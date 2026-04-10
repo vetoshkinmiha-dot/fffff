@@ -1,6 +1,63 @@
-import { Bell, Search } from "lucide-react";
+"use client";
+
+import { useEffect, useState } from "react";
+import { Bell, LogOut, Search } from "lucide-react";
+import { sanitize } from "@/lib/utils";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+
+interface User {
+  id: string;
+  email: string;
+  fullName: string;
+  role: string;
+}
 
 export default function Header() {
+  const [user, setUser] = useState<User | null>(null);
+
+  useEffect(() => {
+    fetch("/api/auth/me", { credentials: "include" })
+      .then((r) => {
+        if (r.ok) return r.json();
+        return null;
+      })
+      .then((data) => {
+        if (data?.user) setUser(data.user);
+      })
+      .catch(() => {});
+  }, []);
+
+  async function handleLogout() {
+    await fetch("/api/auth/logout", { method: "POST", credentials: "include" });
+    window.location.href = "/login";
+  }
+
+  const initials = user?.fullName
+    ? user.fullName
+        .split(" ")
+        .slice(0, 2)
+        .map((n) => n[0])
+        .join("")
+    : "?";
+
+  const roleLabels: Record<string, string> = {
+    admin: "Администратор",
+    factory_hse: "ОТ и ПБ",
+    factory_hr: "Отдел кадров",
+    factory_curator: "Куратор",
+    contractor_admin: "Админ подрядчика",
+    contractor_user: "Сотрудник подрядчика",
+    security: "Служба безопасности",
+    permit_bureau: "Бюро пропусков",
+  };
+
   return (
     <header className="sticky top-0 z-20 flex h-14 items-center gap-4 border-b border-zinc-200 bg-white px-6">
       <div className="relative flex-1 max-w-md">
@@ -17,15 +74,51 @@ export default function Header() {
           <Bell className="h-5 w-5" />
           <span className="absolute -top-0.5 -right-0.5 h-2.5 w-2.5 rounded-full bg-red-500 ring-2 ring-white" />
         </button>
-        <div className="flex items-center gap-3 pl-4 border-l border-zinc-200">
-          <div className="flex h-8 w-8 items-center justify-center rounded-full bg-blue-100 text-blue-700 text-xs font-semibold">
-            ИА
-          </div>
-          <div className="text-sm">
-            <div className="font-medium text-zinc-900">Иванов А.С.</div>
-            <div className="text-xs text-zinc-500">HSE Manager</div>
-          </div>
-        </div>
+        <DropdownMenu>
+          <DropdownMenuTrigger>
+            <div className="flex items-center gap-3 pl-4 border-l border-zinc-200 hover:opacity-80 transition-opacity cursor-pointer">
+              <div className="flex h-8 w-8 items-center justify-center rounded-full bg-blue-100 text-blue-700 text-xs font-semibold">
+                {initials}
+              </div>
+              <div className="text-sm text-left">
+                {user ? (
+                  <>
+                    <div className="font-medium text-zinc-900">{sanitize(user.fullName)}</div>
+                    <div className="text-xs text-zinc-500">
+                      {roleLabels[user.role] || user.role}
+                    </div>
+                  </>
+                ) : (
+                  <>
+                    <div className="font-medium text-zinc-900">Гость</div>
+                    <div className="text-xs text-zinc-500">Не авторизован</div>
+                  </>
+                )}
+              </div>
+            </div>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end" className="w-56">
+            {user && (
+              <>
+                <div className="px-1.5 py-1 text-xs font-medium text-muted-foreground">
+                  <div className="text-sm font-medium">{sanitize(user.fullName)}</div>
+                  <div className="text-xs font-normal text-zinc-500">{user.email}</div>
+                </div>
+                <DropdownMenuSeparator />
+              </>
+            )}
+            {user ? (
+              <DropdownMenuItem onClick={handleLogout}>
+                <LogOut className="mr-2 h-4 w-4" />
+                <span>Выйти</span>
+              </DropdownMenuItem>
+            ) : (
+              <DropdownMenuItem onClick={() => { window.location.href = "/login" }}>
+                <span>Войти</span>
+              </DropdownMenuItem>
+            )}
+          </DropdownMenuContent>
+        </DropdownMenu>
       </div>
     </header>
   );

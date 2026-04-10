@@ -1,5 +1,6 @@
 "use client";
 
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import {
   LayoutDashboard,
@@ -9,27 +10,60 @@ import {
   AlertTriangle,
   CheckSquare,
   BookOpen,
+  ClipboardCheck,
 } from "lucide-react";
 import { usePathname } from "next/navigation";
 
-const navItems = [
-  { label: "Dashboard", href: "/", icon: LayoutDashboard },
+interface NavItem {
+  label: string;
+  href: string;
+  icon: typeof LayoutDashboard;
+  roles?: string[];
+}
+
+const allNavItems: NavItem[] = [
+  { label: "Дашборд", href: "/", icon: LayoutDashboard },
   { label: "Подрядчики", href: "/contractors", icon: Building2 },
   { label: "Сотрудники", href: "/employees", icon: Users },
   { label: "Наряды-допуски", href: "/permits", icon: FileText },
   { label: "Акты нарушений", href: "/violations", icon: AlertTriangle },
   { label: "Чек-листы", href: "/checklists", icon: CheckSquare },
   { label: "Нормативные документы", href: "/documents", icon: BookOpen },
+  { label: "Согласования", href: "/approvals", icon: ClipboardCheck },
 ];
+
+const ROLE_VISIBLE_NAV: Record<string, string[]> = {
+  admin: allNavItems.map((n) => n.href),
+  factory_hse: allNavItems.map((n) => n.href),
+  factory_hr: ["/", "/contractors", "/employees", "/approvals", "/documents"],
+  factory_curator: ["/", "/contractors", "/employees", "/permits", "/approvals"],
+  contractor_admin: ["/", "/contractors", "/employees"],
+  contractor_user: ["/", "/employees"],
+  security: ["/", "/contractors", "/employees", "/approvals", "/permits"],
+  permit_bureau: ["/", "/contractors", "/employees", "/approvals"],
+};
 
 export default function Sidebar() {
   const pathname = usePathname();
+  const [role, setRole] = useState<string | null>(null);
+
+  useEffect(() => {
+    fetch("/api/auth/me", { credentials: "include" })
+      .then((r) => (r.ok ? r.json() : null))
+      .then((data) => {
+        if (data?.user?.role) setRole(data.user.role);
+      })
+      .catch(() => {});
+  }, []);
+
+  const allowedHrefs = role ? ROLE_VISIBLE_NAV[role] : allNavItems.map((n) => n.href);
+  const navItems = allNavItems.filter((item) => allowedHrefs?.includes(item.href));
 
   return (
     <aside className="fixed left-0 top-0 z-30 h-full w-[240px] border-r border-zinc-200 bg-zinc-50 flex flex-col">
       <div className="flex h-14 items-center px-4 border-b border-zinc-200">
         <span className="text-base font-semibold tracking-tight text-zinc-900">
-          ContractorHub
+          ЗАО «ВШЗ»
         </span>
       </div>
       <nav className="flex-1 px-2 py-3 space-y-0.5">
