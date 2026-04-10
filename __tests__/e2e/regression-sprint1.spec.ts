@@ -68,16 +68,11 @@ test.describe('Sprint 1 Regression', () => {
     await page.locator('[data-slot="select-trigger"]').first().click()
     await page.getByRole('option', { name: /ООО/i }).first().click()
 
-    // Create an employee first to upload docs to
-    await page.goto('/employees/new')
-    // Select the organization from dropdown
-    await page.locator('[data-slot="select-trigger"]').first().click()
-    await page.getByRole('option', { name: /ООО/i }).first().click()
-
+    const ts = String(Date.now()).slice(-6)
     await page.locator('#fullName').fill(`Документов Д.Д.`)
     await page.locator('#position').fill('Тестировщик')
-    await page.getByPlaceholder('Серия (4 цифры)').fill('4510')
-    await page.getByPlaceholder('Номер (6 цифр)').fill('654321')
+    await page.getByPlaceholder('Серия (4 цифры)').fill(`45${ts.slice(0,2)}`)
+    await page.getByPlaceholder('Номер (6 цифр)').fill(ts.padStart(6, '0'))
     await page.getByRole('button', { name: /создать/i }).click()
     await page.waitForURL(/\/employees\/[\w-]+/)
     // Wait for detail page to load — Documents card is visible

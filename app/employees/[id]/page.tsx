@@ -1,8 +1,8 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { notFound } from "next/navigation";
-import { ArrowLeft, CheckCircle2, Clock, XCircle, Send, Plus } from "lucide-react";
+import { ArrowLeft, CheckCircle2, Clock, XCircle, Send, Plus, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -16,6 +16,17 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Label } from "@/components/ui/label";
+import { Input } from "@/components/ui/input";
 import Link from "next/link";
 import { cn, sanitize } from "@/lib/utils";
 
@@ -143,6 +154,63 @@ export default function EmployeeDetailPage({
   const [loading, setLoading] = useState(true);
   const [id, setId] = useState<string | null>(null);
   const [showUpload, setShowUpload] = useState(false);
+  const [approvalDialogOpen, setApprovalDialogOpen] = useState(false);
+  const [selectedDepts, setSelectedDepts] = useState<string[]>([]);
+  const [deadline, setDeadline] = useState("");
+  const [submittingApproval, setSubmittingApproval] = useState(false);
+  const [approvalError, setApprovalError] = useState("");
+
+  const DEPARTMENTS: { key: string; label: string }[] = [
+    { key: "security", label: "Служба безопасности" },
+    { key: "hr", label: "Отдел кадров" },
+    { key: "safety", label: "Охрана труда" },
+    { key: "safety_training", label: "Вводный инструктаж" },
+    { key: "permit_bureau", label: "Бюро пропусков/СБ" },
+  ];
+
+  function toggleDept(key: string) {
+    setSelectedDepts((prev) =>
+      prev.includes(key) ? prev.filter((d) => d !== key) : [...prev, key]
+    );
+  }
+
+  async function submitApproval() {
+    if (selectedDepts.length === 0) {
+      setApprovalError("Выберите хотя бы один департамент");
+      return;
+    }
+    if (!deadline) {
+      setApprovalError("Укажите срок");
+      return;
+    }
+    setSubmittingApproval(true);
+    setApprovalError("");
+    try {
+      const res = await fetch(`/api/employees/${id}/approvals`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          departments: selectedDepts,
+          deadline: new Date(deadline).toISOString(),
+        }),
+      });
+      if (!res.ok) {
+        const data = await res.json();
+        setApprovalError(data.error || "Ошибка при отправке на согласование");
+        return;
+      }
+      // Refresh employee data
+      const empRes = await fetch(`/api/employees/${id}`, { credentials: "include" });
+      if (empRes.ok) setEmployee(await empRes.json());
+      setApprovalDialogOpen(false);
+      setSelectedDepts([]);
+      setDeadline("");
+    } catch {
+      setApprovalError("Произошла ошибка. Попробуйте ещё раз.");
+    } finally {
+      setSubmittingApproval(false);
+    }
+  }
 
   useEffect(() => {
     params.then((p) => setId(p.id));
@@ -207,7 +275,7 @@ export default function EmployeeDetailPage({
           </Button>
         </Link>
         <div className="flex-1" />
-        <Button className="gap-2">
+        <Button className="gap-2" onClick={() => setApprovalDialogOpen(true)}>
           <Send className="h-4 w-4" />
           Отправить на согласование
         </Button>
@@ -434,6 +502,64 @@ export default function EmployeeDetailPage({
           </div>
         </CardContent>
       </Card>
+
+      {/* Submit approval dialog (Task 3.1) */}
+      <Dialog open={approvalDialogOpen} onOpenChange={setApprovalDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Отправить на согласование</DialogTitle>
+            <DialogDescription>
+              Выберите департаменты и укажите срок
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-4">
+            <div className="space-y-2">
+              <Label>Департаменты</Label>
+              {DEPARTMENTS.map((dept) => (
+                <div key={dept.key} className="flex items-center gap-2">
+                  <Checkbox
+                    id={dept.key}
+                    checked={selectedDepts.includes(dept.key)}
+                    onCheckedChange={() => toggleDept(dept.key)}
+                  />
+                  <Label htmlFor={dept.key} className="text-sm cursor-pointer">
+                    {dept.label}
+                  </Label>
+                </div>
+              ))}
+            </div>
+
+            <div className="space-y-1.5">
+              <Label htmlFor="approvalDeadline">Срок</Label>
+              <Input
+                id="approvalDeadline"
+                type="date"
+                value={deadline}
+                onChange={(e) => setDeadline(e.target.value)}
+              />
+            </div>
+
+            {approvalError && (
+              <p className="text-sm text-red-600">{approvalError}</p>
+            )}
+          </div>
+
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => { setApprovalDialogOpen(false); setApprovalError(""); }}
+              disabled={submittingApproval}
+            >
+              Отмена
+            </Button>
+            <Button onClick={submitApproval} disabled={submittingApproval}>
+              {submittingApproval && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+              Отправить
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
