@@ -2,7 +2,15 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { authMiddleware } from "@/lib/api-middleware";
 import { decideApprovalSchema } from "@/lib/validations";
-import { sendApprovalResult } from "@/lib/email";
+import { sendApprovalResult, sendApprovalNotification } from "@/lib/email";
+
+const APPROVAL_ORDER = [
+  "security",
+  "hr",
+  "safety",
+  "safety_training",
+  "permit_bureau",
+] as const;
 
 const DEPARTMENT_LABELS: Record<string, string> = {
   security: "Служба безопасности",
@@ -11,6 +19,73 @@ const DEPARTMENT_LABELS: Record<string, string> = {
   safety_training: "Обучение и аттестация",
   permit_bureau: "Бюро пропусков",
 };
+
+async function unblockNextApproval(employeeId: string, currentDept: string) {
+  const currentIndex = APPROVAL_ORDER.indexOf(currentDept as any);
+  if (currentIndex === -1 || currentIndex >= APPROVAL_ORDER.length - 1) return;
+
+  const nextDept = APPROVAL_ORDER[currentIndex + 1];
+
+  const nextApproval = await prisma.approvalRequest.findFirst({
+    where: {
+      employeeId,
+      department: nextDept,
+      status: "blocked",
+    },
+  });
+
+  if (nextApproval) {
+    await prisma.approvalRequest.update({
+      where: { id: nextApproval.id },
+      data: { status: "pending" },
+    });
+
+    // Notify next department's approvers
+    const employee = await prisma.employee.findUnique({
+      where: { id: employeeId },
+      include: { organization: { select: { name: true } } },
+    });
+
+    if (employee) {
+      const approvers = await prisma.user.findMany({
+        where: { isActive: true, department: nextDept },
+      });
+
+      const deadline = nextApproval.deadline.toISOString();
+      for (const approver of approvers) {
+        await sendApprovalNotification(
+          approver.email,
+          approver.fullName,
+          employee.fullName,
+          employee.organization.name,
+          nextDept,
+          deadline,
+        );
+      }
+    }
+  }
+}
+
+async function autoRejectRemaining(employeeId: string, currentDept: string) {
+  const currentIndex = APPROVAL_ORDER.indexOf(currentDept as any);
+  if (currentIndex === -1) return;
+
+  const remainingDepts = APPROVAL_ORDER.slice(currentIndex + 1);
+  if (remainingDepts.length === 0) return;
+
+  await prisma.approvalRequest.updateMany({
+    where: {
+      employeeId,
+      department: { in: remainingDepts as string[] },
+      status: { in: ["pending", "blocked"] },
+    },
+    data: {
+      status: "rejected",
+      comment: "Автоматически отклонено в связи с отклонением предыдущего этапа",
+      decidedAt: new Date(),
+    },
+  });
+}
 
 export async function PATCH(
   req: NextRequest,
@@ -27,13 +102,32 @@ export async function PATCH(
   }
 
   if (approval.status !== "pending") {
-    return NextResponse.json({ error: "Approval already decided" }, { status: 400 });
+    return NextResponse.json({ error: "Approval already decided or blocked" }, { status: 400 });
   }
 
   // Department match required
   if (authResult.user.department && approval.department !== authResult.user.department) {
     if (authResult.user.role !== "admin") {
       return NextResponse.json({ error: "Forbidden: not your department" }, { status: 403 });
+    }
+  }
+
+  // Sequential check: previous department must be approved
+  const currentIdx = APPROVAL_ORDER.indexOf(approval.department as any);
+  if (currentIdx > 0) {
+    const prevDept = APPROVAL_ORDER[currentIdx - 1];
+    const prevApproval = await prisma.approvalRequest.findFirst({
+      where: {
+        employeeId: approval.employeeId,
+        department: prevDept,
+        status: "approved",
+      },
+    });
+
+    if (!prevApproval) {
+      return NextResponse.json({
+        error: `Сначала необходимо согласование от ${DEPARTMENT_LABELS[prevDept] || prevDept}`,
+      }, { status: 400 });
     }
   }
 
@@ -60,6 +154,16 @@ export async function PATCH(
         employee: { select: { fullName: true, organizationId: true } },
       },
     });
+
+    // If approved — unblock next department
+    if (validation.data.status === "approved") {
+      await unblockNextApproval(updated.employeeId, approval.department);
+    }
+
+    // If rejected — auto-reject remaining
+    if (validation.data.status === "rejected") {
+      await autoRejectRemaining(updated.employeeId, approval.department);
+    }
 
     // Send email notification to contractor admin
     const org = await prisma.organization.findUnique({

@@ -4,6 +4,15 @@ import { authMiddleware } from "@/lib/api-middleware";
 import { createApprovalSchema } from "@/lib/validations";
 import { sendApprovalNotification } from "@/lib/email";
 
+// Sequential approval order
+const APPROVAL_ORDER = [
+  "security",
+  "hr",
+  "safety",
+  "safety_training",
+  "permit_bureau",
+] as const;
+
 export async function GET(
   req: NextRequest,
   { params }: { params: Promise<{ id: string }> }
@@ -63,31 +72,55 @@ export async function POST(
 
     const { departments, deadline } = validation.data;
 
-    const requests = await prisma.approvalRequest.createManyAndReturn({
-      data: departments.map((dept) => ({
+    // Create all 5 approval entries sequentially
+    const allRequests = APPROVAL_ORDER.map((dept, index) => {
+      const isRequested = departments.includes(dept);
+      return {
         employeeId: id,
         department: dept,
         deadline: new Date(deadline),
-      })),
+        // Only the first requested department starts as "pending"
+        // Others are "blocked" until previous is approved
+        status: (isRequested && index === 0) ? "pending" as const : "blocked" as const,
+      };
     });
 
-    // Send email notifications to approvers
-    const approvers = await prisma.user.findMany({
-      where: {
-        isActive: true,
-        department: { in: departments },
-      },
+    // Check if any approvals already exist
+    const existing = await prisma.approvalRequest.findMany({
+      where: { employeeId: id },
+      select: { department: true },
+    });
+    const existingDepts = new Set(existing.map((a) => a.department));
+    const newRequests = allRequests.filter((r) => !existingDepts.has(r.department));
+
+    if (newRequests.length === 0) {
+      return NextResponse.json({ error: "Approvals already exist for all departments" }, { status: 400 });
+    }
+
+    const requests = await prisma.approvalRequest.createManyAndReturn({
+      data: newRequests,
     });
 
-    for (const approver of approvers) {
-      await sendApprovalNotification(
-        approver.email,
-        approver.fullName,
-        employee.fullName,
-        employee.organization.name,
-        departments.join(", "),
-        deadline,
-      );
+    // Send email only to the first pending department's approvers
+    const firstPending = requests.find((r) => r.status === "pending");
+    if (firstPending) {
+      const approvers = await prisma.user.findMany({
+        where: {
+          isActive: true,
+          department: firstPending.department,
+        },
+      });
+
+      for (const approver of approvers) {
+        await sendApprovalNotification(
+          approver.email,
+          approver.fullName,
+          employee.fullName,
+          employee.organization.name,
+          firstPending.department,
+          deadline,
+        );
+      }
     }
 
     return NextResponse.json(requests, { status: 201 });
