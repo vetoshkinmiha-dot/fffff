@@ -126,3 +126,43 @@ export const createChecklistSchema = z.object({
 });
 
 export const updateChecklistSchema = createChecklistSchema.partial();
+
+// ─── Regulatory Document ─────────────────────────────────────────
+export const createRegDocumentSchema = z.object({
+  title: z.string().min(1).transform(stripHtmlTags),
+  sectionId: z.string().uuid(),
+  fileType: z.enum(["pdf", "docx", "xlsx"]),
+});
+
+export const createSectionSchema = z.object({
+  name: z.string().min(1).transform(stripHtmlTags),
+  parentId: z.string().uuid().nullable().optional(),
+  order: z.coerce.number().int().min(0).default(0),
+});
+
+// ─── Admin Users ─────────────────────────────────────────────────
+export const createUserSchema = z.object({
+  email: z.string().email(),
+  password: z.string().min(8),
+  fullName: z.string().min(1).transform(stripHtmlTags),
+  role: z.enum([
+    "admin", "factory_hse", "factory_hr", "factory_curator",
+    "contractor_admin", "contractor_user", "security", "permit_bureau",
+  ]),
+  organizationId: z.string().uuid().nullable().optional(),
+  department: z.enum(["security", "hr", "safety", "safety_training", "permit_bureau"]).nullable().optional(),
+});
+
+export const updateUserSchema = z.object({
+  role: z.enum([
+    "admin", "factory_hse", "factory_hr", "factory_curator",
+    "contractor_admin", "contractor_user", "security", "permit_bureau",
+  ]).optional(),
+  department: z.enum(["security", "hr", "safety", "safety_training", "permit_bureau"]).nullable().optional(),
+  organizationId: z.string().uuid().nullable().optional(),
+  isActive: z.boolean().optional(),
+});
+
+export const resetPasswordSchema = z.object({
+  newPassword: z.string().min(8),
+});
