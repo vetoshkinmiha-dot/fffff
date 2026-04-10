@@ -65,6 +65,8 @@ model User {
   createdViolations       Violation[]       @relation("ViolationCreator")
   createdTemplates        ViolationTemplate[] @relation("TemplateCreator")
   createdChecklists       Checklist[]       @relation("ChecklistCreator")
+  createdRegDocuments     RegDocument[]     @relation("RegDocCreator")
+  notificationSubscriptions NotificationSubscription[] @relation("NotificationSubscriber")
 
   @@map("user")
 }
@@ -333,4 +335,56 @@ model ChecklistItem {
   checklist     Checklist      @relation(fields: [checklistId], references: [id], onDelete: Cascade)
 
   @@map("checklist_item")
+}
+
+// ─── Regulatory Documents (Нормативные документы) ───────────────
+
+enum FileType {
+  pdf
+  docx
+  xlsx
+}
+
+model RegDocumentSection {
+  id        String           @id @default(uuid())
+  name      String
+  parentId  String?          @map("parent_id")
+  order     Int              @default(0)
+  createdAt DateTime         @default(now()) @map("created_at")
+  updatedAt DateTime         @updatedAt @map("updated_at")
+
+  parent    RegDocumentSection? @relation("SectionParent", fields: [parentId], references: [id])
+  children  RegDocumentSection[] @relation("SectionParent")
+  documents RegDocument[]
+
+  @@map("reg_document_section")
+}
+
+model RegDocument {
+  id        String    @id @default(uuid())
+  title     String
+  sectionId String    @map("section_id")
+  fileUrl   String    @map("file_url")
+  fileType  FileType
+  version   Int       @default(1)
+  createdById String  @map("created_by_id")
+  createdAt DateTime  @default(now()) @map("created_at")
+  updatedAt DateTime  @updatedAt @map("updated_at")
+
+  section   RegDocumentSection @relation(fields: [sectionId], references: [id])
+  createdBy User               @relation("RegDocCreator", fields: [createdById], references: [id])
+
+  @@map("reg_document")
+}
+
+model NotificationSubscription {
+  id            String   @id @default(uuid())
+  userId        String   @map("user_id")
+  emailOnUpdate Boolean  @default(true) @map("email_on_update")
+  createdAt     DateTime @default(now()) @map("created_at")
+
+  user          User     @relation("NotificationSubscriber", fields: [userId], references: [id])
+
+  @@unique([userId])
+  @@map("notification_subscription")
 }
