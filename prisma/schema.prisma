@@ -62,6 +62,9 @@ model User {
   updatedAt      DateTime  @updatedAt @map("updated_at")
 
   organization   Organization? @relation(fields: [organizationId], references: [id])
+  createdViolations       Violation[]       @relation("ViolationCreator")
+  createdTemplates        ViolationTemplate[] @relation("TemplateCreator")
+  createdChecklists       Checklist[]       @relation("ChecklistCreator")
 
   @@map("user")
 }
@@ -85,6 +88,8 @@ model Organization {
   employees         Employee[]
   users             User[]
   permits           Permit[]
+  violations        Violation[]
+  checklists        Checklist[]
 
   @@map("organization")
 }
@@ -237,4 +242,95 @@ model PermitApproval {
   permit     Permit           @relation(fields: [permitId], references: [id], onDelete: Cascade)
 
   @@map("permit_approval")
+}
+
+// ─── Violations (Акты нарушений) ────────────────────────────────
+
+enum ViolationSeverity {
+  low
+  medium
+  high
+  critical
+}
+
+enum ViolationStatus {
+  pending
+  resolved
+  escalated
+}
+
+model Violation {
+  id                String           @id @default(uuid())
+  contractorId      String           @map("contractor_id")
+  date              DateTime
+  description       String
+  severity          ViolationSeverity
+  status            ViolationStatus  @default(pending)
+  department        String
+  createdById       String           @map("created_by_id")
+  photoUrl          String?          @map("photo_url")
+  resolvedAt        DateTime?        @map("resolved_at")
+  resolutionNotes   String?          @map("resolution_notes")
+  createdAt         DateTime         @default(now()) @map("created_at")
+  updatedAt         DateTime         @updatedAt @map("updated_at")
+
+  contractor        Organization     @relation(fields: [contractorId], references: [id])
+  createdBy         User             @relation("ViolationCreator", fields: [createdById], references: [id])
+
+  @@map("violation")
+}
+
+model ViolationTemplate {
+  id                String           @id @default(uuid())
+  title             String
+  description       String
+  defaultSeverity   ViolationSeverity @default(medium) @map("default_severity")
+  department        String
+  isActive          Boolean          @default(true) @map("is_active")
+  createdById       String           @map("created_by_id")
+  createdAt         DateTime         @default(now()) @map("created_at")
+
+  createdBy         User             @relation("TemplateCreator", fields: [createdById], references: [id])
+
+  @@map("violation_template")
+}
+
+// ─── Checklists (Чек-листы) ──────────────────────────────────────
+
+enum ChecklistStatus {
+  in_progress
+  passed
+  failed
+}
+
+model Checklist {
+  id              String           @id @default(uuid())
+  contractorId    String           @map("contractor_id")
+  inspectorName   String           @map("inspector_name")
+  date            DateTime
+  score           Int?
+  status          ChecklistStatus  @default(in_progress)
+  comments        String?
+  createdById     String           @map("created_by_id")
+  createdAt       DateTime         @default(now()) @map("created_at")
+  updatedAt       DateTime         @updatedAt @map("updated_at")
+
+  contractor      Organization     @relation(fields: [contractorId], references: [id])
+  createdBy       User             @relation("ChecklistCreator", fields: [createdById], references: [id])
+  items           ChecklistItem[]
+
+  @@map("checklist")
+}
+
+model ChecklistItem {
+  id            String         @id @default(uuid())
+  checklistId   String         @map("checklist_id")
+  question      String
+  answer        String         // pass, fail, n/a
+  comment       String?
+  photoUrl      String?        @map("photo_url")
+
+  checklist     Checklist      @relation(fields: [checklistId], references: [id], onDelete: Cascade)
+
+  @@map("checklist_item")
 }
