@@ -16,6 +16,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
+import { Checkbox } from "@/components/ui/checkbox";
 
 function NewEmployeeForm() {
   const router = useRouter();
@@ -34,9 +35,14 @@ function NewEmployeeForm() {
     position: "",
     passportSeries: "",
     passportNumber: "",
+    passportIssuedBy: "",
+    passportIssueDate: "",
+    previouslyAtPirelli: false,
     workClasses: [] as string[],
   });
   const [newWorkClass, setNewWorkClass] = useState("");
+  const [photoFile, setPhotoFile] = useState<File | null>(null);
+  const [photoPreview, setPhotoPreview] = useState<string | null>(null);
 
   useEffect(() => {
     fetch("/api/organizations")
@@ -68,26 +74,41 @@ function NewEmployeeForm() {
 
     setSubmitting(true);
     try {
-      const res = await fetch(
-        `/api/contractors/${form.contractorId}/employees`,
-        {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            fullName: form.fullName,
-            position: form.position,
-            passportSeries: form.passportSeries,
-            passportNumber: form.passportNumber,
-            workClasses: form.workClasses,
-          }),
-        }
-      );
+      const res = await fetch(`/api/employees`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          organizationId: form.contractorId,
+          fullName: form.fullName,
+          position: form.position,
+          passportSeries: form.passportSeries,
+          passportNumber: form.passportNumber,
+          passportIssuedBy: form.passportIssuedBy.trim() || undefined,
+          passportIssueDate: form.passportIssueDate || undefined,
+          previouslyAtPirelli: form.previouslyAtPirelli,
+          workClasses: form.workClasses,
+        }),
+      });
 
       const data = await res.json();
 
       if (!res.ok) {
         setError(data.error || "Ошибка при создании сотрудника");
         return;
+      }
+
+      // Upload photo if selected (Task 2.2)
+      if (photoFile) {
+        try {
+          const photoFormData = new FormData();
+          photoFormData.append("file", photoFile);
+          await fetch(`/api/employees/${data.id}/photo`, {
+            method: "POST",
+            body: photoFormData,
+          });
+        } catch {
+          // Photo upload is non-critical, don't fail the whole flow
+        }
       }
 
       router.push(`/employees/${data.id}`);
@@ -240,6 +261,72 @@ function NewEmployeeForm() {
               />
               {fieldErrors.passportNumber && (
                 <p className="mt-1 text-xs text-red-600">{fieldErrors.passportNumber}</p>
+              )}
+            </div>
+            <div>
+              <Input
+                value={form.passportIssuedBy}
+                onChange={(e) =>
+                  setForm((prev) => ({ ...prev, passportIssuedBy: e.target.value }))
+                }
+                placeholder="Кем выдан"
+              />
+            </div>
+            <div>
+              <Input
+                value={form.passportIssueDate}
+                onChange={(e) =>
+                  setForm((prev) => ({ ...prev, passportIssueDate: e.target.value }))
+                }
+                type="date"
+              />
+            </div>
+          </div>
+          <div className="flex items-center gap-2 mt-2">
+            <Checkbox
+              id="previouslyAtPirelli"
+              checked={form.previouslyAtPirelli}
+              onCheckedChange={(checked) =>
+                setForm((prev) => ({ ...prev, previouslyAtPirelli: !!checked }))
+              }
+            />
+            <Label htmlFor="previouslyAtPirelli" className="text-sm cursor-pointer">
+              Ранее работал в Pirelli
+            </Label>
+          </div>
+        </div>
+
+        {/* Photo upload (Task 2.2) */}
+        <div className="space-y-1.5">
+          <Label>Фото</Label>
+          <div className="flex items-center gap-4">
+            {photoPreview ? (
+              <img src={photoPreview} alt="Preview" className="h-20 w-20 rounded-full object-cover" />
+            ) : (
+              <div className="flex h-20 w-20 items-center justify-center rounded-full bg-zinc-100 text-zinc-400 text-xs">
+                Нет фото
+              </div>
+            )}
+            <div className="flex flex-col gap-2">
+              <Input
+                type="file"
+                accept="image/jpeg,image/png"
+                onChange={(e) => {
+                  const file = e.target.files?.[0];
+                  if (file) {
+                    setPhotoFile(file);
+                    setPhotoPreview(URL.createObjectURL(file));
+                  }
+                }}
+              />
+              {photoFile && (
+                <button
+                  type="button"
+                  onClick={() => { setPhotoFile(null); setPhotoPreview(null); }}
+                  className="text-xs text-zinc-500 hover:text-red-600 underline"
+                >
+                  Удалить фото
+                </button>
               )}
             </div>
           </div>

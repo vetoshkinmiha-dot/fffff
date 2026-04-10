@@ -19,8 +19,18 @@ interface User {
   role: string;
 }
 
+interface Notification {
+  id: string;
+  title: string;
+  message: string;
+  link?: string;
+  read: boolean;
+}
+
 export default function Header() {
   const [user, setUser] = useState<User | null>(null);
+  const [notifications, setNotifications] = useState<Notification[]>([]);
+  const [unreadCount, setUnreadCount] = useState(0);
 
   useEffect(() => {
     fetch("/api/auth/me", { credentials: "include" })
@@ -30,6 +40,14 @@ export default function Header() {
       })
       .then((data) => {
         if (data?.user) setUser(data.user);
+      })
+      .catch(() => {});
+
+    fetch("/api/notifications/me", { credentials: "include" })
+      .then((r) => r.ok ? r.json() : [])
+      .then((data: Notification[]) => {
+        setNotifications(data);
+        setUnreadCount(data.filter((n) => !n.read).length);
       })
       .catch(() => {});
   }, []);
@@ -70,10 +88,42 @@ export default function Header() {
       </div>
       <div className="flex-1" />
       <div className="flex items-center gap-4">
-        <button className="relative inline-flex items-center justify-center h-9 w-9 rounded-md text-zinc-500 hover:bg-zinc-100 hover:text-zinc-700 transition-colors">
-          <Bell className="h-5 w-5" />
-          <span className="absolute -top-0.5 -right-0.5 h-2.5 w-2.5 rounded-full bg-red-500 ring-2 ring-white" />
-        </button>
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <button className="relative inline-flex items-center justify-center h-9 w-9 rounded-md text-zinc-500 hover:bg-zinc-100 hover:text-zinc-700 transition-colors">
+              <Bell className="h-5 w-5" />
+              {unreadCount > 0 && (
+                <span className="absolute -top-0.5 -right-0.5 h-2.5 w-2.5 rounded-full bg-red-500 ring-2 ring-white" />
+              )}
+            </button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end" className="w-72">
+            <div className="px-3 py-2 border-b border-zinc-100">
+              <p className="text-sm font-medium">Уведомления</p>
+            </div>
+            {notifications.length === 0 ? (
+              <div className="px-3 py-6 text-center text-sm text-zinc-400">
+                Нет уведомлений
+              </div>
+            ) : (
+              notifications.map((n) => (
+                <DropdownMenuItem
+                  key={n.id}
+                  className={`cursor-pointer ${!n.read ? "bg-blue-50/50" : ""}`}
+                  onClick={() => { if (n.link) window.location.href = n.link; }}
+                >
+                  <div className="flex flex-col">
+                    <span className="text-sm font-medium">{n.title}</span>
+                    <span className="text-xs text-zinc-500 truncate">{n.message}</span>
+                  </div>
+                  {!n.read && (
+                    <span className="ml-auto h-2 w-2 rounded-full bg-blue-500 shrink-0" />
+                  )}
+                </DropdownMenuItem>
+              ))
+            )}
+          </DropdownMenuContent>
+        </DropdownMenu>
         <DropdownMenu>
           <DropdownMenuTrigger>
             <div className="flex items-center gap-3 pl-4 border-l border-zinc-200 hover:opacity-80 transition-opacity cursor-pointer">
