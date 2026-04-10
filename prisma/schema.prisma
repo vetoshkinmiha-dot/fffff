@@ -84,6 +84,7 @@ model Organization {
 
   employees         Employee[]
   users             User[]
+  permits           Permit[]
 
   @@map("organization")
 }
@@ -178,4 +179,62 @@ model EmailLog {
   createdAt DateTime      @default(now()) @map("created_at")
 
   @@map("email_log")
+}
+
+// ─── Permits (Наряды-допуски) ───────────────────────────────────
+
+enum PermitWorkCategory {
+  hot_work
+  height_work
+  confined_space
+  electrical
+  excavation
+  other
+}
+
+enum PermitStatus {
+  draft
+  pending_approval
+  approved
+  active
+  early_closed
+  closed
+  expired
+}
+
+model Permit {
+  id                 String            @id @default(uuid())
+  permitNumber       String            @unique @map("permit_number")
+  category           PermitWorkCategory
+  contractorId       String            @map("contractor_id")
+  workSite           String            @map("work_site")
+  responsiblePerson  String            @map("responsible_person")
+  openDate           DateTime          @map("open_date")
+  expiryDate         DateTime          @map("expiry_date")
+  status             PermitStatus      @default(draft)
+  closeReason        String?           @map("close_reason")
+  closedAt           DateTime?         @map("closed_at")
+  sequentialNumber   Int               @default(0) @map("sequential_number")
+  createdAt          DateTime          @default(now()) @map("created_at")
+  updatedAt          DateTime          @updatedAt @map("updated_at")
+
+  contractor         Organization      @relation(fields: [contractorId], references: [id])
+  approvals          PermitApproval[]
+
+  @@map("permit")
+}
+
+model PermitApproval {
+  id         String           @id @default(uuid())
+  permitId   String           @map("permit_id")
+  department ApprovalDepartment
+  status     ApprovalStatus   @default(pending)
+  deadline   DateTime
+  comment    String?
+  decidedAt  DateTime?        @map("decided_at")
+  createdAt  DateTime         @default(now()) @map("created_at")
+
+  permit     Permit           @relation(fields: [permitId], references: [id], onDelete: Cascade)
+
+  @@map("permit_approval")
 }
