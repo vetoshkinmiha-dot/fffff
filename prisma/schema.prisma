@@ -1,0 +1,181 @@
+generator client {
+  provider = "prisma-client"
+  output   = "../lib/generated/prisma"
+}
+
+datasource db {
+  provider = "sqlite"
+}
+
+// ─── Enums ─────────────────────────────────────────────────────
+
+enum UserRole {
+  admin
+  factory_hse
+  factory_hr
+  factory_curator
+  contractor_admin
+  contractor_user
+  security
+  permit_bureau
+}
+
+enum ApprovalDepartment {
+  security
+  hr
+  safety
+  safety_training
+  permit_bureau
+}
+
+enum OrgStatus {
+  pending
+  active
+  blocked
+}
+
+enum DocStatus {
+  valid
+  expiring
+  expired
+}
+
+enum ApprovalStatus {
+  pending
+  approved
+  rejected
+}
+
+// ─── Users & Auth ──────────────────────────────────────────────
+
+model User {
+  id             String    @id @default(uuid())
+  email          String    @unique
+  passwordHash   String    @map("password_hash")
+  fullName       String    @map("full_name")
+  role           UserRole
+  organizationId String?   @map("organization_id")
+  department     ApprovalDepartment?
+  isActive       Boolean   @default(true) @map("is_active")
+  mustChangePwd  Boolean   @default(true) @map("must_change_pwd")
+  createdAt      DateTime  @default(now()) @map("created_at")
+  updatedAt      DateTime  @updatedAt @map("updated_at")
+
+  organization   Organization? @relation(fields: [organizationId], references: [id])
+
+  @@map("user")
+}
+
+// ─── Organizations ─────────────────────────────────────────────
+
+model Organization {
+  id                String     @id @default(uuid())
+  sequentialNumber  Int        @unique @default(0) @map("sequential_number")
+  name              String
+  inn               String     @unique
+  kpp               String?
+  legalAddress      String     @map("legal_address")
+  contactPersonName String?    @map("contact_person_name")
+  contactPhone      String?    @map("contact_phone")
+  contactEmail      String?    @map("contact_email")
+  status            OrgStatus  @default(pending)
+  createdAt         DateTime   @default(now()) @map("created_at")
+  updatedAt         DateTime   @updatedAt @map("updated_at")
+
+  employees         Employee[]
+  users             User[]
+
+  @@map("organization")
+}
+
+// ─── Employees ─────────────────────────────────────────────────
+
+model Employee {
+  id                  String    @id @default(uuid())
+  organizationId      String    @map("organization_id")
+  fullName            String    @map("full_name")
+  position            String
+  photoUrl            String?   @map("photo_url")
+  passportSeries      String    @map("passport_series")
+  passportNumber      String    @map("passport_number")
+  passportIssuedBy    String?   @map("passport_issued_by")
+  passportIssueDate   DateTime? @map("passport_issue_date")
+  previouslyAtPirelli Boolean   @default(false) @map("previously_at_pirelli")
+  createdAt           DateTime  @default(now()) @map("created_at")
+  updatedAt           DateTime  @updatedAt @map("updated_at")
+
+  organization        Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  workClasses         EmployeeWorkClass[]
+  documents           EmployeeDocument[]
+  approvals           ApprovalRequest[]
+
+  @@unique([organizationId, passportSeries, passportNumber])
+  @@map("employee")
+}
+
+// ─── Employee Work Classes (relation table for SQLite compat) ──
+
+model EmployeeWorkClass {
+  id           String       @id @default(uuid())
+  employeeId   String       @map("employee_id")
+  workClass    String       @map("work_class")
+  createdAt    DateTime     @default(now()) @map("created_at")
+
+  employee     Employee     @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+
+  @@unique([employeeId, workClass])
+  @@map("employee_work_class")
+}
+
+// ─── Employee Documents ────────────────────────────────────────
+
+model EmployeeDocument {
+  id         String    @id @default(uuid())
+  employeeId String    @map("employee_id")
+  name       String
+  fileUrl    String?   @map("file_url")
+  issueDate  DateTime? @map("issue_date")
+  expiryDate DateTime? @map("expiry_date")
+  status     DocStatus @default(valid)
+  createdAt  DateTime  @default(now()) @map("created_at")
+
+  employee   Employee  @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+
+  @@map("employee_document")
+}
+
+// ─── Approval Requests ─────────────────────────────────────────
+
+model ApprovalRequest {
+  id         String           @id @default(uuid())
+  employeeId String           @map("employee_id")
+  department ApprovalDepartment
+  status     ApprovalStatus   @default(pending)
+  deadline   DateTime
+  comment    String?
+  decidedAt  DateTime?        @map("decided_at")
+  createdAt  DateTime         @default(now()) @map("created_at")
+
+  employee   Employee         @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+
+  @@map("approval_request")
+}
+
+enum EmailLogStatus {
+  SENT
+  FAILED
+  PENDING
+}
+
+model EmailLog {
+  id        String        @id @default(uuid())
+  recipient String
+  subject   String
+  template  String
+  status    EmailLogStatus @default(PENDING)
+  sentAt    DateTime?     @map("sent_at")
+  error     String?
+  createdAt DateTime      @default(now()) @map("created_at")
+
+  @@map("email_log")
+}
