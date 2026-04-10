@@ -424,7 +424,7 @@ export default function AdminUsersPage() {
             </div>
             <div className="space-y-1.5">
               <Label>Роль</Label>
-              <Select value={form.role} onValueChange={(v) => setForm((f) => ({ ...f, role: v }))}>
+              <Select value={form.role} onValueChange={(v) => setForm((f) => ({ ...f, role: v ?? "" }))}>
                 <SelectTrigger><SelectValue /></SelectTrigger>
                 <SelectContent>
                   {Object.entries(roleLabels).map(([key, label]) => (
@@ -435,7 +435,7 @@ export default function AdminUsersPage() {
             </div>
             <div className="space-y-1.5">
               <Label>Организация</Label>
-              <Select value={form.organizationId} onValueChange={(v) => setForm((f) => ({ ...f, organizationId: v }))}>
+              <Select value={form.organizationId} onValueChange={(v) => setForm((f) => ({ ...f, organizationId: v ?? "" }))}>
                 <SelectTrigger><SelectValue placeholder="Без организации" /></SelectTrigger>
                 <SelectContent>
                   <SelectItem value="">Без организации</SelectItem>
@@ -447,7 +447,7 @@ export default function AdminUsersPage() {
             </div>
             <div className="space-y-1.5">
               <Label>Департамент</Label>
-              <Select value={form.department} onValueChange={(v) => setForm((f) => ({ ...f, department: v }))}>
+              <Select value={form.department} onValueChange={(v) => setForm((f) => ({ ...f, department: v ?? "" }))}>
                 <SelectTrigger><SelectValue placeholder="Не указан" /></SelectTrigger>
                 <SelectContent>
                   <SelectItem value="">Не указан</SelectItem>

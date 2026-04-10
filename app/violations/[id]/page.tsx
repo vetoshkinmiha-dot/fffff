@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react";
 import { notFound, useParams } from "next/navigation";
 import Link from "next/link";
-import { ArrowLeft, Loader2, AlertCircle, CheckCircle2, ArrowUp } from "lucide-react";
+import { ArrowLeft, Loader2, AlertCircle, CheckCircle2, ArrowUp, Printer } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
@@ -51,6 +51,7 @@ interface Violation {
   description: string;
   severity: string;
   status: string;
+  department: string | null;
   contractor: { name: string; sequentialNumber: number };
   reportedBy: string;
   photos: string[];
@@ -172,6 +173,14 @@ export default function ViolationDetailPage() {
             Детальная информация о нарушении
           </p>
         </div>
+        <Button
+          variant="outline"
+          className="gap-2"
+          onClick={() => window.open(`/violations/${violation.id}/print`, "_blank")}
+        >
+          <Printer className="h-4 w-4" />
+          Печать
+        </Button>
         <Badge variant={sev.variant} className={sev.color}>
           {sev.label}
         </Badge>
@@ -297,7 +306,7 @@ export default function ViolationDetailPage() {
             <div className="space-y-4">
               <div className="space-y-1.5">
                 <Label>Департамент</Label>
-                <Select value={complaintDept} onValueChange={setComplaintDept}>
+                <Select value={complaintDept} onValueChange={(v) => setComplaintDept(v ?? "")}>
                   <SelectTrigger>
                     <SelectValue />
                   </SelectTrigger>

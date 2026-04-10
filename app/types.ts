@@ -1,12 +1,15 @@
 export interface Contractor {
   id: string;
+  sequentialNumber: number;
   name: string;
   inn: string;
-  kpp: string;
-  address: string;
+  kpp: string | null;
+  legalAddress: string;
+  contactPersonName: string | null;
+  contactPhone: string | null;
+  contactEmail: string | null;
   status: 'active' | 'pending' | 'blocked';
-  contacts: string;
-  employeeCount: number;
+  _count?: { employees: number };
 }
 
 export interface Employee {
@@ -61,7 +64,8 @@ export interface Violation {
   date: string;
   description: string;
   severity: 'low' | 'medium' | 'high' | 'critical';
-  status: 'pending' | 'resolved';
+  status: 'pending' | 'resolved' | 'escalated';
+  department?: string;
 }
 
 export interface Checklist {
