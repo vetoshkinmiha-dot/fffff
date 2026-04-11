@@ -76,6 +76,7 @@ export async function POST(req: NextRequest) {
     const payload: JWTPayload = {
       userId: user.id,
       email: user.email,
+      fullName: user.fullName,
       role: user.role,
       organizationId: user.organizationId,
       department: user.department,
