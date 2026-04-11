@@ -33,6 +33,8 @@ export default function NewContractorPage() {
     if (form.kpp && !/^\d{9}$/.test(form.kpp))
       errs.kpp = "КПП должен содержать 9 цифр";
     if (!form.legalAddress.trim()) errs.legalAddress = "Обязательное поле";
+    if (form.contactPhone && !/^\+7[\s()-]*\d{3}[\s()-]*\d{3}[\s()-]*\d{2}[\s()-]*\d{2}$/.test(form.contactPhone.trim()))
+      errs.contactPhone = "Формат: +7 (XXX) XXX-XX-XX";
     if (form.contactEmail && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.contactEmail))
       errs.contactEmail = "Некорректный email";
     setFieldErrors(errs);
@@ -201,9 +203,27 @@ export default function NewContractorPage() {
               id="contactPhone"
               type="tel"
               value={form.contactPhone}
-              onChange={(e) => handleChange("contactPhone", e.target.value)}
+              onChange={(e) => {
+                const raw = e.target.value;
+                const digits = raw.replace(/\D/g, "");
+                if (!raw.startsWith("+7") && digits.length > 0 && !raw.startsWith("7")) {
+                  handleChange("contactPhone", raw);
+                  return;
+                }
+                const clean = digits.replace(/^7/, "");
+                let formatted = "+7";
+                if (clean.length > 0) formatted += " (" + clean.slice(0, 3);
+                if (clean.length >= 3) formatted += ") " + clean.slice(3, 6);
+                if (clean.length >= 6) formatted += "-" + clean.slice(6, 8);
+                if (clean.length >= 8) formatted += "-" + clean.slice(8, 10);
+                handleChange("contactPhone", formatted);
+              }}
               placeholder="+7 (999) 123-45-67"
+              className={fieldErrors.contactPhone ? "border-red-300" : ""}
             />
+            {fieldErrors.contactPhone && (
+              <p className="text-xs text-red-600">{fieldErrors.contactPhone}</p>
+            )}
           </div>
           <div className="space-y-1.5">
             <Label htmlFor="contactEmail">Email</Label>

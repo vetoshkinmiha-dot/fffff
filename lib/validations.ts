@@ -29,8 +29,14 @@ export const createOrgSchema = z.object({
   kpp: z.string().length(9).optional().or(z.string().length(0)),
   legalAddress: z.string().min(1).transform(stripHtmlTags),
   contactPersonName: z.string().optional().transform((v) => v ? stripHtmlTags(v) : v),
-  contactPhone: z.string().optional(),
-  contactEmail: z.string().email().optional().or(z.string().length(0)),
+  contactPhone: z.string().optional().refine(
+    (v) => !v || /^\+7\d{10}$/.test(v.replace(/[\s()-]/g, "")),
+    "Некорректный формат телефона"
+  ),
+  contactEmail: z.string().optional().refine(
+    (v) => !v || z.string().email().safeParse(v).success,
+    "Некорректный формат email"
+  ),
 });
 
 export const updateOrgSchema = createOrgSchema.partial();
