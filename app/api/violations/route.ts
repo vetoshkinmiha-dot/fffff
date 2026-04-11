@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { authMiddleware } from "@/lib/api-middleware";
-import { createViolationSchema, createViolationTemplateSchema, paginationSchema } from "@/lib/validations";
+import { createViolationSchema, paginationSchema } from "@/lib/validations";
 
 function isAuthorizedForViolations(user: { role: string }): boolean {
   return ["admin", "factory_hse", "factory_hr", "factory_curator", "security"].includes(user.role);
@@ -73,8 +73,17 @@ export async function POST(req: NextRequest) {
     }
 
     // Generate violationNumber: VIO-{sequentialNumber}
-    const count = await prisma.violation.count();
-    const violationNumber = `VIO-${String(count + 1).padStart(5, "0")}`;
+    // Read the highest existing sequence number to avoid race conditions
+    const lastViolation = await prisma.violation.findFirst({
+      orderBy: { createdAt: "desc" },
+      select: { violationNumber: true },
+    });
+    let nextSeq = 1;
+    if (lastViolation?.violationNumber) {
+      const match = lastViolation.violationNumber.match(/VIO-(\d+)/);
+      if (match) nextSeq = parseInt(match[1], 10) + 1;
+    }
+    const violationNumber = `VIO-${String(nextSeq).padStart(5, "0")}`;
 
     const violation = await prisma.violation.create({
       data: {

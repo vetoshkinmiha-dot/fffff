@@ -42,7 +42,8 @@ interface Violation {
   status: string;
   department: string | null;
   contractor: { name: string; sequentialNumber: number };
-  reportedBy: string;
+  createdBy: { fullName: string } | null;
+  photoUrl: string | null;
   resolutionNotes: string | null;
   resolvedAt: string | null;
 }

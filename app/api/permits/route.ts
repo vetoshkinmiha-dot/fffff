@@ -87,19 +87,28 @@ export async function POST(req: NextRequest) {
     }
     const contractorSeq = String(contractor.sequentialNumber).padStart(3, "0");
 
-    // Get curator sequential number (user's position among users with same role)
+    // Get curator sequential number based on user role
     const curator = await prisma.user.findUnique({ where: { id: authResult.user.userId } });
     let curatorSeq = "000";
-    if (curator?.department) {
-      const deptUserCount = await prisma.user.count({
-        where: { department: curator.department },
-      });
-      curatorSeq = String(Math.min(deptUserCount, 99)).padStart(3, "0");
+    if (curator) {
+      const roleSeqMap: Record<string, number> = {
+        admin: 1,
+        factory_hse: 2,
+        factory_hr: 3,
+        factory_curator: 4,
+        permit_bureau: 5,
+        security: 6,
+      };
+      const seq = roleSeqMap[curator.role] ?? 99;
+      curatorSeq = String(seq).padStart(3, "0");
     }
 
-    // Per-contractor sequential number
-    const contractorPermitCount = await prisma.permit.count({ where: { contractorId } });
-    const permitSeq = contractorPermitCount + 1;
+    // Per-contractor sequential number using MAX for safety
+    const maxPermit = await prisma.permit.aggregate({
+      _max: { sequentialNumber: true },
+      where: { contractorId },
+    });
+    const permitSeq = (maxPermit._max.sequentialNumber ?? 0) + 1;
     const permitSeqNumber = String(permitSeq).padStart(4, "0");
 
     const permitNumber = `${categoryCode}-${contractorSeq}-${curatorSeq}-${permitSeqNumber}`;

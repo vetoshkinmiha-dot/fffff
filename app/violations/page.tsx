@@ -51,7 +51,7 @@ interface Violation {
   severity: string;
   status: string;
   contractor: { name: string; sequentialNumber: number };
-  reportedBy: string;
+  createdBy: { fullName: string } | null;
 }
 
 export default function ViolationsPage() {

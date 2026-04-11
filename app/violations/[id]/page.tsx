@@ -54,8 +54,8 @@ interface Violation {
   status: string;
   department: string | null;
   contractor: { name: string; sequentialNumber: number };
-  reportedBy: string;
-  photos: string[];
+  createdBy: { fullName: string } | null;
+  photoUrl: string | null;
   resolutionNotes: string | null;
   resolvedAt: string | null;
 }
@@ -220,14 +220,10 @@ export default function ViolationDetailPage() {
               <div className="text-xs font-medium text-zinc-400 uppercase">Описание</div>
               <div className="text-sm text-zinc-900 whitespace-pre-wrap">{violation.description}</div>
             </div>
-            {violation.photos && violation.photos.length > 0 && (
+            {violation.photoUrl && (
               <div className="sm:col-span-3 space-y-1">
                 <div className="text-xs font-medium text-zinc-400 uppercase">Фото</div>
-                <div className="flex gap-2 flex-wrap mt-2">
-                  {violation.photos.map((photo, i) => (
-                    <img key={i} src={photo} alt={`Фото ${i + 1}`} className="h-32 w-32 rounded-lg object-cover" />
-                  ))}
-                </div>
+                <img src={violation.photoUrl} alt="Фото нарушения" className="h-48 rounded-lg object-cover" />
               </div>
             )}
           </div>
