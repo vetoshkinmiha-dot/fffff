@@ -1,7 +1,7 @@
 "use client";
 
-import { useState, FormEvent, useEffect } from "react";
-import { useRouter } from "next/navigation";
+import { Suspense, useState, FormEvent, useEffect } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { ArrowLeft, Loader2, AlertCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -34,8 +34,11 @@ const DEPARTMENT_OPTIONS = [
   { value: "procurement", label: "Закупки" },
 ];
 
-export default function NewViolationPage() {
+function NewViolationForm() {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const templateId = searchParams.get("templateId");
+
   const [organizations, setOrganizations] = useState<Organization[]>([]);
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
@@ -51,14 +54,24 @@ export default function NewViolationPage() {
   });
 
   useEffect(() => {
-    fetch("/api/organizations", { credentials: "include" })
-      .then((r) => r.json())
-      .then((data) => {
-        setOrganizations(data.data || []);
-        setLoading(false);
-      })
-      .catch(() => setLoading(false));
-  }, []);
+    Promise.all([
+      fetch("/api/organizations", { credentials: "include" }).then((r) => r.json()),
+      templateId
+        ? fetch(`/api/violations/templates/${templateId}`, { credentials: "include" }).then((r) => r.ok ? r.json() : null)
+        : Promise.resolve(null),
+    ]).then(([orgData, tmplData]) => {
+      setOrganizations(orgData.data || []);
+      if (tmplData) {
+        setForm((prev) => ({
+          ...prev,
+          description: tmplData.description || "",
+          severity: tmplData.defaultSeverity || "medium",
+          department: tmplData.department || "hse",
+        }));
+      }
+      setLoading(false);
+    }).catch(() => setLoading(false));
+  }, [templateId]);
 
   function validate() {
     const errs: Record<string, string> = {};
@@ -241,5 +254,19 @@ export default function NewViolationPage() {
         </div>
       </form>
     </div>
+  );
+}
+
+export default function NewViolationPage() {
+  return (
+    <Suspense
+      fallback={
+        <div className="flex items-center justify-center py-20">
+          <Loader2 className="h-6 w-6 animate-spin text-zinc-400" />
+        </div>
+      }
+    >
+      <NewViolationForm />
+    </Suspense>
   );
 }
