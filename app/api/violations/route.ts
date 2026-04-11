@@ -72,9 +72,14 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: validation.error.issues[0].message }, { status: 400 });
     }
 
+    // Generate violationNumber: VIO-{sequentialNumber}
+    const count = await prisma.violation.count();
+    const violationNumber = `VIO-${String(count + 1).padStart(5, "0")}`;
+
     const violation = await prisma.violation.create({
       data: {
         ...validation.data,
+        violationNumber,
         date: new Date(validation.data.date),
         createdById: authResult.user.userId,
       },

@@ -35,10 +35,12 @@ function formatDate(dateStr: string | null): string {
 
 interface Violation {
   id: string;
+  violationNumber: string;
   date: string;
   description: string;
   severity: string;
   status: string;
+  department: string | null;
   contractor: { name: string; sequentialNumber: number };
   reportedBy: string;
   resolutionNotes: string | null;
@@ -93,13 +95,17 @@ export default function ViolationPrintPage() {
 
       {/* Header */}
       <div className="border-b-2 border-black pb-4 mb-6">
-        <h1 className="text-2xl font-bold">АКТ НАРУШЕНИЯ</h1>
+        <h1 className="text-2xl font-bold">АКТ НАРУШЕНИЯ {violation.violationNumber}</h1>
         <p className="text-sm mt-1">ЗАО «ВШЗ» — Система управления подрядными организациями</p>
       </div>
 
       {/* Details table */}
       <table className="w-full border-collapse mb-6">
         <tbody>
+          <tr>
+            <td className="border border-black px-3 py-2 font-semibold w-1/3">Номер акта</td>
+            <td className="border border-black px-3 py-2 font-mono">{violation.violationNumber}</td>
+          </tr>
           <tr>
             <td className="border border-black px-3 py-2 font-semibold w-1/3">Дата нарушения</td>
             <td className="border border-black px-3 py-2">{formatDate(violation.date)}</td>
@@ -110,7 +116,7 @@ export default function ViolationPrintPage() {
           </tr>
           <tr>
             <td className="border border-black px-3 py-2 font-semibold">Департамент</td>
-            <td className="border border-black px-3 py-2">{departmentLabels[violation.department] ?? "—"}</td>
+            <td className="border border-black px-3 py-2">{violation.department ? departmentLabels[violation.department] ?? violation.department : "—"}</td>
           </tr>
           <tr>
             <td className="border border-black px-3 py-2 font-semibold">Тяжесть нарушения</td>

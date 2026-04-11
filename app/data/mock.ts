@@ -25,11 +25,11 @@ export const mockPermits: Permit[] = [
 ];
 
 export const mockViolations: Violation[] = [
-  { id: "v1", contractorName: "ООО «КлиматКонтроль»", date: "2026-04-02", description: "Работы на высоте без страховочного пояса", severity: "critical", status: "pending" },
-  { id: "v2", contractorName: "ООО «СтройЭнергоМонтаж»", date: "2026-03-28", description: "Отсутствие ограждения на рабочем месте", severity: "medium", status: "resolved" },
-  { id: "v3", contractorName: "АО «ТрансТехСервис»", date: "2026-04-05", description: "Нарушение порядка хранения инструментов", severity: "low", status: "pending" },
-  { id: "v4", contractorName: "ИП Козлов А.В.", date: "2026-03-15", description: "Работа без допуска по электробезопасности", severity: "high", status: "resolved" },
-  { id: "v5", contractorName: "ООО «ПромВентиляция»", date: "2026-04-07", description: "Неисправный электроинструмент на объекте", severity: "high", status: "pending" },
+  { id: "v1", violationNumber: "VIO-00001", contractorName: "ООО «КлиматКонтроль»", date: "2026-04-02", description: "Работы на высоте без страховочного пояса", severity: "critical", status: "pending" },
+  { id: "v2", violationNumber: "VIO-00002", contractorName: "ООО «СтройЭнергоМонтаж»", date: "2026-03-28", description: "Отсутствие ограждения на рабочем месте", severity: "medium", status: "resolved" },
+  { id: "v3", violationNumber: "VIO-00003", contractorName: "АО «ТрансТехСервис»", date: "2026-04-05", description: "Нарушение порядка хранения инструментов", severity: "low", status: "pending" },
+  { id: "v4", violationNumber: "VIO-00004", contractorName: "ИП Козлов А.В.", date: "2026-03-15", description: "Работа без допуска по электробезопасности", severity: "high", status: "resolved" },
+  { id: "v5", violationNumber: "VIO-00005", contractorName: "ООО «ПромВентиляция»", date: "2026-04-07", description: "Неисправный электроинструмент на объекте", severity: "high", status: "pending" },
 ];
 
 export const mockChecklists: Checklist[] = [

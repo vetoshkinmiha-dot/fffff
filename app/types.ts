@@ -60,6 +60,7 @@ export interface Permit {
 
 export interface Violation {
   id: string;
+  violationNumber: string;
   contractorName: string;
   date: string;
   description: string;

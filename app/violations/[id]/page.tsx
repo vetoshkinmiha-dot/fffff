@@ -47,6 +47,7 @@ function formatDate(dateStr: string | null): string {
 
 interface Violation {
   id: string;
+  violationNumber: string;
   date: string;
   description: string;
   severity: string;
@@ -166,9 +167,12 @@ export default function ViolationDetailPage() {
           </Button>
         </Link>
         <div className="flex-1">
-          <h1 className="text-2xl font-semibold tracking-tight text-zinc-900">
-            Акт нарушения
-          </h1>
+          <div className="flex items-center gap-2">
+            <h1 className="text-2xl font-semibold tracking-tight text-zinc-900">
+              Акт нарушения
+            </h1>
+            <span className="font-mono text-lg text-zinc-500">{violation.violationNumber}</span>
+          </div>
           <p className="mt-1 text-sm text-zinc-500">
             Детальная информация о нарушении
           </p>
@@ -197,6 +201,10 @@ export default function ViolationDetailPage() {
         <CardContent>
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
             <div className="space-y-1">
+              <div className="text-xs font-medium text-zinc-400 uppercase">Номер акта</div>
+              <div className="text-sm font-mono text-zinc-900">{violation.violationNumber}</div>
+            </div>
+            <div className="space-y-1">
               <div className="text-xs font-medium text-zinc-400 uppercase">Дата</div>
               <div className="text-sm text-zinc-900">{formatDate(violation.date)}</div>
             </div>
@@ -206,7 +214,7 @@ export default function ViolationDetailPage() {
             </div>
             <div className="space-y-1">
               <div className="text-xs font-medium text-zinc-400 uppercase">Департамент</div>
-              <div className="text-sm text-zinc-900">{departmentLabels[violation.department] ?? "—"}</div>
+              <div className="text-sm text-zinc-900">{violation.department ? departmentLabels[violation.department] ?? violation.department : "—"}</div>
             </div>
             <div className="sm:col-span-3 space-y-1">
               <div className="text-xs font-medium text-zinc-400 uppercase">Описание</div>

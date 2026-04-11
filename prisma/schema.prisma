@@ -263,6 +263,7 @@ enum ViolationStatus {
 
 model Violation {
   id                String           @id @default(uuid())
+  violationNumber   String           @unique @map("violation_number")
   contractorId      String           @map("contractor_id")
   date              DateTime
   description       String

@@ -45,6 +45,7 @@ function formatDate(dateStr: string) {
 
 interface Violation {
   id: string;
+  violationNumber: string;
   date: string;
   description: string;
   severity: string;
@@ -139,6 +140,7 @@ export default function ViolationsPage() {
         <Table>
           <TableHeader>
             <TableRow>
+              <TableHead className="font-medium">Номер акта</TableHead>
               <TableHead className="font-medium">Дата</TableHead>
               <TableHead className="font-medium">Подрядчик</TableHead>
               <TableHead className="font-medium">Описание</TableHead>
@@ -150,13 +152,13 @@ export default function ViolationsPage() {
           <TableBody>
             {loading ? (
               <TableRow>
-                <TableCell colSpan={6} className="py-8 text-center text-sm text-zinc-500">
+                <TableCell colSpan={7} className="py-8 text-center text-sm text-zinc-500">
                   Загрузка...
                 </TableCell>
               </TableRow>
             ) : violations.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={6} className="py-8 text-center text-sm text-zinc-500">
+                <TableCell colSpan={7} className="py-8 text-center text-sm text-zinc-500">
                   Нарушения не найдены
                 </TableCell>
               </TableRow>
@@ -165,6 +167,9 @@ export default function ViolationsPage() {
                 const sev = severityConfig[v.severity] ?? severityConfig.low;
                 return (
                   <TableRow key={v.id}>
+                    <TableCell className="font-mono text-xs text-zinc-700">
+                      {v.violationNumber}
+                    </TableCell>
                     <TableCell className="text-zinc-600 font-mono text-xs">
                       {formatDate(v.date)}
                     </TableCell>

@@ -144,7 +144,7 @@ export default function NewViolationPage() {
             <Label>Подрядчик *</Label>
             <Select
               value={form.contractorId}
-              onValueChange={(v) => setForm((prev) => ({ ...prev, contractorId: v }))}
+              onValueChange={(v) => setForm((prev) => ({ ...prev, contractorId: v ?? "" }))}
             >
               <SelectTrigger className={fieldErrors.contractorId ? "border-red-300" : ""}>
                 <SelectValue placeholder="Выберите подрядчика" />
@@ -195,7 +195,7 @@ export default function NewViolationPage() {
             <Label>Тяжесть</Label>
             <Select
               value={form.severity}
-              onValueChange={(v) => setForm((prev) => ({ ...prev, severity: v }))}
+              onValueChange={(v) => setForm((prev) => ({ ...prev, severity: v ?? "" }))}
             >
               <SelectTrigger>
                 <SelectValue />
@@ -214,7 +214,7 @@ export default function NewViolationPage() {
             <Label>Департамент</Label>
             <Select
               value={form.department}
-              onValueChange={(v) => setForm((prev) => ({ ...prev, department: v }))}
+              onValueChange={(v) => setForm((prev) => ({ ...prev, department: v ?? "" }))}
             >
               <SelectTrigger>
                 <SelectValue />
