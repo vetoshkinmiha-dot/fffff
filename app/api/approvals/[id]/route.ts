@@ -188,6 +188,16 @@ export async function PATCH(
         validation.data.comment ?? null,
         updated.employee.id,
       );
+      // In-app notification
+      await prisma.notification.create({
+        data: {
+          userId: admin.id,
+          type: "approval_result",
+          title: "Согласование сотрудника",
+          message: `${deptLabel}: ${validation.data.status === "approved" ? "Одобрено" : "Отклонено"} — ${employeeFullName}`,
+          link: `/employees/${updated.employee.id}`,
+        },
+      });
     }
 
     return NextResponse.json(updated);
