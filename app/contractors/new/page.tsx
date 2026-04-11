@@ -204,13 +204,20 @@ export default function NewContractorPage() {
               type="tel"
               value={form.contactPhone}
               onChange={(e) => {
+                // Only allow +7 and digits
                 const raw = e.target.value;
-                const digits = raw.replace(/\D/g, "");
-                if (!raw.startsWith("+7") && digits.length > 0 && !raw.startsWith("7")) {
-                  handleChange("contactPhone", raw);
+                const onlyAllowed = raw.replace(/[^\d+]/g, "");
+                if (onlyAllowed !== raw) {
+                  // Strip any non-digit/+ characters (prevents letters like "тест")
+                  handleChange("contactPhone", "+7" + onlyAllowed.replace(/[^\d]/g, "").replace(/^7/, "").slice(0, 10));
                   return;
                 }
-                const clean = digits.replace(/^7/, "");
+                const digits = onlyAllowed.replace(/\D/g, "");
+                if (digits.length === 0) {
+                  handleChange("contactPhone", "");
+                  return;
+                }
+                const clean = digits.replace(/^7/, "").slice(0, 10);
                 let formatted = "+7";
                 if (clean.length > 0) formatted += " (" + clean.slice(0, 3);
                 if (clean.length >= 3) formatted += ") " + clean.slice(3, 6);
