@@ -28,6 +28,27 @@ export async function POST(req: NextRequest) {
       where: { id: permit.id },
       data: { status: "expired" },
     });
+
+    // Notify contractor employees and admins
+    const targetUsers = await prisma.user.findMany({
+      where: {
+        isActive: true,
+        organizationId: permit.contractorId,
+        role: { in: ["contractor_employee", "admin"] },
+      },
+    });
+
+    for (const user of targetUsers) {
+      await prisma.notification.create({
+        data: {
+          userId: user.id,
+          type: "permit_expiring",
+          title: "Наряд-допуск истёк",
+          message: `Наряд ${permit.permitNumber} для ${permit.contractor.name}`,
+          link: `/permits/${permit.id}`,
+        },
+      });
+    }
   }
 
   results.push({ action: "expired", count: expiredPermits.length });
