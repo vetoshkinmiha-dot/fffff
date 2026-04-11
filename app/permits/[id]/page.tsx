@@ -1,20 +1,12 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { notFound, useParams, useRouter } from "next/navigation";
+import { notFound, useParams } from "next/navigation";
 import Link from "next/link";
 import { ArrowLeft, CheckCircle2, Clock, XCircle, Printer, Archive, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
 import {
   Dialog,
   DialogContent,
@@ -79,7 +71,6 @@ interface Permit {
 
 export default function PermitDetailPage() {
   const params = useParams();
-  const router = useRouter();
   const id = params.id as string;
 
   const [permit, setPermit] = useState<Permit | null>(null);
@@ -162,6 +153,7 @@ export default function PermitDetailPage() {
       const res = await fetch(`/api/permits/${id}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
+        credentials: "include",
         body: JSON.stringify({ status: "early_closed", closeReason: closeReason.trim() }),
       });
       if (!res.ok) {
