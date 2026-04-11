@@ -28,10 +28,13 @@ import { Textarea } from "@/components/ui/textarea";
 import { cn } from "@/lib/utils";
 
 const statusConfig: Record<string, { variant: "outline" | "default" | "secondary"; label: string }> = {
-  open: { variant: "outline", label: "Открыт" },
+  draft: { variant: "secondary", label: "Черновик" },
+  pending_approval: { variant: "outline", label: "На согласовании" },
+  approved: { variant: "default", label: "Согласован" },
+  active: { variant: "outline", label: "Открыт" },
   closed: { variant: "secondary", label: "Закрыт" },
   early_closed: { variant: "default", label: "Закрыт досрочно" },
-  draft: { variant: "secondary", label: "Черновик" },
+  expired: { variant: "secondary", label: "Истёк" },
 };
 
 const categoryLabels: Record<string, string> = {
@@ -178,7 +181,7 @@ export default function PermitDetailPage() {
           </Button>
         </Link>
         <div className="flex-1" />
-        {permit.status === "open" && (
+        {(permit.status === "active" || permit.status === "approved") && (
           <Button
             variant="outline"
             className="gap-2"

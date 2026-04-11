@@ -27,10 +27,48 @@ export async function GET(req: NextRequest) {
     });
   }
 
+  // Active permits — permits with status 'active' or 'approved'
+  let activePermits: number;
+  if (user.role === "contractor_admin" || user.role === "contractor_user") {
+    activePermits = await prisma.permit.count({
+      where: {
+        contractorId: user.organizationId ?? "",
+        status: { in: ["active", "approved"] },
+      },
+    });
+  } else {
+    activePermits = await prisma.permit.count({
+      where: {
+        status: { in: ["active", "approved"] },
+      },
+    });
+  }
+
+  // Violations this month
+  const now = new Date();
+  const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+  const endOfMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59, 999);
+
+  let monthlyViolations: number;
+  if (user.role === "contractor_admin" || user.role === "contractor_user") {
+    monthlyViolations = await prisma.violation.count({
+      where: {
+        contractorId: user.organizationId ?? "",
+        createdAt: { gte: startOfMonth, lte: endOfMonth },
+      },
+    });
+  } else {
+    monthlyViolations = await prisma.violation.count({
+      where: {
+        createdAt: { gte: startOfMonth, lte: endOfMonth },
+      },
+    });
+  }
+
   return NextResponse.json({
     totalContractors,
-    activePermits: 0,
+    activePermits,
     pendingApprovals,
-    monthlyViolations: 0,
+    monthlyViolations,
   });
 }

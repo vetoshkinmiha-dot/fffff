@@ -23,10 +23,13 @@ import {
 } from "@/components/ui/table";
 
 const statusConfig: Record<string, { variant: "outline" | "default" | "secondary"; label: string }> = {
-  open: { variant: "outline", label: "Открыт" },
+  draft: { variant: "secondary", label: "Черновик" },
+  pending_approval: { variant: "outline", label: "На согласовании" },
+  approved: { variant: "default", label: "Согласован" },
+  active: { variant: "outline", label: "Открыт" },
   closed: { variant: "secondary", label: "Закрыт" },
   early_closed: { variant: "default", label: "Закрыт досрочно" },
-  draft: { variant: "secondary", label: "Черновик" },
+  expired: { variant: "secondary", label: "Истёк" },
 };
 
 const categoryLabels: Record<string, string> = {
@@ -135,9 +138,11 @@ export default function PermitsPage() {
           </SelectTrigger>
           <SelectContent>
             <SelectItem value="all">Все статусы</SelectItem>
-            <SelectItem value="open">Открытые</SelectItem>
+            <SelectItem value="active">Открытые</SelectItem>
             <SelectItem value="closed">Закрытые</SelectItem>
             <SelectItem value="early_closed">Закрыты досрочно</SelectItem>
+            <SelectItem value="draft">Черновики</SelectItem>
+            <SelectItem value="pending_approval">На согласовании</SelectItem>
           </SelectContent>
         </Select>
       </div>
