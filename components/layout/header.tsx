@@ -90,12 +90,12 @@ export default function Header() {
       <div className="flex items-center gap-4">
         <DropdownMenu>
           <DropdownMenuTrigger>
-            <button className="relative inline-flex items-center justify-center h-9 w-9 rounded-md text-zinc-500 hover:bg-zinc-100 hover:text-zinc-700 transition-colors">
+            <span className="relative inline-flex items-center justify-center h-9 w-9 rounded-md text-zinc-500 hover:bg-zinc-100 hover:text-zinc-700 transition-colors cursor-pointer">
               <Bell className="h-5 w-5" />
               {unreadCount > 0 && (
                 <span className="absolute -top-0.5 -right-0.5 h-2.5 w-2.5 rounded-full bg-red-500 ring-2 ring-white" />
               )}
-            </button>
+            </span>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end" className="w-72">
             <div className="px-3 py-2 border-b border-zinc-100">
@@ -126,7 +126,7 @@ export default function Header() {
         </DropdownMenu>
         <DropdownMenu>
           <DropdownMenuTrigger>
-            <div className="flex items-center gap-3 pl-4 border-l border-zinc-200 hover:opacity-80 transition-opacity cursor-pointer">
+            <span className="flex items-center gap-3 pl-4 border-l border-zinc-200 hover:opacity-80 transition-opacity cursor-pointer">
               <div className="flex h-8 w-8 items-center justify-center rounded-full bg-blue-100 text-blue-700 text-xs font-semibold">
                 {initials}
               </div>
@@ -145,7 +145,7 @@ export default function Header() {
                   </>
                 )}
               </div>
-            </div>
+            </span>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end" className="w-56">
             {user && (
