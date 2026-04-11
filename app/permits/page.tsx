@@ -153,13 +153,13 @@ export default function PermitsPage() {
             <TableRow>
               <TableHead className="font-medium">Номер наряда</TableHead>
               <TableHead className="font-medium">Категория</TableHead>
-              <TableHead className="font-medium">Подрядчик</TableHead>
-              <TableHead className="font-medium">Дата открытия</TableHead>
-              <TableHead className="font-medium">Срок действия</TableHead>
-              <TableHead className="font-medium">Участок</TableHead>
-              <TableHead className="font-medium">Ответственный</TableHead>
+              <TableHead className="font-medium max-w-[180px]">Подрядчик</TableHead>
+              <TableHead className="font-medium whitespace-nowrap">Дата открытия</TableHead>
+              <TableHead className="font-medium whitespace-nowrap">Срок действия</TableHead>
+              <TableHead className="font-medium max-w-[160px]">Участок</TableHead>
+              <TableHead className="font-medium max-w-[140px]">Ответственный</TableHead>
               <TableHead className="font-medium">Статус</TableHead>
-              <TableHead className="text-right font-medium">Действия</TableHead>
+              <TableHead className="text-right font-medium w-[100px]">Действия</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -178,20 +178,20 @@ export default function PermitsPage() {
             ) : (
               permits.map((permit) => (
                 <TableRow key={permit.id}>
-                  <TableCell className="font-mono text-xs text-zinc-700">
+                  <TableCell className="font-mono text-xs text-zinc-700 whitespace-nowrap">
                     {permit.permitNumber}
                   </TableCell>
-                  <TableCell>{categoryLabels[permit.category] ?? permit.category}</TableCell>
-                  <TableCell className="text-zinc-900">
+                  <TableCell className="whitespace-nowrap">{categoryLabels[permit.category] ?? permit.category}</TableCell>
+                  <TableCell className="max-w-[180px] truncate text-zinc-900">
                     {permit.contractor?.name ?? "—"}
                   </TableCell>
-                  <TableCell className="text-zinc-600">
+                  <TableCell className="text-zinc-600 whitespace-nowrap">
                     {formatDate(permit.openDate)}
                   </TableCell>
-                  <TableCell className="text-zinc-600">
+                  <TableCell className="text-zinc-600 whitespace-nowrap">
                     {formatDate(permit.expiryDate)}
                   </TableCell>
-                  <TableCell className="max-w-[200px]">
+                  <TableCell className="max-w-[160px]">
                     <span className="text-sm text-zinc-600 line-clamp-2" title={permit.workSite}>
                       {permit.workSite}
                     </span>
@@ -206,10 +206,11 @@ export default function PermitsPage() {
                       {statusConfig[permit.status]?.label ?? permit.status}
                     </Badge>
                   </TableCell>
-                  <TableCell className="text-right whitespace-nowrap">
+                  <TableCell className="text-right whitespace-nowrap pr-4">
                     <Link href={`/permits/${permit.id}`}>
-                      <Button variant="ghost" size="icon-xs">
-                        <Eye className="h-4 w-4" />
+                      <Button variant="ghost" size="sm">
+                        <Eye className="size-4 mr-1" />
+                        Подробнее
                       </Button>
                     </Link>
                   </TableCell>
