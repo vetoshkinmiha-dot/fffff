@@ -7,384 +7,455 @@ datasource db {
   provider = "sqlite"
 }
 
-// ─── Enums ─────────────────────────────────────────────────────
+// ════════════════════════════════════════════════════════════════
+// ENUMS
+// ════════════════════════════════════════════════════════════════
 
+/// Роль пользователя в системе
 enum UserRole {
-  admin
-  factory_hse
-  factory_hr
-  factory_curator
-  contractor_admin
-  contractor_user
-  security
-  permit_bureau
+  admin            /// Администратор завода — полный доступ
+  factory_hse      /// Охрана труда завода
+  factory_hr       /// Отдел кадров завода
+  factory_curator  /// Куратор договора завода
+  contractor_admin /// Администратор подрядной организации
+  contractor_user  /// Сотрудник подрядной организации
+  security         /// Служба безопасности
+  permit_bureau    /// Бюро пропусков
 }
 
+/// Департамент согласования
 enum ApprovalDepartment {
-  security
-  hr
-  safety
-  safety_training
-  permit_bureau
+  security        /// Служба безопасности (допуск на территорию)
+  hr              /// Отдел кадров (если ранее работал на заводе)
+  safety          /// Охрана труда (допуск к работам)
+  safety_training /// Охрана труда (вводный инструктаж)
+  permit_bureau   /// Бюро пропусков (выдача пропуска)
 }
 
+/// Статус подрядной организации
 enum OrgStatus {
-  pending
-  active
-  blocked
+  pending /// На проверке
+  active  /// Активна
+  blocked /// Заблокирована
 }
 
+/// Статус документа сотрудника
 enum DocStatus {
-  valid
-  expiring
-  expired
+  valid    /// Действителен
+  expiring /// Истекает (менее 30 дней)
+  expired  /// Истёк
 }
 
+/// Статус согласования
 enum ApprovalStatus {
-  pending
-  approved
-  rejected
+  pending  /// Ожидает решения
+  approved /// Одобрено
+  rejected /// Отклонено
 }
 
-// ─── Users & Auth ──────────────────────────────────────────────
-
-model User {
-  id             String    @id @default(uuid())
-  email          String    @unique
-  passwordHash   String    @map("password_hash")
-  fullName       String    @map("full_name")
-  role           UserRole
-  organizationId String?   @map("organization_id")
-  department     ApprovalDepartment?
-  isActive       Boolean   @default(true) @map("is_active")
-  mustChangePwd  Boolean   @default(true) @map("must_change_pwd")
-  createdAt      DateTime  @default(now()) @map("created_at")
-  updatedAt      DateTime  @updatedAt @map("updated_at")
-
-  organization   Organization? @relation(fields: [organizationId], references: [id])
-  createdViolations       Violation[]       @relation("ViolationCreator")
-  createdTemplates        ViolationTemplate[] @relation("TemplateCreator")
-  createdChecklists       Checklist[]       @relation("ChecklistCreator")
-  createdRegDocuments     RegDocument[]     @relation("RegDocCreator")
-  notificationSubscriptions NotificationSubscription[] @relation("NotificationSubscriber")
-
-  @@map("user")
-}
-
-// ─── Organizations ─────────────────────────────────────────────
-
-model Organization {
-  id                String     @id @default(uuid())
-  sequentialNumber  Int        @unique @default(0) @map("sequential_number")
-  name              String
-  inn               String     @unique
-  kpp               String?
-  legalAddress      String     @map("legal_address")
-  contactPersonName String?    @map("contact_person_name")
-  contactPhone      String?    @map("contact_phone")
-  contactEmail      String?    @map("contact_email")
-  status            OrgStatus  @default(pending)
-  createdAt         DateTime   @default(now()) @map("created_at")
-  updatedAt         DateTime   @updatedAt @map("updated_at")
-
-  employees         Employee[]
-  users             User[]
-  permits           Permit[]
-  violations        Violation[]
-  checklists        Checklist[]
-
-  @@map("organization")
-}
-
-// ─── Employees ─────────────────────────────────────────────────
-
-model Employee {
-  id                  String    @id @default(uuid())
-  organizationId      String    @map("organization_id")
-  fullName            String    @map("full_name")
-  position            String
-  photoUrl            String?   @map("photo_url")
-  passportSeries      String    @map("passport_series")
-  passportNumber      String    @map("passport_number")
-  passportIssuedBy    String?   @map("passport_issued_by")
-  passportIssueDate   DateTime? @map("passport_issue_date")
-  previouslyAtPirelli Boolean   @default(false) @map("previously_at_pirelli")
-  createdAt           DateTime  @default(now()) @map("created_at")
-  updatedAt           DateTime  @updatedAt @map("updated_at")
-
-  organization        Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
-  workClasses         EmployeeWorkClass[]
-  documents           EmployeeDocument[]
-  approvals           ApprovalRequest[]
-
-  @@unique([organizationId, passportSeries, passportNumber])
-  @@map("employee")
-}
-
-// ─── Employee Work Classes (relation table for SQLite compat) ──
-
-model EmployeeWorkClass {
-  id           String       @id @default(uuid())
-  employeeId   String       @map("employee_id")
-  workClass    String       @map("work_class")
-  createdAt    DateTime     @default(now()) @map("created_at")
-
-  employee     Employee     @relation(fields: [employeeId], references: [id], onDelete: Cascade)
-
-  @@unique([employeeId, workClass])
-  @@map("employee_work_class")
-}
-
-// ─── Employee Documents ────────────────────────────────────────
-
-model EmployeeDocument {
-  id         String    @id @default(uuid())
-  employeeId String    @map("employee_id")
-  name       String
-  fileUrl    String?   @map("file_url")
-  issueDate  DateTime? @map("issue_date")
-  expiryDate DateTime? @map("expiry_date")
-  status     DocStatus @default(valid)
-  createdAt  DateTime  @default(now()) @map("created_at")
-
-  employee   Employee  @relation(fields: [employeeId], references: [id], onDelete: Cascade)
-
-  @@map("employee_document")
-}
-
-// ─── Approval Requests ─────────────────────────────────────────
-
-model ApprovalRequest {
-  id         String           @id @default(uuid())
-  employeeId String           @map("employee_id")
-  department ApprovalDepartment
-  status     ApprovalStatus   @default(pending)
-  deadline   DateTime
-  comment    String?
-  decidedAt  DateTime?        @map("decided_at")
-  createdAt  DateTime         @default(now()) @map("created_at")
-
-  employee   Employee         @relation(fields: [employeeId], references: [id], onDelete: Cascade)
-
-  @@map("approval_request")
-}
-
-enum EmailLogStatus {
-  SENT
-  FAILED
-  PENDING
-}
-
-model EmailLog {
-  id        String        @id @default(uuid())
-  recipient String
-  subject   String
-  template  String
-  status    EmailLogStatus @default(PENDING)
-  sentAt    DateTime?     @map("sent_at")
-  error     String?
-  createdAt DateTime      @default(now()) @map("created_at")
-
-  @@map("email_log")
-}
-
-// ─── Permits (Наряды-допуски) ───────────────────────────────────
-
+/// Категория работ в наряде-допуске
 enum PermitWorkCategory {
-  hot_work
-  height_work
-  confined_space
-  electrical
-  excavation
-  other
+  hot_work       /// Огневые работы
+  height_work    /// Работы на высоте
+  confined_space /// Замкнутые пространства
+  electrical     /// Электробезопасность
+  excavation     /// Земляные работы
+  other          /// Прочее
 }
 
+/// Статус наряда-допуска
 enum PermitStatus {
-  draft
-  pending_approval
-  approved
-  active
-  early_closed
-  closed
-  expired
+  draft            /// Черновик
+  pending_approval /// На согласовании
+  approved         /// Согласован
+  active           /// Действует
+  early_closed     /// Закрыт досрочно
+  closed           /// Закрыт по истечению срока
+  expired          /// Просрочен
 }
 
-model Permit {
-  id                 String            @id @default(uuid())
-  permitNumber       String            @unique @map("permit_number")
-  category           PermitWorkCategory
-  contractorId       String            @map("contractor_id")
-  workSite           String            @map("work_site")
-  responsiblePerson  String            @map("responsible_person")
-  openDate           DateTime          @map("open_date")
-  expiryDate         DateTime          @map("expiry_date")
-  status             PermitStatus      @default(draft)
-  closeReason        String?           @map("close_reason")
-  closedAt           DateTime?         @map("closed_at")
-  sequentialNumber   Int               @default(0) @map("sequential_number")
-  createdAt          DateTime          @default(now()) @map("created_at")
-  updatedAt          DateTime          @updatedAt @map("updated_at")
-
-  contractor         Organization      @relation(fields: [contractorId], references: [id])
-  approvals          PermitApproval[]
-
-  @@map("permit")
-}
-
-model PermitApproval {
-  id         String           @id @default(uuid())
-  permitId   String           @map("permit_id")
-  department ApprovalDepartment
-  status     ApprovalStatus   @default(pending)
-  deadline   DateTime
-  comment    String?
-  decidedAt  DateTime?        @map("decided_at")
-  createdAt  DateTime         @default(now()) @map("created_at")
-
-  permit     Permit           @relation(fields: [permitId], references: [id], onDelete: Cascade)
-
-  @@map("permit_approval")
-}
-
-// ─── Violations (Акты нарушений) ────────────────────────────────
-
+/// Тяжесть нарушения
 enum ViolationSeverity {
-  low
-  medium
-  high
-  critical
+  low      /// Низкая
+  medium   /// Средняя
+  high     /// Высокая
+  critical /// Критическая
 }
 
+/// Статус нарушения
 enum ViolationStatus {
-  pending
-  resolved
-  escalated
+  pending    /// Ожидает
+  resolved   /// Устранено
+  escalated  /// Эскалировано
 }
 
-model Violation {
-  id                String           @id @default(uuid())
-  violationNumber   String           @unique @map("violation_number")
-  contractorId      String           @map("contractor_id")
-  date              DateTime
-  description       String
-  severity          ViolationSeverity
-  status            ViolationStatus  @default(pending)
-  department        String
-  createdById       String           @map("created_by_id")
-  photoUrl          String?          @map("photo_url")
-  resolvedAt        DateTime?        @map("resolved_at")
-  resolutionNotes   String?          @map("resolution_notes")
-  createdAt         DateTime         @default(now()) @map("created_at")
-  updatedAt         DateTime         @updatedAt @map("updated_at")
-
-  contractor        Organization     @relation(fields: [contractorId], references: [id])
-  createdBy         User             @relation("ViolationCreator", fields: [createdById], references: [id])
-
-  @@map("violation")
-}
-
-model ViolationTemplate {
-  id                String           @id @default(uuid())
-  title             String
-  description       String
-  defaultSeverity   ViolationSeverity @default(medium) @map("default_severity")
-  department        String
-  isActive          Boolean          @default(true) @map("is_active")
-  createdById       String           @map("created_by_id")
-  createdAt         DateTime         @default(now()) @map("created_at")
-
-  createdBy         User             @relation("TemplateCreator", fields: [createdById], references: [id])
-
-  @@map("violation_template")
-}
-
-// ─── Checklists (Чек-листы) ──────────────────────────────────────
-
+/// Статус чек-листа проверки
 enum ChecklistStatus {
-  in_progress
-  passed
-  failed
+  in_progress /// В процессе
+  passed      /// Пройден
+  failed      /// Не пройден
 }
 
-model Checklist {
-  id              String           @id @default(uuid())
-  contractorId    String           @map("contractor_id")
-  inspectorName   String           @map("inspector_name")
-  date            DateTime
-  score           Int?
-  status          ChecklistStatus  @default(in_progress)
-  comments        String?
-  createdById     String           @map("created_by_id")
-  createdAt       DateTime         @default(now()) @map("created_at")
-  updatedAt       DateTime         @updatedAt @map("updated_at")
-
-  contractor      Organization     @relation(fields: [contractorId], references: [id])
-  createdBy       User             @relation("ChecklistCreator", fields: [createdById], references: [id])
-  items           ChecklistItem[]
-
-  @@map("checklist")
-}
-
-model ChecklistItem {
-  id            String         @id @default(uuid())
-  checklistId   String         @map("checklist_id")
-  question      String
-  answer        String         // pass, fail, n/a
-  comment       String?
-  photoUrl      String?        @map("photo_url")
-
-  checklist     Checklist      @relation(fields: [checklistId], references: [id], onDelete: Cascade)
-
-  @@map("checklist_item")
-}
-
-// ─── Regulatory Documents (Нормативные документы) ───────────────
-
+/// Тип файла нормативного документа
 enum FileType {
   pdf
   docx
   xlsx
 }
 
-model RegDocumentSection {
-  id        String           @id @default(uuid())
-  name      String
-  parentId  String?          @map("parent_id")
-  order     Int              @default(0)
-  createdAt DateTime         @default(now()) @map("created_at")
-  updatedAt DateTime         @updatedAt @map("updated_at")
+/// Статус отправки email
+enum EmailLogStatus {
+  SENT    /// Отправлено
+  FAILED  /// Ошибка отправки
+  PENDING /// Ожидает отправки
+}
 
-  parent    RegDocumentSection? @relation("SectionParent", fields: [parentId], references: [id])
+// ════════════════════════════════════════════════════════════════
+// USERS & AUTH — Пользователи системы и авторизация
+// ════════════════════════════════════════════════════════════════
+
+model User {
+  id             String    @id @default(uuid())
+  email          String    @unique /// Email для входа
+  passwordHash   String    @map("password_hash") /// bcrypt хеш пароля
+  fullName       String    @map("full_name") /// ФИО сотрудника
+  role           UserRole  /// Роль в системе
+  organizationId String?   @map("organization_id") /// Привязка к подрядчику (для contractor_*)
+  department     ApprovalDepartment? /// Департамент согласования (для security, hr, safety и т.д.)
+  isActive       Boolean   @default(true) @map("is_active") /// Активен ли пользователь
+  mustChangePwd  Boolean   @default(true) @map("must_change_pwd") /// Сменить пароль при первом входе
+  createdAt      DateTime  @default(now()) @map("created_at")
+  updatedAt      DateTime  @updatedAt @map("updated_at")
+
+  organization   Organization? @relation(fields: [organizationId], references: [id])
+  createdViolations         Violation[]         @relation("ViolationCreator")
+  createdTemplates          ViolationTemplate[] @relation("TemplateCreator")
+  createdChecklists         Checklist[]         @relation("ChecklistCreator")
+  createdRegDocuments       RegDocument[]       @relation("RegDocCreator")
+  notificationSubscriptions NotificationSubscription[] @relation("NotificationSubscriber")
+
+  @@index([role])
+  @@index([organizationId])
+  @@index([department])
+  @@map("user")
+}
+
+// ════════════════════════════════════════════════════════════════
+// ORGANIZATIONS — Подрядные организации
+// ════════════════════════════════════════════════════════════════
+
+model Organization {
+  id                String     @id @default(uuid())
+  sequentialNumber  Int        @unique @default(0) @map("sequential_number") /// Порядковый номер подрядчика (для нумерации нарядов)
+  name              String    /// Наименование организации
+  inn               String    @unique /// ИНН (10 или 12 цифр)
+  kpp               String?   /// КПП
+  legalAddress      String    @map("legal_address") /// Юридический адрес
+  contactPersonName String?   @map("contact_person_name") /// Контактное лицо
+  contactPhone      String?   @map("contact_phone")
+  contactEmail      String?   @map("contact_email")
+  status            OrgStatus @default(pending) /// Статус регистрации
+  createdAt         DateTime  @default(now()) @map("created_at")
+  updatedAt         DateTime  @updatedAt @map("updated_at")
+
+  employees  Employee[]
+  users      User[]
+  permits    Permit[]
+  violations Violation[]
+  checklists Checklist[]
+
+  @@index([status])
+  @@index([sequentialNumber])
+  @@map("organization")
+}
+
+// ════════════════════════════════════════════════════════════════
+// EMPLOYEES — Сотрудники подрядчиков
+// ════════════════════════════════════════════════════════════════
+
+model Employee {
+  id                  String    @id @default(uuid())
+  organizationId      String    @map("organization_id") /// Подрядчик, в котором работает
+  fullName            String    @map("full_name") /// ФИО сотрудника
+  position            String   /// Должность
+  photoUrl            String?   @map("photo_url") /// URL фото
+  passportSeries      String    @map("passport_series") /// Серия паспорта (4 цифры)
+  passportNumber      String    @map("passport_number") /// Номер паспорта (6 цифр)
+  passportIssuedBy    String?   @map("passport_issued_by") /// Кем выдан
+  passportIssueDate   DateTime? @map("passport_issue_date") /// Дата выдачи
+  previouslyAtPirelli Boolean   @default(false) @map("previously_at_pirelli") /// Работал ли ранее на заводе (нужно согласование HR)
+  createdAt           DateTime  @default(now()) @map("created_at")
+  updatedAt           DateTime  @updatedAt @map("updated_at")
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  workClasses  EmployeeWorkClass[]
+  documents    EmployeeDocument[]
+  approvals    ApprovalRequest[]
+
+  @@unique([organizationId, passportSeries, passportNumber]) /// Уникальность паспорта в рамках организации
+  @@index([organizationId])
+  @@map("employee")
+}
+
+/// Классы работ сотрудника (множественная связь через relation table для SQLite)
+model EmployeeWorkClass {
+  id         String   @id @default(uuid())
+  employeeId String   @map("employee_id") /// ID сотрудника
+  workClass  String   @map("work_class") /// Название класса работы (hot_work, height_work, и т.д.)
+  createdAt  DateTime @default(now()) @map("created_at")
+
+  employee Employee @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+
+  @@unique([employeeId, workClass])
+  @@map("employee_work_class")
+}
+
+/// Документы сотрудника (допуски, сертификаты, удостоверения)
+model EmployeeDocument {
+  id         String    @id @default(uuid())
+  employeeId String    @map("employee_id")
+  name       String   /// Наименование документа (напр. «Удостоверение по ОТ»)
+  fileUrl    String?   @map("file_url") /// URL загруженного файла
+  issueDate  DateTime? @map("issue_date") /// Дата выдачи
+  expiryDate DateTime? @map("expiry_date") /// Дата истечения срока действия
+  status     DocStatus @default(valid) /// valid → expiring → expired (автоматически через cron)
+  createdAt  DateTime  @default(now()) @map("created_at")
+
+  employee Employee @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+
+  @@index([status])
+  @@index([expiryDate])
+  @@map("employee_document")
+}
+
+// ════════════════════════════════════════════════════════════════
+// APPROVALS — Согласование сотрудников
+// ════════════════════════════════════════════════════════════════
+
+/// Запрос на согласование сотрудника (для каждого департамента)
+model ApprovalRequest {
+  id         String             @id @default(uuid())
+  employeeId String             @map("employee_id") /// Сотрудник
+  department ApprovalDepartment /// Департамент согласования
+  status     ApprovalStatus     @default(pending) /// Текущий статус
+  deadline   DateTime           /// Крайний срок согласования
+  comment    String?            /// Комментарий согласующего
+  decidedAt  DateTime?          @map("decided_at") /// Дата принятия решения
+  createdAt  DateTime           @default(now()) @map("created_at")
+
+  employee Employee @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+
+  @@index([employeeId])
+  @@index([department, status])
+  @@map("approval_request")
+}
+
+// ════════════════════════════════════════════════════════════════
+// EMAIL LOG — Лог отправки уведомлений
+// ════════════════════════════════════════════════════════════════
+
+model EmailLog {
+  id        String         @id @default(uuid())
+  recipient String        /// Email получателя
+  subject   String        /// Тема письма
+  template  String        /// Шаблон письма
+  status    EmailLogStatus @default(PENDING)
+  sentAt    DateTime?      @map("sent_at")
+  error     String?        /// Текст ошибки при FAILED
+  createdAt DateTime       @default(now()) @map("created_at")
+
+  @@index([recipient])
+  @@index([status])
+  @@map("email_log")
+}
+
+// ════════════════════════════════════════════════════════════════
+// PERMITS — Наряды-допуски
+// ════════════════════════════════════════════════════════════════
+
+model Permit {
+  id                String             @id @default(uuid())
+  permitNumber      String             @unique @map("permit_number") /// Сквозной номер: {category}-{contractorSeq}-{seq}
+  category          PermitWorkCategory /// Категория работ
+  contractorId      String             @map("contractor_id") /// Подрядчик
+  workSite          String             @map("work_site") /// Участок работ
+  responsiblePerson String             @map("responsible_person") /// Ответственное лицо
+  openDate          DateTime           @map("open_date") /// Дата открытия
+  expiryDate        DateTime           @map("expiry_date") /// Дата окончания срока
+  status            PermitStatus       @default(draft)
+  closeReason       String?            @map("close_reason") /// Причина досрочного закрытия
+  closedAt          DateTime?          @map("closed_at") /// Дата закрытия
+  sequentialNumber  Int                @default(0) @map("sequential_number") /// Порядковый номер у подрядчика
+  createdAt         DateTime           @default(now()) @map("created_at")
+  updatedAt         DateTime           @updatedAt @map("updated_at")
+
+  contractor Organization      @relation(fields: [contractorId], references: [id])
+  approvals  PermitApproval[]
+
+  @@index([contractorId])
+  @@index([status])
+  @@index([expiryDate])
+  @@map("permit")
+}
+
+/// Согласования наряда-допуска (аналогично ApprovalRequest)
+model PermitApproval {
+  id         String             @id @default(uuid())
+  permitId   String             @map("permit_id")
+  department ApprovalDepartment /// Департамент
+  status     ApprovalStatus     @default(pending)
+  deadline   DateTime           /// Крайний срок
+  comment    String?            /// Комментарий
+  decidedAt  DateTime?          @map("decided_at")
+  createdAt  DateTime           @default(now()) @map("created_at")
+
+  permit Permit @relation(fields: [permitId], references: [id], onDelete: Cascade)
+
+  @@index([permitId])
+  @@index([department, status])
+  @@map("permit_approval")
+}
+
+// ════════════════════════════════════════════════════════════════
+// VIOLATIONS — Акты о нарушениях
+// ════════════════════════════════════════════════════════════════
+
+model Violation {
+  id                String            @id @default(uuid())
+  violationNumber   String            @unique @map("violation_number") /// Сквозной номер: VIO-XXXXX
+  contractorId      String            @map("contractor_id") /// Подрядчик-нарушитель
+  date              DateTime          /// Дата фиксации
+  description       String           /// Описание нарушения
+  severity          ViolationSeverity /// Тяжесть: low/medium/high/critical
+  status            ViolationStatus   @default(pending)
+  department        String           /// Департамент на кого оформлен (hse, curator, procurement)
+  createdById       String            @map("created_by_id") /// Кто зафиксировал
+  photoUrl          String?           @map("photo_url") /// Фото нарушения
+  resolvedAt        DateTime?         @map("resolved_at") /// Дата устранения
+  resolutionNotes   String?           @map("resolution_notes") /// Примечания по устранению
+  createdAt         DateTime          @default(now()) @map("created_at")
+  updatedAt         DateTime          @updatedAt @map("updated_at")
+
+  contractor Organization @relation(fields: [contractorId], references: [id])
+  createdBy  User         @relation("ViolationCreator", fields: [createdById], references: [id])
+
+  @@index([contractorId])
+  @@index([status])
+  @@index([severity])
+  @@index([date])
+  @@map("violation")
+}
+
+/// Шаблоны актов о нарушениях (повторяющиеся типы нарушений)
+model ViolationTemplate {
+  id              String              @id @default(uuid())
+  title           String             /// Название шаблона
+  description     String             /// Описание
+  defaultSeverity ViolationSeverity  @default(medium) @map("default_severity")
+  department      String             /// Департамент по умолчанию
+  isActive        Boolean             @default(true) @map("is_active")
+  createdById     String              @map("created_by_id")
+  createdAt       DateTime            @default(now()) @map("created_at")
+
+  createdBy User @relation("TemplateCreator", fields: [createdById], references: [id])
+
+  @@index([isActive])
+  @@map("violation_template")
+}
+
+// ════════════════════════════════════════════════════════════════
+// CHECKLISTS — Чек-листы проверки подрядчиков
+// ════════════════════════════════════════════════════════════════
+
+model Checklist {
+  id            String            @id @default(uuid())
+  contractorId  String            @map("contractor_id") /// Подрядчик
+  inspectorName String            @map("inspector_name") /// ФИО инспектора
+  date          DateTime          /// Дата проверки
+  score         Int?             /// Результат в процентах (0-100)
+  status        ChecklistStatus   @default(in_progress) /// in_progress → passed/failed
+  comments      String?           /// Общие замечания
+  createdById   String            @map("created_by_id") /// Кто проводил проверку
+  createdAt     DateTime          @default(now()) @map("created_at")
+  updatedAt     DateTime          @updatedAt @map("updated_at")
+
+  contractor Organization      @relation(fields: [contractorId], references: [id])
+  createdBy  User              @relation("ChecklistCreator", fields: [createdById], references: [id])
+  items      ChecklistItem[]
+
+  @@index([contractorId])
+  @@index([date])
+  @@index([status])
+  @@map("checklist")
+}
+
+/// Отдельный пункт чек-листа проверки
+model ChecklistItem {
+  id          String   @id @default(uuid())
+  checklistId String   @map("checklist_id")
+  question    String  /// Вопрос/пункт проверки
+  answer      String  /// Результат: "pass" (пройден), "fail" (не пройден), "n/a" (не применимо)
+  comment     String?  /// Комментарий инспектора
+  photoUrl    String?  @map("photo_url") /// Фото к пункту
+
+  checklist Checklist @relation(fields: [checklistId], references: [id], onDelete: Cascade)
+
+  @@index([checklistId])
+  @@map("checklist_item")
+}
+
+// ════════════════════════════════════════════════════════════════
+// REGULATORY DOCUMENTS — База нормативных документов (ВШЗ)
+// ════════════════════════════════════════════════════════════════
+
+/// Раздел нормативных документов (иерархическая структура)
+model RegDocumentSection {
+  id        String               @id @default(uuid())
+  name      String              /// Название раздела
+  parentId  String?              @map("parent_id") /// Родительский раздел (для вложенности)
+  order     Int                  @default(0) /// Порядок сортировки
+  createdAt DateTime             @default(now()) @map("created_at")
+  updatedAt DateTime             @updatedAt @map("updated_at")
+
+  parent    RegDocumentSection?  @relation("SectionParent", fields: [parentId], references: [id])
   children  RegDocumentSection[] @relation("SectionParent")
   documents RegDocument[]
 
+  @@index([parentId])
+  @@index([order])
   @@map("reg_document_section")
 }
 
 model RegDocument {
-  id        String    @id @default(uuid())
-  title     String
-  sectionId String    @map("section_id")
-  fileUrl   String    @map("file_url")
-  fileType  FileType
-  version   Int       @default(1)
-  createdById String  @map("created_by_id")
-  createdAt DateTime  @default(now()) @map("created_at")
-  updatedAt DateTime  @updatedAt @map("updated_at")
+  id          String   @id @default(uuid())
+  title       String  /// Наименование документа
+  sectionId   String   @map("section_id") /// Раздел
+  fileUrl     String   @map("file_url") /// URL файла
+  fileType    FileType /// Тип файла: pdf/docx/xlsx
+  version     Int      @default(1) /// Версия документа
+  createdById String   @map("created_by_id") /// Кто добавил (только HSE)
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
 
   section   RegDocumentSection @relation(fields: [sectionId], references: [id])
   createdBy User               @relation("RegDocCreator", fields: [createdById], references: [id])
 
+  @@index([sectionId])
+  @@index([fileType])
   @@map("reg_document")
 }
+
+// ════════════════════════════════════════════════════════════════
+// NOTIFICATIONS — Подписки на уведомления
+// ════════════════════════════════════════════════════════════════
 
 model NotificationSubscription {
   id            String   @id @default(uuid())
   userId        String   @map("user_id")
-  emailOnUpdate Boolean  @default(true) @map("email_on_update")
+  emailOnUpdate Boolean  @default(true) @map("email_on_update") /// Подписка на email при обновлениях
   createdAt     DateTime @default(now()) @map("created_at")
 
-  user          User     @relation("NotificationSubscriber", fields: [userId], references: [id])
+  user User @relation("NotificationSubscriber", fields: [userId], references: [id])
 
   @@unique([userId])
   @@map("notification_subscription")
