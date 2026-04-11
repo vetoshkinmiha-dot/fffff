@@ -35,5 +35,5 @@ export async function GET(req: NextRequest) {
     orderBy: { deadline: "asc" },
   });
 
-  return NextResponse.json(approvals);
+  return NextResponse.json({ data: approvals });
 }

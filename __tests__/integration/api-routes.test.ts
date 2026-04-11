@@ -39,8 +39,10 @@ const mockPrisma = vi.hoisted(() => ({
     createMany: vi.fn().mockResolvedValue({ count: 0 }),
     createManyAndReturn: vi.fn().mockResolvedValue([]),
     findUnique: vi.fn(),
+    findFirst: vi.fn().mockResolvedValue(null),
     findMany: vi.fn().mockResolvedValue([]),
     update: vi.fn(),
+    updateMany: vi.fn().mockResolvedValue({ count: 0 }),
     delete: vi.fn(),
   },
 }))
@@ -632,6 +634,13 @@ describe('Approvals API Routes', () => {
         department: 'hr',
         employeeId: 'emp-1',
         deadline: new Date('2024-02-01'),
+      } as any)
+      // Mock previous department approval (sequential check)
+      mockPrisma.approvalRequest.findFirst.mockResolvedValueOnce({
+        id: 'appr-prev',
+        status: 'approved',
+        department: 'security',
+        employeeId: 'emp-1',
       } as any)
       mockPrisma.approvalRequest.update.mockResolvedValueOnce({
         id: 'appr-1',

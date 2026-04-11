@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { authMiddleware } from "@/lib/api-middleware";
-import { resolveViolationSchema } from "@/lib/validations";
 
 export async function PATCH(
   req: NextRequest,

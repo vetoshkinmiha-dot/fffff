@@ -87,34 +87,13 @@ function NewChecklistForm() {
 
     setSubmitting(true);
     try {
-      // Upload photos first
-      const itemsWithPhotos = await Promise.all(
-        items.map(async (item) => {
-          let photoUrl: string | undefined;
-          if (item.photoFile) {
-            try {
-              const formData = new FormData();
-              formData.append("file", item.photoFile);
-              const res = await fetch("/api/upload", {
-                method: "POST",
-                body: formData,
-              });
-              if (res.ok) {
-                const data = await res.json();
-                photoUrl = data.url;
-              }
-            } catch {
-              // Photo upload is non-critical, continue without it
-            }
-          }
-          return {
-            question: item.question.trim(),
-            answer: item.answer as "pass" | "fail" | "n/a",
-            comment: item.comment.trim() || undefined,
-            photoUrl,
-          };
-        })
-      );
+      // Build items list (photo upload deferred until backend endpoint exists)
+      const itemsWithPhotos = items.map((item) => ({
+        question: item.question.trim(),
+        answer: item.answer as "pass" | "fail" | "n/a",
+        comment: item.comment.trim() || undefined,
+        photoUrl: undefined,
+      }));
 
       const res = await fetch("/api/checklists", {
         method: "POST",
