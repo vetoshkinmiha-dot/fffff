@@ -13,14 +13,10 @@ datasource db {
 
 /// Роль пользователя в системе
 enum UserRole {
-  admin            /// Администратор завода — полный доступ
-  factory_hse      /// Охрана труда завода
-  factory_hr       /// Отдел кадров завода
-  factory_curator  /// Куратор договора завода
-  contractor_admin /// Администратор подрядной организации
-  contractor_user  /// Сотрудник подрядной организации
-  security         /// Служба безопасности
-  permit_bureau    /// Бюро пропусков
+  admin                 /// Администратор — полный доступ
+  employee              /// Сотрудник — только просмотр
+  contractor_employee   /// Сотрудник подрядчика — свои данные, наряды, жалобы, согласования
+  department_approver   /// Согласующий департамента — просмотр и согласование заявок своего департамента
 }
 
 /// Департамент согласования
@@ -121,7 +117,7 @@ model User {
   fullName       String    @map("full_name") /// ФИО сотрудника
   role           UserRole  /// Роль в системе
   organizationId String?   @map("organization_id") /// Привязка к подрядчику (для contractor_*)
-  department     ApprovalDepartment? /// Департамент согласования (для security, hr, safety и т.д.)
+  department     String? /// Департамент (для department_approver)
   isActive       Boolean   @default(true) @map("is_active") /// Активен ли пользователь
   mustChangePwd  Boolean   @default(true) @map("must_change_pwd") /// Сменить пароль при первом входе
   createdAt      DateTime  @default(now()) @map("created_at")

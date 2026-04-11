@@ -4,7 +4,7 @@ import { authMiddleware } from "@/lib/api-middleware";
 import { updateViolationSchema } from "@/lib/validations";
 
 function isAuthorizedForViolations(role: string): boolean {
-  return ["admin", "factory_hse", "factory_hr", "factory_curator", "security"].includes(role);
+  return role === "admin";
 }
 
 export async function GET(
@@ -29,10 +29,7 @@ export async function GET(
   }
 
   // Contractor scoping
-  if (
-    authResult.user.role === "contractor_admin" ||
-    authResult.user.role === "contractor_user"
-  ) {
+  if (authResult.user.role === "contractor_employee") {
     if (violation.contractorId !== authResult.user.organizationId) {
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }
@@ -85,8 +82,8 @@ export async function DELETE(
   const authResult = await authMiddleware(req);
   if (authResult instanceof NextResponse) return authResult;
 
-  // Only factory roles can delete
-  if (!["admin", "factory_hse"].includes(authResult.user.role)) {
+  // Only admin can delete
+  if (authResult.user.role !== "admin") {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
 

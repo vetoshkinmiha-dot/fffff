@@ -31,8 +31,8 @@ export async function POST(req: NextRequest) {
   const authResult = await authMiddleware(req);
   if (authResult instanceof NextResponse) return authResult;
 
-  // Only factory HSE can upload
-  if (!["admin", "factory_hse"].includes(authResult.user.role)) {
+  // Only admin can upload
+  if (authResult.user.role !== "admin") {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
 

@@ -170,7 +170,7 @@ export async function PATCH(
       where: {
         isActive: true,
         organizationId: updated.employee.organizationId,
-        role: { in: ["contractor_admin", "contractor_user"] },
+        role: "contractor_employee",
       },
     });
 

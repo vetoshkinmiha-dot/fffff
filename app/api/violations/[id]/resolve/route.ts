@@ -9,8 +9,8 @@ export async function PATCH(
   const authResult = await authMiddleware(req);
   if (authResult instanceof NextResponse) return authResult;
 
-  // Only factory roles can resolve violations
-  if (!["admin", "factory_hse", "factory_hr", "factory_curator", "security"].includes(authResult.user.role)) {
+  // Only admin can resolve violations
+  if (authResult.user.role !== "admin") {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
 

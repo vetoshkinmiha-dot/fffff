@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { authMiddleware, requireFactoryRole } from "@/lib/api-middleware";
+import { authMiddleware, requireAdmin } from "@/lib/api-middleware";
 import { createEmployeeSchema, updateEmployeeSchema } from "@/lib/validations";
 
 export async function GET(
@@ -32,11 +32,8 @@ export async function GET(
     workClasses: employee.workClasses.map((wc) => wc.workClass),
   };
 
-  // Contractor users can only see their own org's employees
-  if (
-    authResult.user.role === "contractor_admin" ||
-    authResult.user.role === "contractor_user"
-  ) {
+  // Contractor employees can only see their own org's employees
+  if (authResult.user.role === "contractor_employee") {
     if (employee.organizationId !== authResult.user.organizationId) {
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }
@@ -54,16 +51,16 @@ export async function POST(
 
   const { id: orgId } = await params;
 
-  // Only contractor_admin (own org) or factory roles
-  const isContractorAdmin = authResult.user.role === "contractor_admin";
+  // Only contractor_employee (own org) or admin
+  const isContractorEmployee = authResult.user.role === "contractor_employee";
 
-  if (isContractorAdmin) {
+  if (isContractorEmployee) {
     if (authResult.user.organizationId !== orgId) {
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }
   } else {
-    const factoryResult = requireFactoryRole(authResult.user);
-    if (factoryResult instanceof NextResponse) return factoryResult;
+    const adminResult = requireAdmin(authResult.user);
+    if (adminResult instanceof NextResponse) return adminResult;
   }
 
   try {
@@ -109,17 +106,12 @@ export async function PATCH(
     return NextResponse.json({ error: "Employee not found" }, { status: 404 });
   }
 
-  // Only contractor_admin can edit their own org's employees
-  if (authResult.user.role === "contractor_admin") {
+  // Only contractor_employee can edit their own org's employees
+  if (authResult.user.role === "contractor_employee") {
     if (employee.organizationId !== authResult.user.organizationId) {
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }
-  } else if (
-    authResult.user.role !== "admin" &&
-    authResult.user.role !== "factory_hse" &&
-    authResult.user.role !== "factory_hr" &&
-    authResult.user.role !== "factory_curator"
-  ) {
+  } else if (authResult.user.role !== "admin") {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
 
@@ -175,16 +167,11 @@ export async function DELETE(
     return NextResponse.json({ error: "Employee not found" }, { status: 404 });
   }
 
-  if (authResult.user.role === "contractor_admin") {
+  if (authResult.user.role === "contractor_employee") {
     if (employee.organizationId !== authResult.user.organizationId) {
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }
-  } else if (
-    authResult.user.role !== "admin" &&
-    authResult.user.role !== "factory_hse" &&
-    authResult.user.role !== "factory_hr" &&
-    authResult.user.role !== "factory_curator"
-  ) {
+  } else if (authResult.user.role !== "admin") {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
 
@@ -192,9 +179,8 @@ export async function DELETE(
   return NextResponse.json({ success: true });
 }
 
-async function requireFactoryRoleFactory(user: { role: string }) {
-  const factoryRoles = ["admin", "factory_hse", "factory_hr", "factory_curator"];
-  if (!factoryRoles.includes(user.role)) {
+async function requireAdminRole(user: { role: string }) {
+  if (user.role !== "admin") {
     return NextResponse.json({ error: "Forbidden: factory access only" }, { status: 403 });
   }
   return true;

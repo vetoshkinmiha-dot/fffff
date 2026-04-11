@@ -34,13 +34,9 @@ const allNavItems: NavItem[] = [
 
 const ROLE_VISIBLE_NAV: Record<string, string[]> = {
   admin: allNavItems.map((n) => n.href),
-  factory_hse: allNavItems.map((n) => n.href),
-  factory_hr: ["/", "/contractors", "/employees", "/approvals", "/documents"],
-  factory_curator: ["/", "/contractors", "/employees", "/permits", "/approvals"],
-  contractor_admin: ["/", "/contractors", "/employees"],
-  contractor_user: ["/", "/employees"],
-  security: ["/", "/contractors", "/employees", "/approvals", "/permits"],
-  permit_bureau: ["/", "/contractors", "/employees", "/approvals"],
+  employee: allNavItems.map((n) => n.href),
+  contractor_employee: ["/", "/contractors", "/employees", "/permits", "/violations", "/checklists", "/approvals"],
+  department_approver: ["/", "/contractors", "/employees", "/permits", "/violations", "/approvals"],
 };
 
 export default function Sidebar() {

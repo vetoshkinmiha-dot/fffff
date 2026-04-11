@@ -18,8 +18,8 @@ import { verifyAccessToken } from '../../lib/auth'
 import {
   authMiddleware,
   requireRole,
-  requireFactoryRole,
-  requireContractorRole,
+  requireAdmin,
+  requireContractorEmployee,
   type AuthenticatedUser,
 } from '../../lib/api-middleware'
 
@@ -39,7 +39,7 @@ describe('Auth Middleware', () => {
   const validPayload = {
     userId: 'user-1',
     email: 'test@example.com',
-    role: 'factory_hse',
+    role: 'employee',
     organizationId: null,
     department: null,
   }
@@ -47,7 +47,7 @@ describe('Auth Middleware', () => {
   const activeUser = {
     id: 'user-1',
     email: 'test@example.com',
-    role: 'factory_hse',
+    role: 'employee',
     organizationId: null,
     department: null,
     isActive: true,
@@ -107,7 +107,7 @@ describe('Auth Middleware', () => {
     if (!(result instanceof NextResponse)) {
       expect(result.user.userId).toBe('user-1')
       expect(result.user.email).toBe('test@example.com')
-      expect(result.user.role).toBe('factory_hse')
+      expect(result.user.role).toBe('employee')
     }
   })
 })
@@ -121,28 +121,28 @@ describe('Role Guards', () => {
     department: null,
   }
 
-  const factoryHseUser: AuthenticatedUser = {
+  const employeeUser: AuthenticatedUser = {
     userId: '2',
-    email: 'hse@test.com',
-    role: 'factory_hse',
+    email: 'employee@test.com',
+    role: 'employee',
     organizationId: null,
     department: null,
   }
 
-  const contractorAdminUser: AuthenticatedUser = {
+  const contractorEmployeeUser: AuthenticatedUser = {
     userId: '3',
     email: 'contractor@test.com',
-    role: 'contractor_admin',
+    role: 'contractor_employee',
     organizationId: 'org-123',
     department: null,
   }
 
-  const securityUser: AuthenticatedUser = {
+  const approverUser: AuthenticatedUser = {
     userId: '4',
-    email: 'security@test.com',
-    role: 'security',
+    email: 'approver@test.com',
+    role: 'department_approver',
     organizationId: null,
-    department: 'security',
+    department: 'safety',
   }
 
   describe('requireRole', () => {
@@ -151,7 +151,7 @@ describe('Role Guards', () => {
     })
 
     it('should reject contractor when admin role is required', () => {
-      const result = requireRole(contractorAdminUser, ['admin'])
+      const result = requireRole(contractorEmployeeUser, ['admin'])
       expect(result).toBeInstanceOf(NextResponse)
       if (result instanceof NextResponse) {
         expect(result.status).toBe(403)
@@ -159,50 +159,54 @@ describe('Role Guards', () => {
     })
 
     it('should allow when user role is in allowed list', () => {
-      expect(requireRole(factoryHseUser, ['admin', 'factory_hse'])).toBe(true)
+      expect(requireRole(employeeUser, ['admin', 'employee'])).toBe(true)
     })
 
     it('should reject when user role is not in allowed list', () => {
-      const result = requireRole(securityUser, ['admin'])
+      const result = requireRole(approverUser, ['admin'])
       expect(result).toBeInstanceOf(NextResponse)
     })
   })
 
-  describe('requireFactoryRole', () => {
+  describe('requireAdmin', () => {
     it('should allow admin', () => {
-      expect(requireFactoryRole(adminUser)).toBe(true)
+      expect(requireAdmin(adminUser)).toBe(true)
     })
 
-    it('should allow factory_hse', () => {
-      expect(requireFactoryRole(factoryHseUser)).toBe(true)
-    })
-
-    it('should reject contractor_admin', () => {
-      const result = requireFactoryRole(contractorAdminUser)
+    it('should reject employee', () => {
+      const result = requireAdmin(employeeUser)
       expect(result).toBeInstanceOf(NextResponse)
       if (result instanceof NextResponse) {
         expect(result.status).toBe(403)
       }
     })
 
-    it('should reject security', () => {
-      const result = requireFactoryRole(securityUser)
+    it('should reject contractor_employee', () => {
+      const result = requireAdmin(contractorEmployeeUser)
+      expect(result).toBeInstanceOf(NextResponse)
+      if (result instanceof NextResponse) {
+        expect(result.status).toBe(403)
+      }
+    })
+
+    it('should reject department_approver', () => {
+      const result = requireAdmin(approverUser)
       expect(result).toBeInstanceOf(NextResponse)
     })
   })
 
-  describe('requireContractorRole', () => {
-    it('should allow contractor_admin', () => {
-      expect(requireContractorRole(contractorAdminUser)).toBe(true)
+  describe('requireContractorEmployee', () => {
+    it('should allow contractor_employee', () => {
+      expect(requireContractorEmployee(contractorEmployeeUser)).toBe(true)
     })
 
-    it('should reject factory_hse', () => {
-      const result = requireContractorRole(factoryHseUser)
+    it('should reject employee', () => {
+      const result = requireContractorEmployee(employeeUser)
       expect(result).toBeInstanceOf(NextResponse)
     })
 
-    it('should reject admin (not a contractor role)', () => {
-      const result = requireContractorRole(adminUser)
+    it('should reject admin (not a contractor employee role)', () => {
+      const result = requireContractorEmployee(adminUser)
       expect(result).toBeInstanceOf(NextResponse)
     })
   })

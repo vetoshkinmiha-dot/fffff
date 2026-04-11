@@ -49,20 +49,23 @@ export function clearAuthCookie(res: Response) {
 
 export const ROLES = {
   admin: "admin",
-  factory_hse: "factory_hse",
-  factory_hr: "factory_hr",
-  factory_curator: "factory_curator",
-  contractor_admin: "contractor_admin",
-  contractor_user: "contractor_user",
-  security: "security",
-  permit_bureau: "permit_bureau",
+  employee: "employee",
+  contractor_employee: "contractor_employee",
+  department_approver: "department_approver",
 } as const;
 
 export type UserRole = (typeof ROLES)[keyof typeof ROLES];
 
-// Roles that can see all organizations (factory-level access)
-const FACTORY_ROLES = [ROLES.admin, ROLES.factory_hse, ROLES.factory_hr, ROLES.factory_curator];
+// Roles that can see all organizations (admin-level access)
+const ADMIN_ROLES = [ROLES.admin];
 
-export function isFactoryRole(role: string): boolean {
-  return FACTORY_ROLES.includes(role as typeof FACTORY_ROLES[number]);
+// Roles that have department-based approval access
+const APPROVER_ROLES = [ROLES.department_approver];
+
+export function isAdminRole(role: string): boolean {
+  return ADMIN_ROLES.includes(role as typeof ADMIN_ROLES[number]);
+}
+
+export function isApproverRole(role: string): boolean {
+  return APPROVER_ROLES.includes(role as typeof APPROVER_ROLES[number]);
 }

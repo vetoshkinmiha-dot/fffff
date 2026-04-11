@@ -10,13 +10,9 @@ const PUBLIC_PREFIXES = ["/_next", "/favicon.ico", "/api/health", "/api/auth/"];
 // Role → allowed route patterns
 const ROLE_ROUTES: Record<string, string[]> = {
   admin: ["/*"],
-  factory_hse: ["/*"],
-  factory_hr: ["/*", "!/documents/sections"],
-  factory_curator: ["/*", "!/documents/sections"],
-  security: ["/contractors/*", "/employees/*", "/approvals", "/approvals/*", "/"],
-  permit_bureau: ["/contractors/*", "/employees/*", "/approvals", "/approvals/*", "/"],
-  contractor_admin: ["/contractors", "/contractors/*", "/employees", "/employees/*", "/approvals", "/approvals/*", "/"],
-  contractor_user: ["/employees/*", "/"],
+  employee: ["/contractors", "/contractors/*", "/employees", "/employees/*", "/permits", "/permits/*", "/violations", "/violations/*", "/checklists", "/checklists/*", "/"],
+  contractor_employee: ["/contractors", "/contractors/*", "/employees", "/employees/*", "/permits", "/permits/*", "/violations", "/violations/*", "/checklists", "/checklists/*", "/approvals", "/approvals/*", "/"],
+  department_approver: ["/contractors", "/contractors/*", "/employees", "/employees/*", "/approvals", "/approvals/*", "/permits", "/permits/*", "/violations", "/violations/*", "/"],
 };
 
 export async function middleware(request: NextRequest) {
@@ -50,7 +46,7 @@ export async function middleware(request: NextRequest) {
   // Check role-based access
   const allowedPatterns = ROLE_ROUTES[payload.role] || [];
 
-  // admin and factory roles get wildcard
+  // admin gets wildcard
   if (allowedPatterns.includes("/*")) {
     // Check exclusions
     const denied = allowedPatterns.filter((p) => p.startsWith("!")).map((p) => p.slice(1));
@@ -60,39 +56,8 @@ export async function middleware(request: NextRequest) {
     return NextResponse.next();
   }
 
-  // Contractor roles: restrict to own organization
-  if (payload.role === "contractor_admin" || payload.role === "contractor_user") {
-    if (!payload.organizationId) {
-      return NextResponse.redirect(new URL("/auth/unauthorized", request.url));
-    }
-
-    // For contractor routes, check if accessing own org
-    // /contractors or /contractors/:id — allow if orgId matches or just listing
-    if (pathname.startsWith("/contractors")) {
-      const parts = pathname.split("/").filter(Boolean);
-      if (parts.length >= 2 && parts[1] !== "new") {
-        const orgId = parts[1];
-        // The orgId in the URL is a UUID — we'll verify on the API side
-        // Here we just allow access to contractor routes
-      }
-    }
-
-    // Check allowed patterns
-    const isAllowed = allowedPatterns.some(
-      (pattern) => pattern.endsWith("/*")
-        ? pathname.startsWith(pattern.replace("/*", ""))
-        : pathname === pattern
-    );
-
-    if (!isAllowed) {
-      return NextResponse.redirect(new URL("/auth/unauthorized", request.url));
-    }
-
-    return NextResponse.next();
-  }
-
-  // Security and permit_bureau: allow specific routes
-  if (payload.role === "security" || payload.role === "permit_bureau") {
+  // employee, contractor_employee, department_approver: check allowed patterns
+  if (allowedPatterns.length > 0) {
     const isAllowed = allowedPatterns.some(
       (pattern) => pattern.endsWith("/*")
         ? pathname.startsWith(pattern.replace("/*", ""))

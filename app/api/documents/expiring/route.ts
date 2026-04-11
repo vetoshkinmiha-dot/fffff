@@ -15,11 +15,8 @@ export async function GET(req: NextRequest) {
   // Contract documents that are expiring or already expired
   const where: any = { expiryDate: { lte: threshold } };
 
-  // Contractor users only see their own org's documents
-  if (
-    authResult.user.role === "contractor_admin" ||
-    authResult.user.role === "contractor_user"
-  ) {
+  // Contractor employees only see their own org's documents
+  if (authResult.user.role === "contractor_employee") {
     where.employee = { organizationId: authResult.user.organizationId };
   }
 

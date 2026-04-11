@@ -4,9 +4,10 @@ import {
   verifyPassword,
   generateAccessToken,
   verifyAccessToken,
-  isFactoryRole,
+  isAdminRole,
+  isApproverRole,
   type JWTPayload,
-  UserRole,
+  type UserRole,
   ROLES,
 } from '../../lib/auth'
 
@@ -50,9 +51,9 @@ describe('Auth Utilities', () => {
     const validPayload: JWTPayload = {
       userId: '550e8400-e29b-41d4-a716-446655440000',
       email: 'test@example.com',
-      role: 'factory_hse',
+      role: 'department_approver',
       organizationId: null,
-      department: null,
+      department: 'safety',
     }
 
     it('should generate and verify a valid token', () => {
@@ -70,14 +71,14 @@ describe('Auth Utilities', () => {
       const payload: JWTPayload = {
         userId: 'test-user-id',
         email: 'user@test.com',
-        role: 'contractor_admin',
+        role: 'contractor_employee',
         organizationId: 'org-123',
         department: null,
       }
       const token = generateAccessToken(payload)
       const decoded = verifyAccessToken(token)!
       expect(decoded.organizationId).toBe('org-123')
-      expect(decoded.role).toBe('contractor_admin')
+      expect(decoded.role).toBe('contractor_employee')
     })
 
     it('should return null for tampered token', () => {
@@ -95,41 +96,43 @@ describe('Auth Utilities', () => {
     })
   })
 
-  describe('isFactoryRole', () => {
+  describe('isAdminRole', () => {
     it('should return true for admin role', () => {
-      expect(isFactoryRole(ROLES.admin)).toBe(true)
+      expect(isAdminRole(ROLES.admin)).toBe(true)
     })
 
-    it('should return true for factory_hse role', () => {
-      expect(isFactoryRole(ROLES.factory_hse)).toBe(true)
+    it('should return false for employee role', () => {
+      expect(isAdminRole(ROLES.employee)).toBe(false)
     })
 
-    it('should return true for factory_hr role', () => {
-      expect(isFactoryRole(ROLES.factory_hr)).toBe(true)
+    it('should return false for contractor_employee role', () => {
+      expect(isAdminRole(ROLES.contractor_employee)).toBe(false)
     })
 
-    it('should return true for factory_curator role', () => {
-      expect(isFactoryRole(ROLES.factory_curator)).toBe(true)
-    })
-
-    it('should return false for contractor_admin role', () => {
-      expect(isFactoryRole(ROLES.contractor_admin)).toBe(false)
-    })
-
-    it('should return false for contractor_user role', () => {
-      expect(isFactoryRole(ROLES.contractor_user)).toBe(false)
-    })
-
-    it('should return false for security role', () => {
-      expect(isFactoryRole(ROLES.security)).toBe(false)
-    })
-
-    it('should return false for permit_bureau role', () => {
-      expect(isFactoryRole(ROLES.permit_bureau)).toBe(false)
+    it('should return false for department_approver role', () => {
+      expect(isAdminRole(ROLES.department_approver)).toBe(false)
     })
 
     it('should return false for unknown role string', () => {
-      expect(isFactoryRole('unknown_role')).toBe(false)
+      expect(isAdminRole('unknown_role')).toBe(false)
+    })
+  })
+
+  describe('isApproverRole', () => {
+    it('should return true for department_approver role', () => {
+      expect(isApproverRole(ROLES.department_approver)).toBe(true)
+    })
+
+    it('should return false for admin role', () => {
+      expect(isApproverRole(ROLES.admin)).toBe(false)
+    })
+
+    it('should return false for employee role', () => {
+      expect(isApproverRole(ROLES.employee)).toBe(false)
+    })
+
+    it('should return false for unknown role string', () => {
+      expect(isApproverRole('unknown_role')).toBe(false)
     })
   })
 })

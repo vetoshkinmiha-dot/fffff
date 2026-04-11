@@ -124,7 +124,7 @@ export default function DocumentsPage() {
     return matchesSearch && matchesSection;
   });
 
-  const isHSE = userRole === "admin" || userRole === "factory_hse";
+  const isHSE = userRole === "admin";
 
   async function handleUpload() {
     if (!uploadFile || !uploadTitle.trim() || !uploadSection) {

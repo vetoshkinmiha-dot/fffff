@@ -96,7 +96,7 @@ export default function ViolationTemplatesPage() {
     ]).then(async ([userRes, tmplRes]) => {
       if (userRes.ok) {
         const userData = await userRes.json();
-        setIsHSE(userData.user?.role === "admin" || userData.user?.role === "factory_hse");
+        setIsHSE(userData.user?.role === "admin");
       }
       if (tmplRes.ok) {
         const data = await tmplRes.json();

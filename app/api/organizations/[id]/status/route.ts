@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { authMiddleware, requireFactoryRole } from "@/lib/api-middleware";
+import { authMiddleware, requireAdmin } from "@/lib/api-middleware";
 import { orgStatusSchema } from "@/lib/validations";
 
 export async function PATCH(
@@ -10,7 +10,7 @@ export async function PATCH(
   const authResult = await authMiddleware(req);
   if (authResult instanceof NextResponse) return authResult;
 
-  const roleResult = requireFactoryRole(authResult.user);
+  const roleResult = requireAdmin(authResult.user);
   if (roleResult instanceof NextResponse) return roleResult;
 
   const { id } = await params;

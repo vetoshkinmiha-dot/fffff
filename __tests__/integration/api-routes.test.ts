@@ -58,7 +58,7 @@ const verifyMock = vi.fn().mockImplementation((token: string) => {
       return { userId: 'user-1', email: 'admin@pirelli.ru', role: 'admin', organizationId: null, department: null }
     }
     if (token === 'contractor-token') {
-      return { userId: 'user-2', email: 'contractor@test.ru', role: 'contractor_admin', organizationId: 'org-1', department: null }
+      return { userId: 'user-2', email: 'contractor@employee.ru', role: 'contractor_employee', organizationId: 'org-1', department: null }
     }
     if (token === 'security-token') {
       return { userId: 'user-3', email: 'security@test.ru', role: 'security', organizationId: null, department: 'security' }
@@ -127,10 +127,10 @@ const ADMIN_MOCK_USER = {
 
 const CONTRACTOR_MOCK_USER = {
   id: 'user-2',
-  email: 'contractor@test.ru',
+  email: 'contractor@employee.ru',
   passwordHash: 'hash',
   fullName: 'Contractor',
-  role: 'contractor_admin',
+  role: 'contractor_employee',
   isActive: true,
   organizationId: 'org-1',
   department: null,
@@ -211,7 +211,7 @@ describe('Auth API Routes', () => {
         email: 'new@test.ru',
         password: 'Password1',
         fullName: 'Test User',
-        role: 'factory_hse',
+        role: 'admin',
       })
       expect(res.status).toBe(401)
     })
@@ -223,7 +223,7 @@ describe('Auth API Routes', () => {
         POST,
         'POST',
         'http://localhost/api/auth/register',
-        { email: 'new@test.ru', password: 'Password1', fullName: 'Test', role: 'factory_hse' },
+        { email: 'new@test.ru', password: 'Password1', fullName: 'Test', role: 'admin' },
         { auth_token: 'contractor-token' },
       )
       expect(res.status).toBe(403)
@@ -425,13 +425,16 @@ describe('Employees API Routes', () => {
       expect(body.organization.name).toBe('ООО Тест')
     })
 
-    it('should return 403 when contractor views other org employee', async () => {
+    it('should return 403 when contractor_employee views other org employee', async () => {
       mockPrisma.user.findUnique.mockResolvedValueOnce(CONTRACTOR_MOCK_USER)
       mockPrisma.employee.findUnique.mockResolvedValueOnce({
         id: 'emp-1',
         fullName: 'Петров П.П.',
         position: 'Инженер',
         organizationId: 'org-2',
+        organization: { id: 'org-2', name: 'Other Org' },
+        documents: [],
+        approvals: [],
         workClasses: [],
       } as any)
 
@@ -444,7 +447,7 @@ describe('Employees API Routes', () => {
   })
 
   describe('POST /api/organizations/:orgId/employees', () => {
-    it('should create employee for own org (contractor_admin)', async () => {
+    it('should create employee for own org (contractor_employee)', async () => {
       mockPrisma.user.findUnique.mockResolvedValueOnce(CONTRACTOR_MOCK_USER)
       mockPrisma.employee.create.mockResolvedValueOnce({
         id: 'emp-1',

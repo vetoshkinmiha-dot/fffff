@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { authMiddleware, requireFactoryRole } from "@/lib/api-middleware";
+import { authMiddleware, requireAdmin } from "@/lib/api-middleware";
 import { createOrgSchema, paginationSchema } from "@/lib/validations";
 
 export async function GET(req: NextRequest) {
@@ -23,7 +23,7 @@ export async function GET(req: NextRequest) {
     where.status = query.status;
   }
 
-  if (authResult.user.role === "contractor_admin" || authResult.user.role === "contractor_user") {
+  if (authResult.user.role === "contractor_employee") {
     where.id = authResult.user.organizationId;
   }
 
@@ -53,7 +53,7 @@ export async function POST(req: NextRequest) {
   const authResult = await authMiddleware(req);
   if (authResult instanceof NextResponse) return authResult;
 
-  const roleResult = requireFactoryRole(authResult.user);
+  const roleResult = requireAdmin(authResult.user);
   if (roleResult instanceof NextResponse) return roleResult;
 
   try {

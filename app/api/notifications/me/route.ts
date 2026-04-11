@@ -46,8 +46,8 @@ export async function GET(req: NextRequest) {
     }
   }
 
-  // Contractor admin: expiring documents in their organization
-  if (user.role === "contractor_admin" && user.organizationId) {
+  // Contractor employee: expiring documents in their organization
+  if (user.role === "contractor_employee" && user.organizationId) {
     const now = new Date();
     const threshold = new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000);
 

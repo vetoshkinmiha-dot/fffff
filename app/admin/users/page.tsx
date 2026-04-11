@@ -34,13 +34,9 @@ import { Textarea } from "@/components/ui/textarea";
 
 const roleLabels: Record<string, string> = {
   admin: "Администратор",
-  factory_hse: "ОТ и ПБ",
-  factory_hr: "Отдел кадров",
-  factory_curator: "Куратор",
-  contractor_admin: "Админ подрядчика",
-  contractor_user: "Сотрудник подрядчика",
-  security: "Служба безопасности",
-  permit_bureau: "Бюро пропусков",
+  employee: "Сотрудник",
+  contractor_employee: "Сотрудник подрядчика",
+  department_approver: "Согласующий",
 };
 
 const departmentLabels: Record<string, string> = {
@@ -83,7 +79,7 @@ export default function AdminUsersPage() {
     email: "",
     password: "",
     fullName: "",
-    role: "contractor_user",
+    role: "contractor_employee",
     organizationId: "",
     department: "",
   });
@@ -134,7 +130,7 @@ export default function AdminUsersPage() {
 
   function openCreateDialog() {
     setEditUser(null);
-    setForm({ email: "", password: "", fullName: "", role: "contractor_user", organizationId: "", department: "" });
+    setForm({ email: "", password: "", fullName: "", role: "contractor_employee", organizationId: "", department: "" });
     setFormErrors({});
     setDialogError("");
     setDialogOpen(true);

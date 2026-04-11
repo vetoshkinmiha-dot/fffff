@@ -23,11 +23,8 @@ export async function GET(req: NextRequest) {
     if (dateTo) where.date.lte = new Date(dateTo);
   }
 
-  // Contractor users only see their own org's checklists
-  if (
-    authResult.user.role === "contractor_admin" ||
-    authResult.user.role === "contractor_user"
-  ) {
+  // Contractor employees only see their own org's checklists
+  if (authResult.user.role === "contractor_employee") {
     where.contractorId = authResult.user.organizationId;
   }
 
@@ -61,8 +58,8 @@ export async function POST(req: NextRequest) {
   const authResult = await authMiddleware(req);
   if (authResult instanceof NextResponse) return authResult;
 
-  // Only factory HSE can create checklists
-  if (!["admin", "factory_hse"].includes(authResult.user.role)) {
+  // Only admin can create checklists
+  if (authResult.user.role !== "admin") {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
 

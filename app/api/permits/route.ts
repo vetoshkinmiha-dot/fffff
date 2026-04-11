@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { authMiddleware, requireFactoryRole } from "@/lib/api-middleware";
+import { authMiddleware, requireAdmin } from "@/lib/api-middleware";
 import { createPermitSchema, paginationSchema } from "@/lib/validations";
 
 const CATEGORY_CODES: Record<string, string> = {
@@ -30,10 +30,9 @@ export async function GET(req: NextRequest) {
     where.contractorId = contractorFilter;
   }
 
-  // Contractor users only see their own org's permits
+  // Contractor employees only see their own org's permits
   if (
-    authResult.user.role === "contractor_admin" ||
-    authResult.user.role === "contractor_user"
+    authResult.user.role === "contractor_employee"
   ) {
     where.contractorId = authResult.user.organizationId;
   }
@@ -66,8 +65,8 @@ export async function POST(req: NextRequest) {
   const authResult = await authMiddleware(req);
   if (authResult instanceof NextResponse) return authResult;
 
-  const factoryResult = requireFactoryRole(authResult.user);
-  if (factoryResult instanceof NextResponse) return factoryResult;
+  const adminResult = requireAdmin(authResult.user);
+  if (adminResult instanceof NextResponse) return adminResult;
 
   try {
     const body = await req.json();
@@ -93,11 +92,8 @@ export async function POST(req: NextRequest) {
     if (curator) {
       const roleSeqMap: Record<string, number> = {
         admin: 1,
-        factory_hse: 2,
-        factory_hr: 3,
-        factory_curator: 4,
-        permit_bureau: 5,
-        security: 6,
+        employee: 2,
+        department_approver: 3,
       };
       const seq = roleSeqMap[curator.role] ?? 99;
       curatorSeq = String(seq).padStart(3, "0");

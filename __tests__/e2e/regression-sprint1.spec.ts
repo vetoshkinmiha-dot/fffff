@@ -116,15 +116,15 @@ test.describe('Sprint 1 Regression', () => {
     }
   })
 
-  // 6. contractor_user cannot create/edit employees
-  test('6. contractor_user cannot create employees', async ({ page }) => {
-    // Login as contractor_user — they should not see "Add employee" button
+  // 6. contractor_employee cannot create/edit employees
+  test('6. contractor_employee cannot create employees', async ({ page }) => {
+    // Login as contractor_employee — they should not see "Add employee" button
     // or it should be disabled
     await login(page, ADMIN_CREDS.email, ADMIN_CREDS.password)
     await page.goto('/employees')
 
     // The "Add employee" button should either not be visible
-    // or the page should not allow creation for contractor_user
+    // or the page should not allow creation for contractor_employee
     const createBtn = page.getByRole('button', { name: /добавить сотрудника/i })
     const isVisible = await createBtn.isVisible().catch(() => false)
 

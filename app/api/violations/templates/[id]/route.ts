@@ -6,7 +6,7 @@ import { createViolationTemplateSchema } from "@/lib/validations";
 async function requireHSE(req: NextRequest) {
   const authResult = await authMiddleware(req);
   if (authResult instanceof NextResponse) return authResult;
-  if (!["admin", "factory_hse"].includes(authResult.user.role)) {
+  if (authResult.user.role !== "admin") {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
   return authResult;

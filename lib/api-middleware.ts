@@ -54,22 +54,29 @@ export function requireRole(
   return true;
 }
 
-export function requireFactoryRole(
+export function requireAdmin(
   user: AuthenticatedUser
 ): true | NextResponse {
-  const factoryRoles = ["admin", "factory_hse", "factory_hr", "factory_curator"];
-  if (!factoryRoles.includes(user.role)) {
-    return NextResponse.json({ error: "Forbidden: factory access only" }, { status: 403 });
+  if (user.role !== "admin") {
+    return NextResponse.json({ error: "Forbidden: admin access required" }, { status: 403 });
   }
   return true;
 }
 
-export function requireContractorRole(
+export function requireApproverRole(
   user: AuthenticatedUser
 ): true | NextResponse {
-  const contractorRoles = ["contractor_admin", "contractor_user"];
-  if (!contractorRoles.includes(user.role)) {
-    return NextResponse.json({ error: "Forbidden: contractor access only" }, { status: 403 });
+  if (user.role !== "department_approver") {
+    return NextResponse.json({ error: "Forbidden: approver access required" }, { status: 403 });
+  }
+  return true;
+}
+
+export function requireContractorEmployee(
+  user: AuthenticatedUser
+): true | NextResponse {
+  if (user.role !== "contractor_employee") {
+    return NextResponse.json({ error: "Forbidden: contractor employee access required" }, { status: 403 });
   }
   return true;
 }

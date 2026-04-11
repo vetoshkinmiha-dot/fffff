@@ -51,8 +51,8 @@ export async function DELETE(
   const authResult = await authMiddleware(req);
   if (authResult instanceof NextResponse) return authResult;
 
-  // Only HSE can delete
-  if (!["admin", "factory_hse"].includes(authResult.user.role)) {
+  // Only admin can delete
+  if (authResult.user.role !== "admin") {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
 

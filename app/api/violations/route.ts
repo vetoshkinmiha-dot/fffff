@@ -4,7 +4,7 @@ import { authMiddleware } from "@/lib/api-middleware";
 import { createViolationSchema, paginationSchema } from "@/lib/validations";
 
 function isAuthorizedForViolations(role: string): boolean {
-  return ["admin", "factory_hse", "factory_hr", "factory_curator", "security"].includes(role);
+  return role === "admin";
 }
 
 export async function GET(req: NextRequest) {
@@ -24,11 +24,8 @@ export async function GET(req: NextRequest) {
   if (contractorId) where.contractorId = contractorId;
   if (department) where.department = department;
 
-  // Contractor users only see their own org's violations
-  if (
-    authResult.user.role === "contractor_admin" ||
-    authResult.user.role === "contractor_user"
-  ) {
+  // Contractor employees only see their own org's violations
+  if (authResult.user.role === "contractor_employee") {
     where.contractorId = authResult.user.organizationId;
   }
 

@@ -24,11 +24,8 @@ export async function GET(
     return NextResponse.json({ error: "Permit not found" }, { status: 404 });
   }
 
-  // Contractor users can only see their own org's permits
-  if (
-    authResult.user.role === "contractor_admin" ||
-    authResult.user.role === "contractor_user"
-  ) {
+  // Contractor employees can only see their own org's permits
+  if (authResult.user.role === "contractor_employee") {
     if (permit.contractorId !== authResult.user.organizationId) {
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }
@@ -57,11 +54,8 @@ export async function PATCH(
     return NextResponse.json({ error: "Permit not found" }, { status: 404 });
   }
 
-  // Contractor users can only edit their own org's permits
-  if (
-    authResult.user.role === "contractor_admin" ||
-    authResult.user.role === "contractor_user"
-  ) {
+  // Contractor employees can only edit their own org's permits
+  if (authResult.user.role === "contractor_employee") {
     if (permit.contractorId !== authResult.user.organizationId) {
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }

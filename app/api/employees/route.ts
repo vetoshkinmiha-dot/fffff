@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { authMiddleware, requireFactoryRole } from "@/lib/api-middleware";
+import { authMiddleware, requireAdmin } from "@/lib/api-middleware";
 import { paginationSchema, createEmployeeSchema } from "@/lib/validations";
 
 export async function GET(req: NextRequest) {
@@ -21,8 +21,8 @@ export async function GET(req: NextRequest) {
     where.organizationId = orgFilter;
   }
 
-  // Contractor users only see their own org's employees
-  if (authResult.user.role === "contractor_admin" || authResult.user.role === "contractor_user") {
+  // Contractor employees only see their own org's employees
+  if (authResult.user.role === "contractor_employee") {
     where.organizationId = authResult.user.organizationId;
   }
 
@@ -67,8 +67,8 @@ export async function POST(req: NextRequest) {
   const authResult = await authMiddleware(req);
   if (authResult instanceof NextResponse) return authResult;
 
-  const factoryResult = requireFactoryRole(authResult.user);
-  if (factoryResult instanceof NextResponse) return factoryResult;
+  const adminResult = requireAdmin(authResult.user);
+  if (adminResult instanceof NextResponse) return adminResult;
 
   try {
     const body = await req.json();

@@ -7,10 +7,8 @@ async function main() {
 
   // ─── Users ──────────────────────────────────────────────────
   const adminHash = await hashPassword("Admin123!");
-  const hseHash = await hashPassword("Hse12345!");
+  const approverHash = await hashPassword("Approver1!");
   const contractorHash = await hashPassword("Contractor1!");
-  const securityHash = await hashPassword("Security1!");
-  const hrHash = await hashPassword("Hr12345!");
 
   const users = await Promise.all([
     prisma.user.upsert({
@@ -25,37 +23,14 @@ async function main() {
       },
     }),
     prisma.user.upsert({
-      where: { email: "hse@pirelli.ru" },
+      where: { email: "approver@pirelli.ru" },
       update: {},
       create: {
-        email: "hse@pirelli.ru",
-        passwordHash: hseHash,
+        email: "approver@pirelli.ru",
+        passwordHash: approverHash,
         fullName: "Иванов А.С.",
-        role: "factory_hse",
-        mustChangePwd: true,
-      },
-    }),
-    prisma.user.upsert({
-      where: { email: "hr@pirelli.ru" },
-      update: {},
-      create: {
-        email: "hr@pirelli.ru",
-        passwordHash: hrHash,
-        fullName: "Смирнова О.В.",
-        role: "factory_hr",
-        department: "hr",
-        mustChangePwd: true,
-      },
-    }),
-    prisma.user.upsert({
-      where: { email: "security@pirelli.ru" },
-      update: {},
-      create: {
-        email: "security@pirelli.ru",
-        passwordHash: securityHash,
-        fullName: "Петров Д.И.",
-        role: "security",
-        department: "security",
+        role: "department_approver",
+        department: "safety",
         mustChangePwd: true,
       },
     }),
@@ -94,7 +69,7 @@ async function main() {
       email: "admin@stroymont.ru",
       passwordHash: contractorHash,
       fullName: "Петров И.С.",
-      role: "contractor_admin",
+      role: "contractor_employee",
       organizationId: orgs[0].id,
       mustChangePwd: true,
     },

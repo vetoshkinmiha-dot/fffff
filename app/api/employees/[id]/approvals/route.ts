@@ -29,8 +29,7 @@ export async function GET(
   }
 
   if (
-    authResult.user.role === "contractor_admin" ||
-    authResult.user.role === "contractor_user"
+    authResult.user.role === "contractor_employee"
   ) {
     if (employee.organizationId !== authResult.user.organizationId) {
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });

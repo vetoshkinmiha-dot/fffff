@@ -67,13 +67,9 @@ export default function Header() {
 
   const roleLabels: Record<string, string> = {
     admin: "Администратор",
-    factory_hse: "ОТ и ПБ",
-    factory_hr: "Отдел кадров",
-    factory_curator: "Куратор",
-    contractor_admin: "Админ подрядчика",
-    contractor_user: "Сотрудник подрядчика",
-    security: "Служба безопасности",
-    permit_bureau: "Бюро пропусков",
+    employee: "Сотрудник",
+    contractor_employee: "Сотрудник подрядчика",
+    department_approver: "Согласующий",
   };
 
   return (

@@ -16,11 +16,8 @@ export async function POST(
     return NextResponse.json({ error: "Violation not found" }, { status: 404 });
   }
 
-  // Only contractor users can file complaints
-  if (
-    authResult.user.role !== "contractor_admin" &&
-    authResult.user.role !== "contractor_user"
-  ) {
+  // Only contractor employees can file complaints
+  if (authResult.user.role !== "contractor_employee") {
     return NextResponse.json({ error: "Forbidden: only contractors can file complaints" }, { status: 403 });
   }
 

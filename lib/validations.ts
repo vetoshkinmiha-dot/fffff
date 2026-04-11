@@ -15,11 +15,10 @@ export const registerSchema = z.object({
   password: z.string().min(8).regex(/[A-Z]/, "Must contain uppercase letter").regex(/[0-9]/, "Must contain a number"),
   fullName: z.string().min(2).transform(stripHtmlTags),
   role: z.enum([
-    "admin", "factory_hse", "factory_hr", "factory_curator",
-    "contractor_admin", "contractor_user", "security", "permit_bureau",
+    "admin", "employee", "contractor_employee", "department_approver",
   ]),
   organizationId: z.string().uuid().nullable().optional(),
-  department: z.enum(["security", "hr", "safety", "safety_training", "permit_bureau"]).nullable().optional(),
+  department: z.string().nullable().optional(),
 });
 
 // ─── Organization ──────────────────────────────────────────────
@@ -152,19 +151,17 @@ export const createUserSchema = z.object({
   password: z.string().min(8),
   fullName: z.string().min(1).transform(stripHtmlTags),
   role: z.enum([
-    "admin", "factory_hse", "factory_hr", "factory_curator",
-    "contractor_admin", "contractor_user", "security", "permit_bureau",
+    "admin", "employee", "contractor_employee", "department_approver",
   ]),
   organizationId: z.string().uuid().nullable().optional(),
-  department: z.enum(["security", "hr", "safety", "safety_training", "permit_bureau"]).nullable().optional(),
+  department: z.string().nullable().optional(),
 });
 
 export const updateUserSchema = z.object({
   role: z.enum([
-    "admin", "factory_hse", "factory_hr", "factory_curator",
-    "contractor_admin", "contractor_user", "security", "permit_bureau",
+    "admin", "employee", "contractor_employee", "department_approver",
   ]).optional(),
-  department: z.enum(["security", "hr", "safety", "safety_training", "permit_bureau"]).nullable().optional(),
+  department: z.string().nullable().optional(),
   organizationId: z.string().uuid().nullable().optional(),
   isActive: z.boolean().optional(),
 });

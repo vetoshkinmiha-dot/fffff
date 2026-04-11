@@ -318,7 +318,7 @@ describe('Prisma Database Schema & Integrity (Mocked)', () => {
         email: 'contractor@pirelli.ru',
         passwordHash: 'hash',
         fullName: 'Подрядчик',
-        role: 'contractor_admin',
+        role: 'contractor_employee',
         organizationId: 'org-1',
         isActive: true,
         mustChangePwd: true,
@@ -331,7 +331,7 @@ describe('Prisma Database Schema & Integrity (Mocked)', () => {
           email: 'contractor@pirelli.ru',
           passwordHash: 'hash',
           fullName: 'Подрядчик',
-          role: 'contractor_admin',
+          role: 'contractor_employee',
           organizationId: 'org-1',
         },
       })

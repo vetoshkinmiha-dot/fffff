@@ -26,10 +26,7 @@ export async function GET(
   }
 
   // Contractor scoping
-  if (
-    authResult.user.role === "contractor_admin" ||
-    authResult.user.role === "contractor_user"
-  ) {
+  if (authResult.user.role === "contractor_employee") {
     if (checklist.contractorId !== authResult.user.organizationId) {
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }
@@ -45,7 +42,7 @@ export async function PATCH(
   const authResult = await authMiddleware(req);
   if (authResult instanceof NextResponse) return authResult;
 
-  if (!["admin", "factory_hse"].includes(authResult.user.role)) {
+  if (authResult.user.role !== "admin") {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
 

@@ -22,10 +22,7 @@ export async function DELETE(
   }
 
   // Contractor scoping
-  if (
-    authResult.user.role === "contractor_admin" ||
-    authResult.user.role === "contractor_user"
-  ) {
+  if (authResult.user.role === "contractor_employee") {
     if (doc.employee.organizationId !== authResult.user.organizationId) {
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }

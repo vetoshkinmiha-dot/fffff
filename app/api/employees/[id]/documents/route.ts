@@ -19,8 +19,7 @@ export async function GET(
 
   // Contractor scoping
   if (
-    authResult.user.role === "contractor_admin" ||
-    authResult.user.role === "contractor_user"
+    authResult.user.role === "contractor_employee"
   ) {
     if (employee.organizationId !== authResult.user.organizationId) {
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
@@ -49,17 +48,12 @@ export async function POST(
     return NextResponse.json({ error: "Employee not found" }, { status: 404 });
   }
 
-  // Only contractor_admin can upload for their own org's employees
-  if (authResult.user.role === "contractor_admin") {
+  // Only contractor_employee can upload for their own org's employees
+  if (authResult.user.role === "contractor_employee") {
     if (employee.organizationId !== authResult.user.organizationId) {
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }
-  } else if (
-    authResult.user.role !== "admin" &&
-    authResult.user.role !== "factory_hse" &&
-    authResult.user.role !== "factory_hr" &&
-    authResult.user.role !== "factory_curator"
-  ) {
+  } else if (authResult.user.role !== "admin") {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
 

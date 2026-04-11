@@ -41,7 +41,7 @@ export async function POST(req: NextRequest) {
       where: {
         isActive: true,
         organizationId: doc.employee.organizationId,
-        role: { in: ["contractor_admin", "contractor_user"] },
+        role: "contractor_employee",
       },
     });
 
@@ -100,23 +100,16 @@ export async function POST(req: NextRequest) {
       data: { status: "expired" },
     });
 
-    // Email contractor admin
+    // Email contractor employees
     const admins = await prisma.user.findMany({
       where: {
         isActive: true,
         organizationId: doc.employee.organizationId,
-        role: { in: ["contractor_admin", "contractor_user"] },
+        role: "contractor_employee",
       },
     });
 
-    // Also email security
-    const securityUsers = await prisma.user.findMany({
-      where: { isActive: true, role: "security" },
-    });
-
-    const allRecipients = [...admins, ...securityUsers];
-
-    for (const user of allRecipients) {
+    for (const user of admins) {
       try {
         await sendDocumentExpiryAlert(
           user.email,

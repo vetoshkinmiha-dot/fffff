@@ -35,7 +35,7 @@ describe('Validation Schemas', () => {
       email: 'user@example.com',
       password: 'Password1',
       fullName: 'Ivanov Ivan',
-      role: 'factory_hse' as const,
+      role: 'admin' as const,
     }
 
     it('should accept valid registration data', () => {
@@ -54,7 +54,7 @@ describe('Validation Schemas', () => {
     it('should accept optional department', () => {
       const result = registerSchema.safeParse({
         ...validInput,
-        department: 'security',
+        department: 'safety',
       })
       expect(result.success).toBe(true)
     })

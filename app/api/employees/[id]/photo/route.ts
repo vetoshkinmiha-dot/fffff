@@ -8,16 +8,16 @@ import { readFileSync } from "fs";
 
 const UPLOAD_DIR = path.join(process.cwd(), "data", "uploads", "employees");
 
-function isFactoryRole(role: string): boolean {
-  return ["admin", "factory_hse", "factory_hr", "factory_curator"].includes(role);
+function isAdminRole(role: string): boolean {
+  return role === "admin";
 }
 
 async function checkEmployeeAccess(authResult: any, employee: { organizationId: string }) {
-  if (authResult.user.role === "contractor_admin") {
+  if (authResult.user.role === "contractor_employee") {
     if (employee.organizationId !== authResult.user.organizationId) {
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }
-  } else if (!isFactoryRole(authResult.user.role)) {
+  } else if (!isAdminRole(authResult.user.role)) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
   return null;
