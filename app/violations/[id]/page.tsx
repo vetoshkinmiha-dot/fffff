@@ -17,11 +17,11 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 
-const severityConfig: Record<string, { variant: "default" | "destructive" | "secondary" | "outline"; label: string; color: string }> = {
-  low: { variant: "outline", label: "Низкий", color: "text-green-600" },
-  medium: { variant: "secondary", label: "Средний", color: "text-yellow-600" },
-  high: { variant: "default", label: "Высокий", color: "text-orange-600" },
-  critical: { variant: "destructive", label: "Критический", color: "text-red-600" },
+const severityConfig: Record<string, { className: string; label: string }> = {
+  low: { className: "bg-green-50 text-green-700 border-green-200", label: "Низкий" },
+  medium: { className: "bg-amber-50 text-amber-700 border-amber-200", label: "Средний" },
+  high: { className: "bg-orange-50 text-orange-700 border-orange-200", label: "Высокий" },
+  critical: { className: "bg-red-50 text-red-700 border-red-200", label: "Критический" },
 };
 
 const statusLabels: Record<string, string> = {
@@ -185,7 +185,7 @@ export default function ViolationDetailPage() {
           <Printer className="h-4 w-4" />
           Печать
         </Button>
-        <Badge variant={sev.variant} className={sev.color}>
+        <Badge variant="outline" className={sev.className}>
           {sev.label}
         </Badge>
         <Badge variant="outline">
