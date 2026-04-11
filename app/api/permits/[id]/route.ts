@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { authMiddleware } from "@/lib/api-middleware";
 import { updatePermitSchema, closePermitSchema } from "@/lib/validations";
+import { createNotification } from "@/lib/notifications";
 
 export async function GET(
   req: NextRequest,
@@ -82,6 +83,22 @@ export async function PATCH(
         approvals: { orderBy: { createdAt: "asc" } },
       },
     });
+
+    // Notify contractor employees about early closure
+    const contractorUsers = await prisma.user.findMany({
+      where: { isActive: true, organizationId: updated.contractorId },
+      select: { id: true },
+    });
+
+    for (const user of contractorUsers) {
+      await createNotification({
+        userId: user.id,
+        type: "permit_closed",
+        title: "Наряд-допуск закрыт",
+        message: `Наряд ${updated.permitNumber} закрыт досрочно: ${validation.data.closeReason}`,
+        link: `/permits/${updated.id}`,
+      });
+    }
 
     return NextResponse.json({
       ...updated,
