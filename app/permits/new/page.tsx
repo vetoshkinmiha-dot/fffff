@@ -144,7 +144,7 @@ export default function NewPermitPage() {
             <Label>Категория работ *</Label>
             <Select
               value={form.category}
-              onValueChange={(v) => setForm((prev) => ({ ...prev, category: v }))}
+              onValueChange={(v) => setForm((prev) => ({ ...prev, category: v ?? "" }))}
             >
               <SelectTrigger className={fieldErrors.category ? "border-red-300" : ""}>
                 <SelectValue placeholder="Выберите категорию" />
@@ -166,7 +166,7 @@ export default function NewPermitPage() {
             <Label>Подрядчик *</Label>
             <Select
               value={form.contractorId}
-              onValueChange={(v) => setForm((prev) => ({ ...prev, contractorId: v }))}
+              onValueChange={(v) => setForm((prev) => ({ ...prev, contractorId: v ?? "" }))}
             >
               <SelectTrigger className={fieldErrors.contractorId ? "border-red-300" : ""}>
                 <SelectValue placeholder="Выберите подрядчика" />

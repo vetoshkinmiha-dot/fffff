@@ -36,6 +36,7 @@ export async function authMiddleware(req: NextRequest): Promise<AuthResult | Nex
     user: {
       userId: user.id,
       email: user.email,
+      fullName: user.fullName,
       role: user.role,
       organizationId: user.organizationId,
       department: user.department,

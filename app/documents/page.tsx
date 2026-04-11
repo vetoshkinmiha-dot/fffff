@@ -331,7 +331,7 @@ export default function DocumentsPage() {
             </div>
             <div className="space-y-1.5">
               <Label>Раздел *</Label>
-              <Select value={uploadSection} onValueChange={setUploadSection}>
+              <Select value={uploadSection} onValueChange={(v) => setUploadSection(v ?? "")}>
                 <SelectTrigger>
                   <SelectValue placeholder="Выберите раздел" />
                 </SelectTrigger>
