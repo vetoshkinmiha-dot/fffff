@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback } from "react";
 import Link from "next/link";
-import { Plus, Search } from "lucide-react";
+import { Plus, Search, Eye } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -191,21 +191,25 @@ export default function PermitsPage() {
                   <TableCell className="text-zinc-600">
                     {formatDate(permit.expiryDate)}
                   </TableCell>
-                  <TableCell className="text-sm text-zinc-600 max-w-[200px] truncate">
-                    {permit.workSite}
+                  <TableCell className="max-w-[200px]">
+                    <span className="text-sm text-zinc-600 line-clamp-2" title={permit.workSite}>
+                      {permit.workSite}
+                    </span>
                   </TableCell>
-                  <TableCell className="text-sm text-zinc-600">
-                    {permit.responsiblePerson}
+                  <TableCell className="max-w-[140px] truncate">
+                    <span className="text-sm text-zinc-600" title={permit.responsiblePerson}>
+                      {permit.responsiblePerson}
+                    </span>
                   </TableCell>
-                  <TableCell>
+                  <TableCell className="whitespace-nowrap">
                     <Badge variant={statusConfig[permit.status]?.variant ?? "secondary"}>
                       {statusConfig[permit.status]?.label ?? permit.status}
                     </Badge>
                   </TableCell>
-                  <TableCell className="text-right">
+                  <TableCell className="text-right whitespace-nowrap">
                     <Link href={`/permits/${permit.id}`}>
-                      <Button variant="ghost" size="sm">
-                        Подробнее
+                      <Button variant="ghost" size="icon-xs">
+                        <Eye className="h-4 w-4" />
                       </Button>
                     </Link>
                   </TableCell>

@@ -19,7 +19,7 @@ const ROLE_ROUTES: Record<string, string[]> = {
   contractor_user: ["/employees/*", "/"],
 };
 
-export async function proxy(request: NextRequest) {
+export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
   // Skip public routes and prefixes
@@ -55,7 +55,7 @@ export async function proxy(request: NextRequest) {
     // Check exclusions
     const denied = allowedPatterns.filter((p) => p.startsWith("!")).map((p) => p.slice(1));
     if (denied.some((d) => pathname.startsWith(d.replace("*", "")))) {
-      return NextResponse.redirect(new URL("/unauthorized", request.url));
+      return NextResponse.redirect(new URL("/auth/unauthorized", request.url));
     }
     return NextResponse.next();
   }
@@ -63,7 +63,7 @@ export async function proxy(request: NextRequest) {
   // Contractor roles: restrict to own organization
   if (payload.role === "contractor_admin" || payload.role === "contractor_user") {
     if (!payload.organizationId) {
-      return NextResponse.redirect(new URL("/unauthorized", request.url));
+      return NextResponse.redirect(new URL("/auth/unauthorized", request.url));
     }
 
     // For contractor routes, check if accessing own org
@@ -85,7 +85,7 @@ export async function proxy(request: NextRequest) {
     );
 
     if (!isAllowed) {
-      return NextResponse.redirect(new URL("/unauthorized", request.url));
+      return NextResponse.redirect(new URL("/auth/unauthorized", request.url));
     }
 
     return NextResponse.next();
@@ -100,14 +100,14 @@ export async function proxy(request: NextRequest) {
     );
 
     if (!isAllowed) {
-      return NextResponse.redirect(new URL("/unauthorized", request.url));
+      return NextResponse.redirect(new URL("/auth/unauthorized", request.url));
     }
 
     return NextResponse.next();
   }
 
   // Default: deny
-  return NextResponse.redirect(new URL("/unauthorized", request.url));
+  return NextResponse.redirect(new URL("/auth/unauthorized", request.url));
 }
 
 export const config = {

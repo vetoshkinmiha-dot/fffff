@@ -142,6 +142,7 @@ export default function DocumentsPage() {
 
       const res = await fetch("/api/documents/regulatory", {
         method: "POST",
+        credentials: "include",
         body: formData,
       });
       if (!res.ok) {
@@ -331,15 +332,14 @@ export default function DocumentsPage() {
                       <td className="px-4 py-3 text-zinc-600">{doc.section?.name ?? "—"}</td>
                       <td className="px-4 py-3 text-zinc-600 font-mono text-xs">{formatDate(doc.updatedAt)}</td>
                       <td className="px-4 py-3 text-right">
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => window.open(doc.fileUrl, "_blank")}
-                          className="gap-1"
+                        <a
+                          href={`/api/documents/regulatory/${doc.id}`}
+                          download
+                          className="inline-flex items-center gap-1 text-sm text-blue-600 hover:underline"
                         >
                           <Download className="h-4 w-4" />
                           Скачать
-                        </Button>
+                        </a>
                       </td>
                     </tr>
                   );
