@@ -214,9 +214,11 @@ export default function ContractorsPage() {
                           <Eye />
                         </Button>
                       </Link>
-                      <Button variant="ghost" size="icon-xs">
-                        <Pencil />
-                      </Button>
+                      <Link href={`/contractors/${c.id}/edit`}>
+                        <Button variant="ghost" size="icon-xs">
+                          <Pencil />
+                        </Button>
+                      </Link>
                     </div>
                   </TableCell>
                 </TableRow>
