@@ -9,6 +9,7 @@ async function main() {
   const adminHash = await hashPassword("Admin123!");
   const approverHash = await hashPassword("Approver1!");
   const contractorHash = await hashPassword("Contractor1!");
+  const employeeHash = await hashPassword("Employee1!");
 
   const users = await Promise.all([
     prisma.user.upsert({
@@ -31,6 +32,29 @@ async function main() {
         fullName: "Иванов А.С.",
         role: "department_approver",
         department: "safety",
+        mustChangePwd: true,
+      },
+    }),
+    prisma.user.upsert({
+      where: { email: "podradchik@pirelli.ru" },
+      update: {},
+      create: {
+        email: "podradchik@pirelli.ru",
+        passwordHash: contractorHash,
+        fullName: "Сидоров П.И.",
+        role: "contractor_employee",
+        organizationId: null,
+        mustChangePwd: true,
+      },
+    }),
+    prisma.user.upsert({
+      where: { email: "employee@pirelli.ru" },
+      update: {},
+      create: {
+        email: "employee@pirelli.ru",
+        passwordHash: employeeHash,
+        fullName: "Просматривающий",
+        role: "employee",
         mustChangePwd: true,
       },
     }),
