@@ -84,7 +84,7 @@ export default function NewViolationPage() {
           description: form.description.trim(),
           severity: form.severity,
           department: form.department,
-          violationDate: new Date(form.violationDate).toISOString(),
+          date: new Date(form.violationDate).toISOString(),
         }),
       });
 

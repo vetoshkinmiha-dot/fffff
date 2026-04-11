@@ -259,6 +259,7 @@ model EmailLog {
   recipient String        /// Email получателя
   subject   String        /// Тема письма
   template  String        /// Шаблон письма
+  message   String?        /// Текст сообщения (для жалоб и прочего)
   status    EmailLogStatus @default(PENDING)
   sentAt    DateTime?      @map("sent_at")
   error     String?        /// Текст ошибки при FAILED
@@ -333,17 +334,33 @@ model Violation {
   photoUrl          String?           @map("photo_url") /// Фото нарушения
   resolvedAt        DateTime?         @map("resolved_at") /// Дата устранения
   resolutionNotes   String?           @map("resolution_notes") /// Примечания по устранению
+  sequentialNumber  Int                @default(0) @map("sequential_number") /// Порядковый номер для атомарной нумерации
   createdAt         DateTime          @default(now()) @map("created_at")
   updatedAt         DateTime          @updatedAt @map("updated_at")
 
   contractor Organization @relation(fields: [contractorId], references: [id])
   createdBy  User         @relation("ViolationCreator", fields: [createdById], references: [id])
+  complaints ViolationComplaint[] @relation("ViolationComplaints")
 
   @@index([contractorId])
   @@index([status])
   @@index([severity])
   @@index([date])
   @@map("violation")
+}
+
+/// Жалобы подрядчиков на акты о нарушениях
+model ViolationComplaint {
+  id             String   @id @default(uuid())
+  violationId    String   @map("violation_id") /// ID нарушения
+  complaintText  String   @map("complaint_text") /// Текст жалобы
+  department     String   /// Департамент, на который направлена жалоба
+  createdAt      DateTime @default(now()) @map("created_at")
+
+  violation Violation @relation("ViolationComplaints", fields: [violationId], references: [id], onDelete: Cascade)
+
+  @@index([violationId])
+  @@map("violation_complaint")
 }
 
 /// Шаблоны актов о нарушениях (повторяющиеся типы нарушений)

@@ -37,13 +37,12 @@ export async function POST(
       return NextResponse.json({ error: "Text is required" }, { status: 400 });
     }
 
-    // Create a notification log entry for the complaint
-    await prisma.emailLog.create({
+    // Create a proper violation complaint record
+    await prisma.violationComplaint.create({
       data: {
-        recipient: department,
-        subject: "Жалоба на акт нарушения",
-        template: "violation_complaint",
-        status: "PENDING",
+        violationId: id,
+        complaintText: text.trim(),
+        department,
       },
     });
 

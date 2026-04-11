@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback } from "react";
 import Link from "next/link";
-import { Plus, Search, Eye } from "lucide-react";
+import { Plus, Search, Eye, FileInput } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -102,12 +102,20 @@ export default function ViolationsPage() {
             Фиксация нарушений подрядных организаций
           </p>
         </div>
-        <Link href="/violations/new">
-          <Button variant="default" size="lg">
-            <Plus />
-            Создать акт
-          </Button>
-        </Link>
+        <div className="flex items-center gap-2">
+          <Link href="/violations/templates">
+            <Button variant="outline" size="lg">
+              <FileInput />
+              Шаблоны
+            </Button>
+          </Link>
+          <Link href="/violations/new">
+            <Button variant="default" size="lg">
+              <Plus />
+              Создать акт
+            </Button>
+          </Link>
+        </div>
       </div>
 
       <div className="flex items-center gap-3 flex-wrap">

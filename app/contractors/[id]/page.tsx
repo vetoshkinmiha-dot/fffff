@@ -7,6 +7,14 @@ import { ArrowLeft, Building2, MapPin, Mail, Hash, Loader2 } from "lucide-react"
 import { sanitize } from "@/lib/utils";
 import type { Contractor, Employee } from "@/app/types";
 import { Badge } from "@/components/ui/badge";
+
+const departmentLabels: Record<string, string> = {
+  security: "Служба безопасности",
+  hr: "Отдел кадров",
+  safety: "Охрана труда (допуск)",
+  safety_training: "Охрана труда (инструктаж)",
+  permit_bureau: "Бюро пропусков",
+};
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -286,7 +294,7 @@ export default function ContractorDetailPage() {
                                 className="flex items-center justify-between text-xs"
                               >
                                 <span className="text-zinc-500">
-                                  {a.departmentName}
+                                  {departmentLabels[a.department] ?? a.department}
                                 </span>
                                 <span className={`font-medium ${info.color}`}>
                                   {info.label}

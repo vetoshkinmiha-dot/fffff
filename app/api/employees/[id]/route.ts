@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { authMiddleware } from "@/lib/api-middleware";
+import { authMiddleware, requireFactoryRole } from "@/lib/api-middleware";
 import { createEmployeeSchema, updateEmployeeSchema } from "@/lib/validations";
 
 export async function GET(
@@ -62,7 +62,7 @@ export async function POST(
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }
   } else {
-    const factoryResult = await requireFactoryRoleFactory(authResult.user);
+    const factoryResult = requireFactoryRole(authResult.user);
     if (factoryResult instanceof NextResponse) return factoryResult;
   }
 

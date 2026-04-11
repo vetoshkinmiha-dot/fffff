@@ -73,16 +73,11 @@ export async function POST(req: NextRequest) {
     }
 
     // Generate violationNumber: VIO-{sequentialNumber}
-    // Read the highest existing sequence number to avoid race conditions
-    const lastViolation = await prisma.violation.findFirst({
-      orderBy: { createdAt: "desc" },
-      select: { violationNumber: true },
+    // Use aggregate MAX for atomic safety against race conditions
+    const maxSeq = await prisma.violation.aggregate({
+      _max: { sequentialNumber: true },
     });
-    let nextSeq = 1;
-    if (lastViolation?.violationNumber) {
-      const match = lastViolation.violationNumber.match(/VIO-(\d+)/);
-      if (match) nextSeq = parseInt(match[1], 10) + 1;
-    }
+    const nextSeq = (maxSeq._max.sequentialNumber ?? 0) + 1;
     const violationNumber = `VIO-${String(nextSeq).padStart(5, "0")}`;
 
     const violation = await prisma.violation.create({
@@ -90,6 +85,7 @@ export async function POST(req: NextRequest) {
         ...validation.data,
         violationNumber,
         date: new Date(validation.data.date),
+        sequentialNumber: nextSeq,
         createdById: authResult.user.userId,
       },
       include: {

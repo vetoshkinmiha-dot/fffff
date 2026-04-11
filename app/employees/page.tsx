@@ -36,6 +36,7 @@ interface Employee {
   id: string;
   fullName: string;
   position: string;
+  organizationId: string;
   organization: OrgInfo;
   workClasses: string[];
   documents: EmployeeDoc[];
@@ -61,11 +62,16 @@ export default function EmployeesPage() {
   const [totalPages, setTotalPages] = useState(1);
   const limit = 20;
 
-  // Unique orgs for filter dropdown
+  // Unique orgs for filter dropdown (id is UUID, needed for API filtering)
   const uniqueOrgs = useMemo(() => {
-    const map = new Map<number, string>();
-    employees.forEach((e) => map.set(e.organization.sequentialNumber, e.organization.name));
-    return Array.from(map.entries()).sort((a, b) => a[0] - b[0]);
+    const map = new Map<string, { id: string; name: string; num: number }>();
+    employees.forEach((e) => {
+      const key = e.organization.name;
+      if (!map.has(key)) {
+        map.set(key, { id: e.organizationId, name: e.organization.name, num: e.organization.sequentialNumber });
+      }
+    });
+    return Array.from(map.values()).sort((a, b) => a.num - b.num);
   }, [employees]);
 
   const fetchEmployees = useCallback(async () => {
@@ -170,9 +176,9 @@ export default function EmployeesPage() {
           </SelectTrigger>
           <SelectContent>
             <SelectItem value="all">Все организации</SelectItem>
-            {uniqueOrgs.map(([num, name]) => (
-              <SelectItem key={num} value={String(num)}>
-                {name}
+            {uniqueOrgs.map((org) => (
+              <SelectItem key={org.id} value={org.id}>
+                {org.name}
               </SelectItem>
             ))}
           </SelectContent>

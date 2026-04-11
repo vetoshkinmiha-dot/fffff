@@ -45,7 +45,7 @@ function NewEmployeeForm() {
   const [photoPreview, setPhotoPreview] = useState<string | null>(null);
 
   useEffect(() => {
-    fetch("/api/organizations")
+    fetch("/api/organizations", { credentials: "include" })
       .then((r) => r.json())
       .then((data) => {
         setContractors(data.data || []);
@@ -84,7 +84,7 @@ function NewEmployeeForm() {
           passportSeries: form.passportSeries,
           passportNumber: form.passportNumber,
           passportIssuedBy: form.passportIssuedBy.trim() || undefined,
-          passportIssueDate: form.passportIssueDate || undefined,
+          passportIssueDate: form.passportIssueDate ? new Date(form.passportIssueDate).toISOString() : undefined,
           previouslyAtPirelli: form.previouslyAtPirelli,
           workClasses: form.workClasses,
         }),
