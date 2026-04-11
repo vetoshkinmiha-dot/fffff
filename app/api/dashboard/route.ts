@@ -21,7 +21,7 @@ export async function GET(req: NextRequest) {
   if (user.department) {
     pendingApprovals = await prisma.approvalRequest.count({
       where: {
-        department: user.department,
+        department: user.department as any,
         status: "pending",
       },
     });

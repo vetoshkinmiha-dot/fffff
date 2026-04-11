@@ -3,8 +3,8 @@ import { prisma } from "@/lib/prisma";
 import { authMiddleware } from "@/lib/api-middleware";
 import { updateViolationSchema, resolveViolationSchema } from "@/lib/validations";
 
-function isAuthorizedForViolations(user: { role: string }): boolean {
-  return ["admin", "factory_hse", "factory_hr", "factory_curator", "security"].includes(user.role);
+function isAuthorizedForViolations(role: string): boolean {
+  return ["admin", "factory_hse", "factory_hr", "factory_curator", "security"].includes(role);
 }
 
 export async function GET(

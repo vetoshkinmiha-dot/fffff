@@ -72,18 +72,21 @@ export async function POST(
 
     const { departments, deadline } = validation.data;
 
-    // Create all 5 approval entries sequentially
-    const allRequests = APPROVAL_ORDER.map((dept, index) => {
-      const isRequested = departments.includes(dept);
-      return {
+    // Create approval entries — all as "pending"
+    // Sequential order is enforced in PATCH handler (autoRejectRemaining)
+    const allRequests: Array<{
+      employeeId: string;
+      department: typeof APPROVAL_ORDER[number];
+      deadline: Date;
+      status: "pending";
+    }> = APPROVAL_ORDER
+      .filter((dept) => departments.includes(dept))
+      .map((dept) => ({
         employeeId: id,
         department: dept,
         deadline: new Date(deadline),
-        // Only the first requested department starts as "pending"
-        // Others are "blocked" until previous is approved
-        status: (isRequested && index === 0) ? "pending" as const : "blocked" as const,
-      };
-    });
+        status: "pending" as const,
+      }));
 
     // Check if any approvals already exist
     const existing = await prisma.approvalRequest.findMany({
@@ -91,7 +94,7 @@ export async function POST(
       select: { department: true },
     });
     const existingDepts = new Set(existing.map((a) => a.department));
-    const newRequests = allRequests.filter((r) => !existingDepts.has(r.department));
+    const newRequests = allRequests.filter((r): r is NonNullable<typeof r> => !existingDepts.has(r.department));
 
     if (newRequests.length === 0) {
       return NextResponse.json({ error: "Approvals already exist for all departments" }, { status: 400 });

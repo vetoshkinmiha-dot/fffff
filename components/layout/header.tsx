@@ -89,7 +89,7 @@ export default function Header() {
       <div className="flex-1" />
       <div className="flex items-center gap-4">
         <DropdownMenu>
-          <DropdownMenuTrigger asChild>
+          <DropdownMenuTrigger>
             <button className="relative inline-flex items-center justify-center h-9 w-9 rounded-md text-zinc-500 hover:bg-zinc-100 hover:text-zinc-700 transition-colors">
               <Bell className="h-5 w-5" />
               {unreadCount > 0 && (

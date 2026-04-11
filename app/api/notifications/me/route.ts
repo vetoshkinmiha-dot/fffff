@@ -21,7 +21,7 @@ export async function GET(req: NextRequest) {
   if (user.department && !["admin"].includes(user.role)) {
     const pendingApprovals = await prisma.approvalRequest.findMany({
       where: {
-        department: user.department,
+        department: user.department as any,
         status: "pending",
       },
       include: {

@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { notFound, useParams, useRouter } from "next/navigation";
+import { notFound, useParams } from "next/navigation";
 import Link from "next/link";
 import { ArrowLeft, Loader2, Download, Edit2, Check, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -97,7 +97,6 @@ function AnswerBadge({ answer }: { answer: string | null }) {
 
 export default function ChecklistDetailPage() {
   const params = useParams();
-  const router = useRouter();
   const id = params.id as string;
 
   const [checklist, setChecklist] = useState<Checklist | null>(null);
@@ -154,7 +153,10 @@ export default function ChecklistDetailPage() {
           })),
         }),
       });
-      if (!res.ok) return;
+      if (!res.ok) {
+        // Silently fail — editing mode stays active so user can retry
+        return;
+      }
 
       const updated = await fetch(`/api/checklists/${id}`, { credentials: "include" });
       if (updated.ok) setChecklist(await updated.json());
@@ -201,11 +203,12 @@ export default function ChecklistDetailPage() {
       `N/A,${na}`,
     ].join("\n");
 
+    const safeName = checklist.contractor.name.replace(/[^a-zA-Zа-яА-ЯёЁ0-9\s-]/g, "").trim().replace(/\s+/g, "-");
     const blob = new Blob(["\uFEFF" + csv], { type: "text/csv;charset=utf-8;" });
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
     a.href = url;
-    a.download = `checklist-${checklist.contractor.name}-${checklist.date}.csv`;
+    a.download = `checklist-${safeName}-${checklist.date}.csv`;
     a.click();
     URL.revokeObjectURL(url);
   }

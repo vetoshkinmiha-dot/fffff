@@ -20,27 +20,22 @@ const DEPARTMENT_LABELS: Record<string, string> = {
   permit_bureau: "Бюро пропусков",
 };
 
-async function unblockNextApproval(employeeId: string, currentDept: string) {
+async function notifyNextApproval(employeeId: string, currentDept: string) {
   const currentIndex = APPROVAL_ORDER.indexOf(currentDept as any);
   if (currentIndex === -1 || currentIndex >= APPROVAL_ORDER.length - 1) return;
 
   const nextDept = APPROVAL_ORDER[currentIndex + 1];
 
+  // Next approvals are already in "pending" status — just notify approvers
   const nextApproval = await prisma.approvalRequest.findFirst({
     where: {
       employeeId,
       department: nextDept,
-      status: "blocked",
+      status: "pending",
     },
   });
 
   if (nextApproval) {
-    await prisma.approvalRequest.update({
-      where: { id: nextApproval.id },
-      data: { status: "pending" },
-    });
-
-    // Notify next department's approvers
     const employee = await prisma.employee.findUnique({
       where: { id: employeeId },
       include: { organization: { select: { name: true } } },
@@ -76,8 +71,8 @@ async function autoRejectRemaining(employeeId: string, currentDept: string) {
   await prisma.approvalRequest.updateMany({
     where: {
       employeeId,
-      department: { in: remainingDepts as string[] },
-      status: { in: ["pending", "blocked"] },
+      department: { in: remainingDepts as unknown as typeof APPROVAL_ORDER[number][] },
+      status: "pending",
     },
     data: {
       status: "rejected",
@@ -151,13 +146,13 @@ export async function PATCH(
         decidedAt: new Date(),
       },
       include: {
-        employee: { select: { fullName: true, organizationId: true } },
+        employee: { select: { id: true, fullName: true, organizationId: true } },
       },
     });
 
     // If approved — unblock next department
     if (validation.data.status === "approved") {
-      await unblockNextApproval(updated.employeeId, approval.department);
+      await notifyNextApproval(updated.employeeId, approval.department);
     }
 
     // If rejected — auto-reject remaining
