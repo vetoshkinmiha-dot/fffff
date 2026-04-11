@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
-import { Plus, Search, Download, FileText, FileSpreadsheet, File, ChevronRight, ChevronDown, Upload } from "lucide-react";
+import { Plus, Search, Download, FileText, FileSpreadsheet, File, ChevronRight, ChevronDown, Upload, FolderPlus } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -87,6 +87,13 @@ export default function DocumentsPage() {
   const [uploadFile, setUploadFile] = useState<File | null>(null);
   const [uploadError, setUploadError] = useState("");
 
+  // Section creation dialog
+  const [sectionOpen, setSectionOpen] = useState(false);
+  const [creatingSection, setCreatingSection] = useState(false);
+  const [newSectionName, setNewSectionName] = useState("");
+  const [newSectionParent, setNewSectionParent] = useState<string | null>(null);
+  const [sectionError, setSectionError] = useState("");
+
   useEffect(() => {
     Promise.all([
       fetch("/api/auth/me", { credentials: "include" }).then((r) => r.ok ? r.json() : null),
@@ -156,6 +163,44 @@ export default function DocumentsPage() {
     }
   }
 
+  async function handleCreateSection() {
+    if (!newSectionName.trim()) {
+      setSectionError("Введите название раздела");
+      return;
+    }
+    setCreatingSection(true);
+    setSectionError("");
+    try {
+      const res = await fetch("/api/documents/sections", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          name: newSectionName.trim(),
+          parentId: newSectionParent,
+        }),
+      });
+      if (!res.ok) {
+        const data = await res.json();
+        setSectionError(data.error || "Ошибка при создании раздела");
+        return;
+      }
+      // Refresh sections
+      const secsRes = await fetch("/api/documents/sections", { credentials: "include" });
+      if (secsRes.ok) {
+        const secsData = (await secsRes.json()).data || [];
+        setSections(secsData);
+        setTree(buildTree(secsData));
+      }
+      setSectionOpen(false);
+      setNewSectionName("");
+      setNewSectionParent(null);
+    } catch {
+      setSectionError("Произошла ошибка. Попробуйте ещё раз.");
+    } finally {
+      setCreatingSection(false);
+    }
+  }
+
   if (loading) {
     return (
       <div className="flex items-center justify-center py-20">
@@ -193,8 +238,17 @@ export default function DocumentsPage() {
     <div className="flex h-[calc(100vh-56px)]">
       {/* Sidebar — sections tree */}
       <aside className="w-64 border-r border-zinc-200 bg-zinc-50 flex flex-col">
-        <div className="p-4 border-b border-zinc-200">
+        <div className="flex items-center justify-between p-4 border-b border-zinc-200">
           <h3 className="text-sm font-medium text-zinc-900">Разделы</h3>
+          {isHSE && (
+            <button
+              onClick={() => setSectionOpen(true)}
+              className="text-zinc-400 hover:text-zinc-600 transition-colors"
+              title="Добавить раздел"
+            >
+              <FolderPlus className="h-4 w-4" />
+            </button>
+          )}
         </div>
         <div className="flex-1 overflow-y-auto p-2">
           <button
@@ -351,6 +405,52 @@ export default function DocumentsPage() {
             <Button onClick={handleUpload} disabled={uploading}>
               {uploading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
               Загрузить
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Section creation dialog */}
+      <Dialog open={sectionOpen} onOpenChange={setSectionOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Создать раздел</DialogTitle>
+            <DialogDescription>
+              Укажите название и родительский раздел
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div className="space-y-1.5">
+              <Label>Название раздела *</Label>
+              <Input
+                value={newSectionName}
+                onChange={(e) => setNewSectionName(e.target.value)}
+                placeholder="Название"
+              />
+            </div>
+            <div className="space-y-1.5">
+              <Label>Родительский раздел</Label>
+              <Select value={newSectionParent ?? ""} onValueChange={(v) => setNewSectionParent(v === "" ? null : v)}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Без родителя (корневой)" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="">— Без родителя —</SelectItem>
+                  {sections.filter((s) => s.parentId === null).map((s) => (
+                    <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            {sectionError && <p className="text-sm text-red-600">{sectionError}</p>}
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => { setSectionOpen(false); setSectionError(""); }} disabled={creatingSection}>
+              Отмена
+            </Button>
+            <Button onClick={handleCreateSection} disabled={creatingSection}>
+              {creatingSection && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+              Создать
             </Button>
           </DialogFooter>
         </DialogContent>
