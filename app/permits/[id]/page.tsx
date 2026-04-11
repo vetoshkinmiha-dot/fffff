@@ -89,6 +89,13 @@ export default function PermitDetailPage() {
   const [closing, setClosing] = useState(false);
   const [closeError, setCloseError] = useState("");
 
+  // Approval decision state
+  const [decisionApprovalId, setDecisionApprovalId] = useState<string | null>(null);
+  const [decisionAction, setDecisionAction] = useState<"approved" | "rejected" | null>(null);
+  const [decisionComment, setDecisionComment] = useState("");
+  const [deciding, setDeciding] = useState(false);
+  const [decisionError, setDecisionError] = useState("");
+
   useEffect(() => {
     async function fetchPermit() {
       setLoading(true);
@@ -107,6 +114,41 @@ export default function PermitDetailPage() {
     }
     fetchPermit();
   }, [id]);
+
+  async function handleDecision() {
+    if (!decisionApprovalId || !decisionAction) return;
+    if (decisionAction === "rejected" && !decisionComment.trim()) {
+      setDecisionError("Комментарий обязателен при отклонении");
+      return;
+    }
+    setDeciding(true);
+    setDecisionError("");
+    try {
+      const res = await fetch(`/api/permits/${id}/approvals/${decisionApprovalId}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({
+          status: decisionAction,
+          comment: decisionComment.trim() || undefined,
+        }),
+      });
+      if (!res.ok) {
+        const data = await res.json();
+        setDecisionError(data.error || "Ошибка при согласовании");
+        return;
+      }
+      const updated = await fetch(`/api/permits/${id}`, { credentials: "include" });
+      if (updated.ok) setPermit(await updated.json());
+      setDecisionApprovalId(null);
+      setDecisionAction(null);
+      setDecisionComment("");
+    } catch {
+      setDecisionError("Произошла ошибка. Попробуйте ещё раз.");
+    } finally {
+      setDeciding(false);
+    }
+  }
 
   async function handleClosePermit() {
     if (!closeReason.trim()) {
@@ -301,6 +343,38 @@ export default function PermitDetailPage() {
                         <div className="flex shrink-0 items-center gap-3 text-sm text-zinc-500">
                           <span>Срок: {formatDate(approval.deadline)}</span>
                           {getApprovalBadge(approval.status)}
+                          {approval.status === "pending" && (
+                            <div className="flex gap-1 ml-2">
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                className="h-7 px-2.5 text-xs gap-1 text-green-700 border-green-200 hover:bg-green-50"
+                                onClick={() => {
+                                  setDecisionApprovalId(approval.id);
+                                  setDecisionAction("approved");
+                                  setDecisionComment("");
+                                  setDecisionError("");
+                                }}
+                              >
+                                <CheckCircle2 className="h-3.5 w-3.5" />
+                                Согласовать
+                              </Button>
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                className="h-7 px-2.5 text-xs gap-1 text-red-700 border-red-200 hover:bg-red-50"
+                                onClick={() => {
+                                  setDecisionApprovalId(approval.id);
+                                  setDecisionAction("rejected");
+                                  setDecisionComment("");
+                                  setDecisionError("");
+                                }}
+                              >
+                                <XCircle className="h-3.5 w-3.5" />
+                                Отклонить
+                              </Button>
+                            </div>
+                          )}
                         </div>
                       </div>
                     </div>
@@ -311,6 +385,79 @@ export default function PermitDetailPage() {
           </CardContent>
         </Card>
       )}
+
+      {/* Approval decision dialog */}
+      <Dialog
+        open={!!decisionApprovalId}
+        onOpenChange={(open) => {
+          if (!open) {
+            setDecisionApprovalId(null);
+            setDecisionAction(null);
+            setDecisionComment("");
+            setDecisionError("");
+          }
+        }}
+      >
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>
+              {decisionAction === "approved" ? "Согласование" : "Отклонение"} наряда-допуска
+            </DialogTitle>
+            <DialogDescription>
+              {decisionAction === "approved"
+                ? "Подтвердите согласование наряда-допуска"
+                : "Укажите причину отклонения (обязательно)"}
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-3">
+            {decisionAction === "rejected" && (
+              <div className="space-y-1.5">
+                <Label>Причина отклонения *</Label>
+                <Textarea
+                  value={decisionComment}
+                  onChange={(e) => setDecisionComment(e.target.value)}
+                  placeholder="Причина отклонения..."
+                  rows={3}
+                />
+              </div>
+            )}
+            {decisionAction === "approved" && (
+              <div className="space-y-1.5">
+                <Label>Комментарий (необязательно)</Label>
+                <Textarea
+                  value={decisionComment}
+                  onChange={(e) => setDecisionComment(e.target.value)}
+                  placeholder="Комментарий к согласованию..."
+                  rows={2}
+                />
+              </div>
+            )}
+            {decisionError && <p className="text-sm text-red-600">{decisionError}</p>}
+          </div>
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => {
+                setDecisionApprovalId(null);
+                setDecisionAction(null);
+                setDecisionComment("");
+                setDecisionError("");
+              }}
+              disabled={deciding}
+            >
+              Отмена
+            </Button>
+            <Button
+              variant={decisionAction === "rejected" ? "destructive" : "default"}
+              onClick={handleDecision}
+              disabled={deciding}
+            >
+              {deciding && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+              {decisionAction === "approved" ? "Согласовать" : "Отклонить"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       {/* Close dialog */}
       <Dialog open={closeDialogOpen} onOpenChange={setCloseDialogOpen}>
