@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { sendEmail, sendDocumentExpiryAlert } from "@/lib/email";
+import { createNotification } from "@/lib/notifications";
 
 const CRON_SECRET = process.env.CRON_SECRET;
 
@@ -23,6 +24,7 @@ export async function POST(req: NextRequest) {
     include: {
       employee: {
         select: {
+          id: true,
           fullName: true,
           organizationId: true,
         },
@@ -74,6 +76,15 @@ export async function POST(req: NextRequest) {
           },
         });
       }
+
+      // In-app notification
+      await createNotification({
+        userId: admin.id,
+        type: "document_expiring",
+        title: "Истекает документ",
+        message: `${doc.employee.fullName} — ${doc.name}`,
+        link: `/employees/${doc.employee.id}`,
+      });
     }
   }
   results.push({ action: "expiring", count: expiringDocs.length });
@@ -87,6 +98,7 @@ export async function POST(req: NextRequest) {
     include: {
       employee: {
         select: {
+          id: true,
           fullName: true,
           organizationId: true,
         },
@@ -138,6 +150,15 @@ export async function POST(req: NextRequest) {
           },
         });
       }
+
+      // In-app notification
+      await createNotification({
+        userId: user.id,
+        type: "document_expired",
+        title: "Документ истёк",
+        message: `${doc.employee.fullName} — ${doc.name}`,
+        link: `/employees/${doc.employee.id}`,
+      });
     }
   }
   results.push({ action: "expired", count: expiredDocs.length });

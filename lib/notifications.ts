@@ -5,6 +5,7 @@ export type NotificationType =
   | "approval_result"
   | "document_added"
   | "document_expiring"
+  | "document_expired"
   | "permit_expiring"
   | "permit_closed"
   | "complaint_submitted";

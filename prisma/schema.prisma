@@ -112,6 +112,7 @@ enum NotificationType {
   approval_result       /// Результат согласования
   document_added        /// Новый нормативный документ
   document_expiring     /// Истекает срок документа
+  document_expired      /// Истёк срок документа
   permit_expiring       /// Подходит срок истечения наряда-допуска
   permit_closed         /// Досрочное закрытие наряда-допуска
   complaint_submitted   /// Подана жалоба
