@@ -193,7 +193,28 @@ export async function PATCH(
         data: {
           userId: admin.id,
           type: "approval_result",
-          title: "Согласование сотрудника",
+          title: "Решение по согласованию",
+          message: `${deptLabel}: ${validation.data.status === "approved" ? "Одобрено" : "Отклонено"} — ${employeeFullName}`,
+          link: `/employees/${updated.employee.id}`,
+        },
+      });
+    }
+
+    // Notify organization owner (admin tied to this organization)
+    const orgOwners = await prisma.user.findMany({
+      where: {
+        isActive: true,
+        organizationId: updated.employee.organizationId,
+        role: "admin",
+      },
+    });
+
+    for (const owner of orgOwners) {
+      await prisma.notification.create({
+        data: {
+          userId: owner.id,
+          type: "approval_result",
+          title: "Решение по согласованию",
           message: `${deptLabel}: ${validation.data.status === "approved" ? "Одобрено" : "Отклонено"} — ${employeeFullName}`,
           link: `/employees/${updated.employee.id}`,
         },
