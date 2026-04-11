@@ -282,7 +282,7 @@ export default function ContractorDetailPage() {
                             const info = approvalStatusMap[a.status];
                             return (
                               <div
-                                key={a.id}
+                                key={`${a.department}-${a.status}-${a.id ?? 'none'}`}
                                 className="flex items-center justify-between text-xs"
                               >
                                 <span className="text-zinc-500">
