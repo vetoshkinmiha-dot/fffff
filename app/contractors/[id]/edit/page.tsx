@@ -102,7 +102,7 @@ export default function EditContractorPage() {
         return;
       }
 
-      router.push(`/contractors/${id}`);
+      router.push(`/contractors`);
     } catch {
       setError("Произошла ошибка. Попробуйте ещё раз.");
     } finally {
@@ -133,7 +133,7 @@ export default function EditContractorPage() {
     <div className="space-y-6">
       {/* Back */}
       <div className="flex items-center gap-3">
-        <Link href={`/contractors/${id}`}>
+        <Link href={`/contractors`}>
           <Button variant="ghost" size="icon-xs">
             <ArrowLeft />
           </Button>
@@ -262,7 +262,7 @@ export default function EditContractorPage() {
 
         {/* Actions */}
         <div className="flex items-center justify-end gap-3 pt-2">
-          <Link href={`/contractors/${id}`}>
+          <Link href={`/contractors`}>
             <Button variant="outline" type="button">Отмена</Button>
           </Link>
           <Button type="submit" disabled={loading}>
