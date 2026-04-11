@@ -15,10 +15,13 @@ const categoryLabels: Record<string, string> = {
 };
 
 const statusLabels: Record<string, string> = {
-  open: "Открыт",
+  draft: "Черновик",
+  pending_approval: "На согласовании",
+  approved: "Согласован",
+  active: "Открыт",
   closed: "Закрыт",
   early_closed: "Закрыт досрочно",
-  draft: "Черновик",
+  expired: "Истёк",
 };
 
 function formatDate(dateStr: string | null): string {

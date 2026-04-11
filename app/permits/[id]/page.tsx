@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react";
 import { notFound, useParams, useRouter } from "next/navigation";
 import Link from "next/link";
-import { ArrowLeft, CheckCircle2, Clock, XCircle, Printer, Archive, Loader2, Plus } from "lucide-react";
+import { ArrowLeft, CheckCircle2, Clock, XCircle, Printer, Archive, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
@@ -143,6 +143,7 @@ export default function PermitDetailPage() {
       setDecisionApprovalId(null);
       setDecisionAction(null);
       setDecisionComment("");
+      setDecisionError("");
     } catch {
       setDecisionError("Произошла ошибка. Попробуйте ещё раз.");
     } finally {

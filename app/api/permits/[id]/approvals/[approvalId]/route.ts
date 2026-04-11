@@ -81,11 +81,11 @@ export async function PATCH(
       }
     }
 
-    // If any approval is rejected → set permit to expired
+    // If any approval is rejected → set permit to closed
     if (validation.data.status === "rejected") {
       await prisma.permit.update({
         where: { id },
-        data: { status: "expired" },
+        data: { status: "closed" },
       });
     }
 
