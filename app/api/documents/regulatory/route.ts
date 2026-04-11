@@ -4,6 +4,7 @@ import { authMiddleware } from "@/lib/api-middleware";
 import { createRegDocumentSchema } from "@/lib/validations";
 import { uploadFile } from "@/lib/file-storage";
 import { sendRegDocUpdated } from "@/lib/email";
+import { createNotification } from "@/lib/notifications";
 
 export async function GET(req: NextRequest) {
   const authResult = await authMiddleware(req);
@@ -85,6 +86,22 @@ export async function POST(req: NextRequest) {
 
     if (subscribers.length > 0) {
       await sendRegDocUpdated(subscribers, doc.title, `/documents/regulatory/${doc.id}`);
+    }
+
+    // Create in-app notification for all active users
+    const allActiveUsers = await prisma.user.findMany({
+      where: { isActive: true },
+      select: { id: true },
+    });
+
+    for (const user of allActiveUsers) {
+      await createNotification({
+        userId: user.id,
+        type: "document_added",
+        title: "Новый нормативный документ",
+        message: doc.title,
+        link: "/documents",
+      });
     }
 
     return NextResponse.json(doc, { status: 201 });
