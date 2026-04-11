@@ -84,9 +84,9 @@ export default function PermitPrintPage() {
   }
 
   return (
-    <div className="max-w-[210mm] mx-auto p-8">
+    <div className="max-w-[210mm] mx-auto p-8 print:p-0 print:max-w-none print:w-full print:mx-0 print:bg-white">
       {/* Print button */}
-      <div className="mb-6 no-print">
+      <div className="mb-6 print:hidden">
         <Button onClick={() => window.print()}>
           Печать
         </Button>

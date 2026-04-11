@@ -11,8 +11,9 @@ export default function RootLayout({
 }) {
   const pathname = usePathname();
   const isAuthPage = pathname === "/login" || pathname === "/auth/unauthorized";
+  const isPrintPage = pathname?.includes("/print");
 
-  if (isAuthPage) {
+  if (isAuthPage || isPrintPage) {
     return <>{children}</>;
   }
 
