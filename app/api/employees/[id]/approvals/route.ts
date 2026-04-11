@@ -103,13 +103,12 @@ export async function POST(
       data: newRequests,
     });
 
-    // Send email only to the first pending department's approvers
-    const firstPending = requests.find((r) => r.status === "pending");
-    if (firstPending) {
+    // Send email + in-app notifications to all newly created departments' approvers
+    for (const request of requests) {
       const approvers = await prisma.user.findMany({
         where: {
           isActive: true,
-          department: firstPending.department,
+          department: request.department,
         },
       });
 
@@ -119,9 +118,18 @@ export async function POST(
           approver.fullName,
           employee.fullName,
           employee.organization.name,
-          firstPending.department,
+          request.department,
           deadline,
         );
+        await prisma.notification.create({
+          data: {
+            userId: approver.id,
+            type: "approval_requested",
+            title: "Новое согласование",
+            message: `Сотрудник ${employee.fullName} (${employee.organization.name})`,
+            link: "/approvals",
+          },
+        });
       }
     }
 
