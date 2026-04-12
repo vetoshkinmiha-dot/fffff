@@ -32,12 +32,22 @@ const CATEGORY_OPTIONS: { value: string; label: string }[] = [
 
 export default function NewPermitPage() {
   const router = useRouter();
+
+  // ALL hooks MUST be called before any early return
   const [organizations, setOrganizations] = useState<Organization[]>([]);
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState("");
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
   const [authorized, setAuthorized] = useState<boolean | null>(null);
+  const [form, setForm] = useState({
+    contractorId: "",
+    category: "",
+    workSite: "",
+    responsiblePerson: "",
+    openDate: "",
+    expiryDate: "",
+  });
 
   useEffect(() => {
     fetch("/api/auth/me", { credentials: "include" })
@@ -61,6 +71,7 @@ export default function NewPermitPage() {
       .catch(() => setLoading(false));
   }, []);
 
+  // Early returns AFTER all hooks
   if (authorized === null || loading) {
     return (
       <div className="flex items-center justify-center py-20">
@@ -73,15 +84,6 @@ export default function NewPermitPage() {
     router.push("/permits");
     return null;
   }
-
-  const [form, setForm] = useState({
-    contractorId: "",
-    category: "",
-    workSite: "",
-    responsiblePerson: "",
-    openDate: "",
-    expiryDate: "",
-  });
 
   function validate() {
     const errs: Record<string, string> = {};
@@ -126,14 +128,6 @@ export default function NewPermitPage() {
     } finally {
       setSubmitting(false);
     }
-  }
-
-  if (loading) {
-    return (
-      <div className="flex items-center justify-center py-20">
-        <Loader2 className="h-6 w-6 animate-spin text-zinc-400" />
-      </div>
-    );
   }
 
   return (
