@@ -156,74 +156,62 @@ export default function PermitsPage() {
         </Select>
       </div>
 
-      <div className="rounded-xl border border-zinc-200 bg-white">
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead>Номер наряда</TableHead>
-              <TableHead>Категория</TableHead>
-              <TableHead>Подрядчик</TableHead>
-              <TableHead>Дата открытия</TableHead>
-              <TableHead>Срок действия</TableHead>
-              <TableHead>Участок</TableHead>
-              <TableHead>Ответственный</TableHead>
-              <TableHead>Статус</TableHead>
-              <TableHead className="text-right">Действия</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
+      <div className="overflow-x-auto rounded-xl border border-zinc-200 bg-white">
+        <table className="w-full caption-bottom text-sm">
+          <thead>
+            <tr className="border-b">
+              <th className="h-10 px-2 text-left align-middle font-medium">Номер наряда</th>
+              <th className="h-10 px-2 text-left align-middle font-medium">Категория</th>
+              <th className="h-10 px-2 text-left align-middle font-medium">Подрядчик</th>
+              <th className="h-10 px-2 text-left align-middle font-medium">Дата открытия</th>
+              <th className="h-10 px-2 text-left align-middle font-medium">Срок действия</th>
+              <th className="h-10 px-2 text-left align-middle font-medium">Участок</th>
+              <th className="h-10 px-2 text-left align-middle font-medium">Ответственный</th>
+              <th className="h-10 px-2 text-left align-middle font-medium">Статус</th>
+              <th className="h-10 px-2 text-right align-middle font-medium">Действия</th>
+            </tr>
+          </thead>
+          <tbody className="[&_tr:last-child]:border-0">
             {loading ? (
-              <TableRow>
-                <TableCell colSpan={9} className="py-8 text-center text-sm text-zinc-500">
+              <tr className="border-b">
+                <td colSpan={9} className="p-2 py-8 text-center text-sm text-zinc-500">
                   Загрузка...
-                </TableCell>
-              </TableRow>
+                </td>
+              </tr>
             ) : permits.length === 0 ? (
-              <TableRow>
-                <TableCell colSpan={9} className="py-8 text-center text-sm text-zinc-500">
+              <tr className="border-b">
+                <td colSpan={9} className="p-2 py-8 text-center text-sm text-zinc-500">
                   Наряды-допуски не найдены
-                </TableCell>
-              </TableRow>
+                </td>
+              </tr>
             ) : (
               permits.map((permit) => (
-                <TableRow key={permit.id}>
-                  <TableCell className="font-mono text-xs text-zinc-700">
-                    {permit.permitNumber}
-                  </TableCell>
-                  <TableCell>{categoryLabels[permit.category] ?? permit.category}</TableCell>
-                  <TableCell className="max-w-[200px] truncate text-zinc-900">
-                    {permit.contractor?.name ?? "—"}
-                  </TableCell>
-                  <TableCell className="text-zinc-600">
-                    {formatDate(permit.openDate)}
-                  </TableCell>
-                  <TableCell className="text-zinc-600">
-                    {formatDate(permit.expiryDate)}
-                  </TableCell>
-                  <TableCell className="max-w-[200px] truncate text-sm text-zinc-600">
-                    {permit.workSite}
-                  </TableCell>
-                  <TableCell className="max-w-[150px] truncate text-sm text-zinc-600">
-                    {permit.responsiblePerson}
-                  </TableCell>
-                  <TableCell>
+                <tr key={permit.id} className="border-b transition-colors hover:bg-muted/50">
+                  <td className="p-2 font-mono text-xs text-zinc-700">{permit.permitNumber}</td>
+                  <td className="p-2 text-sm text-zinc-900">{categoryLabels[permit.category] ?? permit.category}</td>
+                  <td className="p-2 text-sm text-zinc-900 max-w-[200px] truncate">{permit.contractor?.name ?? "—"}</td>
+                  <td className="p-2 text-sm text-zinc-600">{formatDate(permit.openDate)}</td>
+                  <td className="p-2 text-sm text-zinc-600">{formatDate(permit.expiryDate)}</td>
+                  <td className="p-2 text-sm text-zinc-600 max-w-[200px] truncate">{permit.workSite}</td>
+                  <td className="p-2 text-sm text-zinc-600 max-w-[150px] truncate">{permit.responsiblePerson}</td>
+                  <td className="p-2">
                     <Badge variant={statusConfig[permit.status]?.variant ?? "secondary"}>
                       {statusConfig[permit.status]?.label ?? permit.status}
                     </Badge>
-                  </TableCell>
-                  <TableCell className="text-right">
+                  </td>
+                  <td className="p-2 text-right">
                     <Link href={`/permits/${permit.id}`}>
                       <Button variant="ghost" size="sm">
                         <Eye className="size-4 mr-1" />
                         Подробнее
                       </Button>
                     </Link>
-                  </TableCell>
-                </TableRow>
+                  </td>
+                </tr>
               ))
             )}
-          </TableBody>
-        </Table>
+          </tbody>
+        </table>
       </div>
 
       {totalPages > 1 && (
