@@ -232,19 +232,21 @@ export default function ApprovalsPage() {
         </p>
       </div>
 
-      <div className="flex items-center gap-3">
-        <Select value={statusFilter} onValueChange={handleStatusChange}>
-          <SelectTrigger className="w-[200px]">
-            <SelectValue placeholder="Все статусы" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="pending">Ожидающие</SelectItem>
-            <SelectItem value="approved">Согласованные</SelectItem>
-            <SelectItem value="rejected">Отклонённые</SelectItem>
-            <SelectItem value="all">Все</SelectItem>
-          </SelectContent>
-        </Select>
-      </div>
+      {role !== "department_approver" && (
+        <div className="flex items-center gap-3">
+          <Select value={statusFilter} onValueChange={handleStatusChange}>
+            <SelectTrigger className="w-[200px]">
+              <SelectValue placeholder="Все статусы" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="pending">Ожидающие</SelectItem>
+              <SelectItem value="approved">Согласованные</SelectItem>
+              <SelectItem value="rejected">Отклонённые</SelectItem>
+              <SelectItem value="all">Все</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+      )}
 
       <div className="overflow-hidden rounded-xl border border-zinc-200 bg-white">
         <Table>

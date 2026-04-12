@@ -48,14 +48,10 @@ export async function GET(req: NextRequest) {
 
   // department_approver: only pending approvals of their department
   if (role === "department_approver") {
-    const where: any = {};
-    if (authResult.user.department) {
-      where.department = authResult.user.department;
-    }
-    // By default show pending; if statusFilter provided, use it
-    if (statusFilter && statusFilter !== "all") {
-      where.status = statusFilter;
-    }
+    const where: any = {
+      department: authResult.user.department,
+      status: "pending",
+    };
 
     const approvals = await prisma.approvalRequest.findMany({
       where,
