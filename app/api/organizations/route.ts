@@ -23,7 +23,7 @@ export async function GET(req: NextRequest) {
     where.status = query.status;
   }
 
-  if (authResult.user.role === "contractor_employee") {
+  if (authResult.user.role === "contractor_employee" && authResult.user.organizationId) {
     where.id = authResult.user.organizationId;
   }
 

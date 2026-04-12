@@ -16,7 +16,7 @@ export async function GET(req: NextRequest) {
   const where: any = { expiryDate: { lte: threshold } };
 
   // Contractor employees only see their own org's documents
-  if (authResult.user.role === "contractor_employee") {
+  if (authResult.user.role === "contractor_employee" && authResult.user.organizationId) {
     where.employee = { organizationId: authResult.user.organizationId };
   }
 

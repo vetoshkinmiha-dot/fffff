@@ -24,7 +24,7 @@ export async function GET(req: NextRequest) {
   }
 
   // Contractor employees only see their own org's checklists
-  if (authResult.user.role === "contractor_employee") {
+  if (authResult.user.role === "contractor_employee" && authResult.user.organizationId) {
     where.contractorId = authResult.user.organizationId;
   }
 

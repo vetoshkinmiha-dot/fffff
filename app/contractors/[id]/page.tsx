@@ -54,6 +54,7 @@ export default function ContractorDetailPage() {
   const [contractor, setContractor] = useState<Contractor | null>(null);
   const [employees, setEmployees] = useState<Employee[]>([]);
   const [loading, setLoading] = useState(true);
+  const [userRole, setUserRole] = useState<string>("");
 
   useEffect(() => {
     let cancelled = false;
@@ -61,10 +62,16 @@ export default function ContractorDetailPage() {
     async function loadData() {
       setLoading(true);
       try {
-        const [orgRes, empRes] = await Promise.all([
+        const [orgRes, empRes, userRes] = await Promise.all([
           fetch(`/api/organizations/${id}`, { credentials: "include" }),
           fetch(`/api/employees?organizationId=${id}`, { credentials: "include" }),
+          fetch("/api/auth/me", { credentials: "include" }),
         ]);
+
+        if (!cancelled && userRes.ok) {
+          const userData = await userRes.json();
+          setUserRole(userData.user?.role || "");
+        }
 
         if (cancelled) return;
 

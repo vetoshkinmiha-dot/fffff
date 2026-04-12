@@ -56,6 +56,7 @@ export default function ContractorsPage() {
   const [page, setPage] = useState(1);
   const [total, setTotal] = useState(0);
   const [totalPages, setTotalPages] = useState(1);
+  const [userRole, setUserRole] = useState<string>("");
   const limit = 20;
 
   const fetchContractors = useCallback(async () => {
@@ -87,6 +88,12 @@ export default function ContractorsPage() {
 
   useEffect(() => {
     fetchContractors();
+    fetch("/api/auth/me", { credentials: "include" })
+      .then((r) => (r.ok ? r.json() : null))
+      .then((data) => {
+        if (data?.user?.role) setUserRole(data.user.role);
+      })
+      .catch(() => {});
   }, [fetchContractors]);
 
   const handleStatusChange = useCallback(
@@ -108,12 +115,14 @@ export default function ContractorsPage() {
             Управление подрядными организациями
           </p>
         </div>
+        {userRole === "admin" && (
         <Link href="/contractors/new">
           <Button variant="default" size="lg">
             <Plus />
             Добавить подрядчика
           </Button>
         </Link>
+        )}
       </div>
 
       <div className="flex items-center gap-3 flex-wrap">
@@ -214,11 +223,13 @@ export default function ContractorsPage() {
                           <Eye />
                         </Button>
                       </Link>
+                      {userRole === "admin" && (
                       <Link href={`/contractors/${c.id}/edit`}>
                         <Button variant="ghost" size="icon-xs">
                           <Pencil />
                         </Button>
                       </Link>
+                      )}
                     </div>
                   </TableCell>
                 </TableRow>

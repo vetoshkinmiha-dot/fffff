@@ -12,7 +12,7 @@ export async function GET(
 
   const { id } = await params;
 
-  if (authResult.user.role === "contractor_employee") {
+  if (authResult.user.role === "contractor_employee" && authResult.user.organizationId) {
     if (authResult.user.organizationId !== id) {
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }

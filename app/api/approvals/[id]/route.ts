@@ -91,7 +91,10 @@ export async function PATCH(
 
   const { id } = await params;
 
-  const approval = await prisma.approvalRequest.findUnique({ where: { id } });
+  const approval = await prisma.approvalRequest.findUnique({
+    where: { id },
+    include: { employee: { select: { id: true, fullName: true, organizationId: true } } },
+  });
   if (!approval) {
     return NextResponse.json({ error: "Approval not found" }, { status: 404 });
   }
@@ -100,11 +103,24 @@ export async function PATCH(
     return NextResponse.json({ error: "Approval already decided or blocked" }, { status: 400 });
   }
 
-  // Department match required
-  if (authResult.user.department && approval.department !== authResult.user.department) {
-    if (authResult.user.role !== "admin") {
+  // Role-based decision rights
+  if (authResult.user.role === "contractor_employee") {
+    return NextResponse.json({ error: "Forbidden: contractor_employee cannot decide approvals" }, { status: 403 });
+  }
+
+  // department_approver can only decide approvals for their own department
+  if (authResult.user.role === "department_approver") {
+    if (approval.department !== authResult.user.department) {
       return NextResponse.json({ error: "Forbidden: not your department" }, { status: 403 });
     }
+  }
+
+  // admin can decide any approval; other roles without department get 403
+  if (
+    authResult.user.role !== "admin" &&
+    authResult.user.role !== "department_approver"
+  ) {
+    return NextResponse.json({ error: "Forbidden: insufficient permissions" }, { status: 403 });
   }
 
   // Sequential check: previous department must be approved

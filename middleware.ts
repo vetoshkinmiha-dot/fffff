@@ -2,17 +2,18 @@ import { NextRequest, NextResponse } from "next/server";
 import { verifyAccessToken } from "./lib/auth-edge";
 
 // Routes that don't require authentication
-const PUBLIC_ROUTES = ["/login", "/register"];
+const PUBLIC_ROUTES = ["/login", "/register", "/auth/unauthorized"];
 
 // Routes that bypass auth (static files, API health, etc.)
 const PUBLIC_PREFIXES = ["/_next", "/favicon.ico", "/api/health", "/api/auth/"];
 
 // Role → allowed route patterns
+// employee: view-only access (no approvals, no admin pages)
 const ROLE_ROUTES: Record<string, string[]> = {
   admin: ["/*"],
-  employee: ["/contractors", "/contractors/*", "/employees", "/employees/*", "/permits", "/permits/*", "/violations", "/violations/*", "/checklists", "/checklists/*", "/"],
-  contractor_employee: ["/contractors", "/contractors/*", "/employees", "/employees/*", "/permits", "/permits/*", "/violations", "/violations/*", "/checklists", "/checklists/*", "/approvals", "/approvals/*", "/"],
-  department_approver: ["/contractors", "/contractors/*", "/employees", "/employees/*", "/approvals", "/approvals/*", "/permits", "/permits/*", "/violations", "/violations/*", "/"],
+  employee: ["/", "/contractors", "/contractors/*", "/employees", "/employees/*", "/permits", "/permits/*", "/permits/*/print", "/violations", "/violations/*", "/violations/*/print", "/checklists", "/checklists/*", "/documents", "/documents/*"],
+  contractor_employee: ["/contractors", "/contractors/*", "/employees", "/employees/*", "/permits", "/permits/*", "/permits/*/print", "/violations", "/violations/*", "/violations/*/print", "/checklists", "/checklists/*", "/approvals", "/approvals/*", "/"],
+  department_approver: ["/contractors", "/contractors/*", "/employees", "/employees/*", "/approvals", "/approvals/*", "/permits", "/permits/*", "/permits/*/print", "/violations", "/violations/*", "/violations/*/print", "/"],
 };
 
 export async function middleware(request: NextRequest) {

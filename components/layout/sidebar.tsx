@@ -34,7 +34,7 @@ const allNavItems: NavItem[] = [
 
 const ROLE_VISIBLE_NAV: Record<string, string[]> = {
   admin: allNavItems.map((n) => n.href),
-  employee: allNavItems.map((n) => n.href),
+  employee: ["/", "/contractors", "/employees", "/permits", "/violations", "/documents"],
   contractor_employee: ["/", "/contractors", "/employees", "/permits", "/violations", "/checklists", "/approvals"],
   department_approver: ["/", "/contractors", "/employees", "/permits", "/violations", "/approvals"],
 };

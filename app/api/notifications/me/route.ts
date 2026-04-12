@@ -47,7 +47,7 @@ export async function GET(req: NextRequest) {
   }
 
   // Contractor employee: expiring documents in their organization
-  if (user.role === "contractor_employee" && user.organizationId) {
+  if (user.role === "contractor_employee" && user.organizationId && user.organizationId) {
     const now = new Date();
     const threshold = new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000);
 

@@ -43,7 +43,7 @@ export async function POST(req: NextRequest) {
       where: {
         isActive: true,
         organizationId: doc.employee.organizationId,
-        role: "contractor_employee",
+        role: { in: ["contractor_employee", "admin"] },
       },
     });
 
@@ -117,7 +117,7 @@ export async function POST(req: NextRequest) {
       where: {
         isActive: true,
         organizationId: doc.employee.organizationId,
-        role: "contractor_employee",
+        role: { in: ["contractor_employee", "admin"] },
       },
     });
 

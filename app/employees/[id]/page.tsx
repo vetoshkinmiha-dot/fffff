@@ -159,6 +159,7 @@ export default function EmployeeDetailPage({
   const [deadline, setDeadline] = useState("");
   const [submittingApproval, setSubmittingApproval] = useState(false);
   const [approvalError, setApprovalError] = useState("");
+  const [userRole, setUserRole] = useState<string | null>(null);
 
   const DEPARTMENTS: { key: string; label: string }[] = [
     { key: "security", label: "Служба безопасности" },
@@ -215,6 +216,15 @@ export default function EmployeeDetailPage({
   useEffect(() => {
     params.then((p) => setId(p.id));
   }, [params]);
+
+  useEffect(() => {
+    fetch("/api/auth/me", { credentials: "include" })
+      .then((r) => (r.ok ? r.json() : null))
+      .then((data) => {
+        if (data?.user?.role) setUserRole(data.user.role);
+      })
+      .catch(() => {});
+  }, []);
 
   useEffect(() => {
     if (!id) return;
@@ -275,10 +285,12 @@ export default function EmployeeDetailPage({
           </Button>
         </Link>
         <div className="flex-1" />
-        <Button className="gap-2" onClick={() => setApprovalDialogOpen(true)}>
-          <Send className="h-4 w-4" />
-          Отправить на согласование
-        </Button>
+        {(userRole === "admin" || userRole === "contractor_employee") && (
+          <Button className="gap-2" onClick={() => setApprovalDialogOpen(true)}>
+            <Send className="h-4 w-4" />
+            Отправить на согласование
+          </Button>
+        )}
       </div>
 
       {/* Employee header */}

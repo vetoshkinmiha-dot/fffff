@@ -34,7 +34,7 @@ export async function POST(req: NextRequest) {
       where: {
         isActive: true,
         organizationId: permit.contractorId,
-        role: { in: ["contractor_employee", "admin"] },
+        role: { in: ["contractor_employee", "employee", "admin"] },
       },
     });
 

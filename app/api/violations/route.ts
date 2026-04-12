@@ -25,7 +25,7 @@ export async function GET(req: NextRequest) {
   if (department) where.department = department;
 
   // Contractor employees only see their own org's violations
-  if (authResult.user.role === "contractor_employee") {
+  if (authResult.user.role === "contractor_employee" && authResult.user.organizationId) {
     where.contractorId = authResult.user.organizationId;
   }
 

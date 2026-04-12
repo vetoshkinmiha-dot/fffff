@@ -32,7 +32,7 @@ export async function GET(req: NextRequest) {
 
   // Contractor employees only see their own org's permits
   if (
-    authResult.user.role === "contractor_employee"
+    authResult.user.role === "contractor_employee" && authResult.user.organizationId
   ) {
     where.contractorId = authResult.user.organizationId;
   }

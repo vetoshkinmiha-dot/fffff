@@ -26,7 +26,7 @@ export async function GET(
   }
 
   // Contractor employees can only see their own org's permits
-  if (authResult.user.role === "contractor_employee") {
+  if (authResult.user.role === "contractor_employee" && authResult.user.organizationId) {
     if (permit.contractorId !== authResult.user.organizationId) {
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }
@@ -56,7 +56,7 @@ export async function PATCH(
   }
 
   // Contractor employees can only edit their own org's permits
-  if (authResult.user.role === "contractor_employee") {
+  if (authResult.user.role === "contractor_employee" && authResult.user.organizationId) {
     if (permit.contractorId !== authResult.user.organizationId) {
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }

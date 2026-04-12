@@ -10,7 +10,7 @@ export async function GET(req: NextRequest) {
 
   // Total contractors (organizations) — factory roles see all, contractors see their org
   let totalContractors: number;
-  if (user.role === "contractor_employee") {
+  if (user.role === "contractor_employee" && user.organizationId) {
     totalContractors = user.organizationId ? 1 : 0;
   } else {
     totalContractors = await prisma.organization.count();
@@ -29,7 +29,7 @@ export async function GET(req: NextRequest) {
 
   // Active permits — permits with status 'active' or 'approved'
   let activePermits: number;
-  if (user.role === "contractor_employee") {
+  if (user.role === "contractor_employee" && user.organizationId) {
     activePermits = await prisma.permit.count({
       where: {
         contractorId: user.organizationId ?? "",
@@ -50,7 +50,7 @@ export async function GET(req: NextRequest) {
   const endOfMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59, 999);
 
   let monthlyViolations: number;
-  if (user.role === "contractor_employee") {
+  if (user.role === "contractor_employee" && user.organizationId) {
     monthlyViolations = await prisma.violation.count({
       where: {
         contractorId: user.organizationId ?? "",

@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useCallback, useEffect } from "react";
+import { useRouter } from "next/navigation";
 import { CheckCircle2, XCircle, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -53,6 +54,14 @@ const statusConfig: Record<
   rejected: { variant: "secondary", label: "Отклонено" },
 };
 
+const DEPARTMENT_NAMES: Record<string, string> = {
+  security: "Служба безопасности",
+  hr: "Отдел кадров",
+  safety: "Охрана труда",
+  safety_training: "Вводный инструктаж",
+  permit_bureau: "Бюро пропусков",
+};
+
 function formatDate(dateStr: string) {
   return new Date(dateStr).toLocaleDateString("ru-RU", {
     day: "2-digit",
@@ -62,6 +71,7 @@ function formatDate(dateStr: string) {
 }
 
 export default function ApprovalsPage() {
+  const router = useRouter();
   const [approvals, setApprovals] = useState<Approval[]>([]);
   const [loading, setLoading] = useState(true);
   const [statusFilter, setStatusFilter] = useState("pending");
@@ -71,14 +81,23 @@ export default function ApprovalsPage() {
   const [dialogApprovalId, setDialogApprovalId] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState("");
+  const [role, setRole] = useState<string | null>(null);
+  const [forbidden, setForbidden] = useState(false);
 
-  const DEPARTMENT_NAMES: Record<string, string> = {
-    security: "Служба безопасности",
-    hr: "Отдел кадров",
-    safety: "Охрана труда",
-    safety_training: "Вводный инструктаж",
-    permit_bureau: "Бюро пропусков/СБ",
-  };
+  useEffect(() => {
+    fetch("/api/auth/me", { credentials: "include" })
+      .then((r) => (r.ok ? r.json() : null))
+      .then((data) => {
+        if (data?.user?.role) {
+          setRole(data.user.role);
+          // employee role should redirect
+          if (data.user.role === "employee") {
+            router.replace("/");
+          }
+        }
+      })
+      .catch(() => {});
+  }, [router]);
 
   useEffect(() => {
     const statusParam = statusFilter === "all" ? "" : statusFilter;
@@ -86,19 +105,31 @@ export default function ApprovalsPage() {
       ? `/api/approvals?status=${statusParam}`
       : "/api/approvals";
     fetch(url, { credentials: "include" })
-      .then((r) => r.json())
+      .then((r) => {
+        if (r.status === 403) {
+          setForbidden(true);
+          return null;
+        }
+        return r.json();
+      })
       .then((data) => {
-        setApprovals(data.map((a: any) => ({
-          id: a.id,
-          employeeName: a.employee?.fullName || "",
-          contractorName: a.employee?.organization?.name || "",
-          department: a.department,
-          departmentName: DEPARTMENT_NAMES[a.department] || a.department,
-          status: a.status,
-          deadline: a.deadline,
-          comment: a.comment,
-          createdAt: a.createdAt,
-        })));
+        if (!data) {
+          setLoading(false);
+          return;
+        }
+        setApprovals(
+          data.map((a: any) => ({
+            id: a.id,
+            employeeName: a.employee?.fullName || "",
+            contractorName: a.employee?.organization?.name || "",
+            department: a.department,
+            departmentName: DEPARTMENT_NAMES[a.department] || a.department,
+            status: a.status,
+            deadline: a.deadline,
+            comment: a.comment,
+            createdAt: a.createdAt,
+          }))
+        );
         setLoading(false);
       })
       .catch(() => setLoading(false));
@@ -135,14 +166,19 @@ export default function ApprovalsPage() {
       });
 
       if (!res.ok) {
-        setError("Ошибка при сохранении решения");
+        const data = await res.json();
+        setError(data.error || "Ошибка при сохранении решения");
         return;
       }
 
       setApprovals((prev) =>
         prev.map((a) =>
           a.id === dialogApprovalId
-            ? { ...a, status: dialogMode === "approve" ? "approved" : "rejected", comment: dialogComment.trim() || null }
+            ? {
+                ...a,
+                status: dialogMode === "approve" ? "approved" : "rejected",
+                comment: dialogComment.trim() || null,
+              }
             : a
         )
       );
@@ -154,10 +190,24 @@ export default function ApprovalsPage() {
     }
   }
 
+  const canDecide =
+    role === "admin" || role === "department_approver";
+
   const filtered =
     statusFilter === "all"
       ? approvals
       : approvals.filter((a) => a.status === statusFilter);
+
+  if (forbidden) {
+    return (
+      <div className="flex flex-col items-center justify-center py-20 gap-4">
+        <p className="text-lg text-zinc-600">Нет доступа к разделу согласований</p>
+        <Button variant="outline" onClick={() => router.push("/")}>
+          На главную
+        </Button>
+      </div>
+    );
+  }
 
   if (loading) {
     return (
@@ -167,6 +217,8 @@ export default function ApprovalsPage() {
     );
   }
 
+  const isContractor = role === "contractor_employee";
+
   return (
     <div className="space-y-6">
       <div>
@@ -174,7 +226,9 @@ export default function ApprovalsPage() {
           Согласования
         </h1>
         <p className="mt-1 text-sm text-zinc-500">
-          Управление допусками сотрудников подрядных организаций
+          {isContractor
+            ? "Статус заявок на согласование сотрудников вашей организации"
+            : "Управление допусками сотрудников подрядных организаций"}
         </p>
       </div>
 
@@ -201,19 +255,23 @@ export default function ApprovalsPage() {
               <TableHead className="font-medium">Департамент</TableHead>
               <TableHead className="font-medium">Срок</TableHead>
               <TableHead className="font-medium">Статус</TableHead>
-              <TableHead className="font-medium text-right">
-                Действия
-              </TableHead>
+              {canDecide && (
+                <TableHead className="font-medium text-right">
+                  Действия
+                </TableHead>
+              )}
             </TableRow>
           </TableHeader>
           <TableBody>
             {filtered.length === 0 ? (
               <TableRow>
                 <TableCell
-                  colSpan={6}
+                  colSpan={canDecide ? 6 : 5}
                   className="py-8 text-center text-sm text-zinc-500"
                 >
-                  Запросы на согласование не найдены
+                  {isContractor
+                    ? "Сотрудников на согласование не найдено"
+                    : "Запросы на согласование не найдены"}
                 </TableCell>
               </TableRow>
             ) : (
@@ -236,32 +294,38 @@ export default function ApprovalsPage() {
                       {statusConfig[approval.status].label}
                     </Badge>
                   </TableCell>
-                  <TableCell className="text-right">
-                    {approval.status === "pending" ? (
-                      <div className="flex items-center justify-end gap-1">
-                        <Button
-                          variant="ghost"
-                          size="icon-xs"
-                          className="text-emerald-600 hover:text-emerald-700 hover:bg-emerald-50"
-                          onClick={() => openDialog(approval.id, "approve")}
-                        >
-                          <CheckCircle2 className="h-4 w-4" />
-                        </Button>
-                        <Button
-                          variant="ghost"
-                          size="icon-xs"
-                          className="text-red-600 hover:text-red-700 hover:bg-red-50"
-                          onClick={() => openDialog(approval.id, "reject")}
-                        >
-                          <XCircle className="h-4 w-4" />
-                        </Button>
-                      </div>
-                    ) : (
-                      <span className="text-xs text-zinc-400">
-                        {approval.comment || "—"}
-                      </span>
-                    )}
-                  </TableCell>
+                  {canDecide && (
+                    <TableCell className="text-right">
+                      {approval.status === "pending" ? (
+                        <div className="flex items-center justify-end gap-1">
+                          <Button
+                            variant="ghost"
+                            size="icon-xs"
+                            className="text-emerald-600 hover:text-emerald-700 hover:bg-emerald-50"
+                            onClick={() =>
+                              openDialog(approval.id, "approve")
+                            }
+                          >
+                            <CheckCircle2 className="h-4 w-4" />
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="icon-xs"
+                            className="text-red-600 hover:text-red-700 hover:bg-red-50"
+                            onClick={() =>
+                              openDialog(approval.id, "reject")
+                            }
+                          >
+                            <XCircle className="h-4 w-4" />
+                          </Button>
+                        </div>
+                      ) : (
+                        <span className="text-xs text-zinc-400">
+                          {approval.comment || "—"}
+                        </span>
+                      )}
+                    </TableCell>
+                  )}
                 </TableRow>
               ))
             )}

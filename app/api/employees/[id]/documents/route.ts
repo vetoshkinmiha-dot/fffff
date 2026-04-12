@@ -19,7 +19,7 @@ export async function GET(
 
   // Contractor scoping
   if (
-    authResult.user.role === "contractor_employee"
+    authResult.user.role === "contractor_employee" && authResult.user.organizationId
   ) {
     if (employee.organizationId !== authResult.user.organizationId) {
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
@@ -49,7 +49,7 @@ export async function POST(
   }
 
   // Only contractor_employee can upload for their own org's employees
-  if (authResult.user.role === "contractor_employee") {
+  if (authResult.user.role === "contractor_employee" && authResult.user.organizationId) {
     if (employee.organizationId !== authResult.user.organizationId) {
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }

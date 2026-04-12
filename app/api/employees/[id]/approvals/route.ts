@@ -29,7 +29,7 @@ export async function GET(
   }
 
   if (
-    authResult.user.role === "contractor_employee"
+    authResult.user.role === "contractor_employee" && authResult.user.organizationId
   ) {
     if (employee.organizationId !== authResult.user.organizationId) {
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
@@ -60,6 +60,16 @@ export async function POST(
 
   if (!employee) {
     return NextResponse.json({ error: "Employee not found" }, { status: 404 });
+  }
+
+  // Only admin and contractor_employee can create approvals
+  if (authResult.user.role !== "admin" && authResult.user.role !== "contractor_employee") {
+    return NextResponse.json({ error: "Forbidden: only admin or contractor_employee can create approvals" }, { status: 403 });
+  }
+
+  // contractor_employee can only submit for their own organization
+  if (authResult.user.role === "contractor_employee" && employee.organizationId !== authResult.user.organizationId) {
+    return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
 
   try {
