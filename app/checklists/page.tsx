@@ -54,6 +54,7 @@ export default function ChecklistsPage() {
   const [total, setTotal] = useState(0);
   const [totalPages, setTotalPages] = useState(1);
   const [statusFilter, setStatusFilter] = useState("all");
+  const [userRole, setUserRole] = useState<string>("");
   const limit = 20;
 
   const fetchChecklists = useCallback(async () => {
@@ -80,6 +81,12 @@ export default function ChecklistsPage() {
 
   useEffect(() => {
     fetchChecklists();
+    fetch("/api/auth/me", { credentials: "include" })
+      .then((r) => (r.ok ? r.json() : null))
+      .then((data) => {
+        if (data?.user?.role) setUserRole(data.user.role);
+      })
+      .catch(() => {});
   }, [fetchChecklists]);
 
   return (
@@ -93,12 +100,14 @@ export default function ChecklistsPage() {
             Проверка подрядных организаций
           </p>
         </div>
+        {userRole === "admin" && (
         <Link href="/checklists/new">
           <Button variant="default" size="lg">
             <Plus />
             Создать чек-лист
           </Button>
         </Link>
+        )}
       </div>
 
       <div className="flex items-center gap-3">

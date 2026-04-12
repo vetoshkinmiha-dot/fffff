@@ -62,6 +62,7 @@ export default function ViolationsPage() {
   const [totalPages, setTotalPages] = useState(1);
   const [severityFilter, setSeverityFilter] = useState("all");
   const [statusFilter, setStatusFilter] = useState("all");
+  const [userRole, setUserRole] = useState<string>("");
   const limit = 20;
 
   const fetchViolations = useCallback(async () => {
@@ -89,6 +90,12 @@ export default function ViolationsPage() {
 
   useEffect(() => {
     fetchViolations();
+    fetch("/api/auth/me", { credentials: "include" })
+      .then((r) => (r.ok ? r.json() : null))
+      .then((data) => {
+        if (data?.user?.role) setUserRole(data.user.role);
+      })
+      .catch(() => {});
   }, [fetchViolations]);
 
   return (
@@ -103,12 +110,14 @@ export default function ViolationsPage() {
           </p>
         </div>
         <div className="flex items-center gap-2">
+          {userRole === "admin" && (
           <Link href="/violations/templates">
             <Button variant="outline" size="lg">
               <FileInput />
               Шаблоны
             </Button>
           </Link>
+          )}
           <Link href="/violations/new">
             <Button variant="default" size="lg">
               <Plus />

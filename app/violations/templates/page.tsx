@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import Link from "next/link";
 import { ArrowLeft, Plus, Eye, Loader2, AlertCircle, X } from "lucide-react";
+import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -73,6 +74,7 @@ function formatDate(dateStr: string) {
 }
 
 export default function ViolationTemplatesPage() {
+  const router = useRouter();
   const [templates, setTemplates] = useState<Template[]>([]);
   const [loading, setLoading] = useState(true);
   const [createOpen, setCreateOpen] = useState(false);
@@ -96,7 +98,12 @@ export default function ViolationTemplatesPage() {
     ]).then(async ([userRes, tmplRes]) => {
       if (userRes.ok) {
         const userData = await userRes.json();
-        setIsHSE(userData.user?.role === "admin");
+        const isAdmin = userData.user?.role === "admin";
+        setIsHSE(isAdmin);
+        if (!isAdmin) {
+          router.push("/violations");
+          return;
+        }
       }
       if (tmplRes.ok) {
         const data = await tmplRes.json();

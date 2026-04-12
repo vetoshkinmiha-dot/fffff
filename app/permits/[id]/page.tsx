@@ -75,6 +75,7 @@ export default function PermitDetailPage() {
 
   const [permit, setPermit] = useState<Permit | null>(null);
   const [loading, setLoading] = useState(true);
+  const [userRole, setUserRole] = useState<string>("");
   const [closeDialogOpen, setCloseDialogOpen] = useState(false);
   const [closeReason, setCloseReason] = useState("");
   const [closing, setClosing] = useState(false);
@@ -91,11 +92,18 @@ export default function PermitDetailPage() {
     async function fetchPermit() {
       setLoading(true);
       try {
-        const res = await fetch(`/api/permits/${id}`, { credentials: "include" });
+        const [res, userRes] = await Promise.all([
+          fetch(`/api/permits/${id}`, { credentials: "include" }),
+          fetch("/api/auth/me", { credentials: "include" }),
+        ]);
         if (res.status === 404) {
           notFound();
         } else if (res.ok) {
           setPermit(await res.json());
+        }
+        if (userRes.ok) {
+          const userData = await userRes.json();
+          setUserRole(userData.user?.role || "");
         }
       } catch {
         notFound();
@@ -216,7 +224,7 @@ export default function PermitDetailPage() {
           </Button>
         </Link>
         <div className="flex-1" />
-        {(permit.status === "active" || permit.status === "approved") && (
+        {(permit.status === "active" || permit.status === "approved") && (userRole === "admin" || userRole === "contractor_employee") && (
           <Button
             variant="outline"
             className="gap-2"
