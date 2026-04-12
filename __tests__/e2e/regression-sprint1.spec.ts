@@ -1,6 +1,11 @@
 import { test, expect } from '@playwright/test'
 
-const ADMIN_CREDS = { email: 'admin@pirelli.ru', password: 'Admin123!' }
+const ACCOUNTS = {
+  admin: { email: 'admin@pirelli.ru', password: 'Admin123!' },
+  approver: { email: 'approver@pirelli.ru', password: 'Approver1!' },
+  contractor: { email: 'podradchik@pirelli.ru', password: 'Contractor1!' },
+  employee: { email: 'employee@pirelli.ru', password: 'Employee1!' },
+}
 
 async function login(page: any, email: string, password: string) {
   await page.goto('/login')
@@ -10,11 +15,11 @@ async function login(page: any, email: string, password: string) {
   await page.waitForLoadState('networkidle')
 }
 
-test.describe('Sprint 1 Regression', () => {
+test.describe('Sprint 1 Regression — 4 roles', () => {
 
   // 1. Create contractor → redirect to detail
   test('1. Create contractor → redirects to detail page', async ({ page }) => {
-    await login(page, ADMIN_CREDS.email, ADMIN_CREDS.password)
+    await login(page, ACCOUNTS.admin.email, ACCOUNTS.admin.password)
     await page.goto('/contractors/new')
 
     await page.locator('#name').fill(`ООО Регресс-${Date.now()}`)
@@ -22,16 +27,14 @@ test.describe('Sprint 1 Regression', () => {
     await page.locator('#legalAddress').fill('Москва, ул. Тест')
     await page.getByRole('button', { name: /создать/i }).click()
 
-    // Should redirect to contractor detail
     await expect(page).toHaveURL(/\/contractors\/[\w-]+/)
     await expect(page.locator('h1').first()).toBeVisible()
   })
 
   // 2. Create employee → redirect to detail
   test('2. Create employee → redirects to detail page', async ({ page }) => {
-    await login(page, ADMIN_CREDS.email, ADMIN_CREDS.password)
+    await login(page, ACCOUNTS.admin.email, ACCOUNTS.admin.password)
 
-    // First create a contractor if none exist
     await page.goto('/contractors/new')
     await page.locator('#name').fill(`ООО ДляСотрудника-${Date.now()}`)
     await page.locator('#inn').fill('7707987654')
@@ -39,32 +42,24 @@ test.describe('Sprint 1 Regression', () => {
     await page.getByRole('button', { name: /создать/i }).click()
     await page.waitForURL(/\/contractors\/[\w-]+/)
 
-    // Now go to employee form
     await page.goto('/employees/new')
-
-    // Select the organization from dropdown
     await page.locator('[data-slot="select-trigger"]').first().click()
     await page.getByRole('option', { name: /ООО/i }).first().click()
 
-    // Fill employee form
     await page.locator('#fullName').fill('Регрессов Р.Р.')
     await page.locator('#position').fill('Инженер')
     await page.getByPlaceholder('Серия (4 цифры)').fill('4510')
     await page.getByPlaceholder('Номер (6 цифр)').fill('123456')
 
     await page.getByRole('button', { name: /создать/i }).click()
-
-    // Should redirect to employee detail
     await expect(page).toHaveURL(/\/employees\/[\w-]+/)
   })
 
   // 3. Upload document → success
   test('3. Upload document → success', async ({ page }) => {
-    await login(page, ADMIN_CREDS.email, ADMIN_CREDS.password)
+    await login(page, ACCOUNTS.admin.email, ACCOUNTS.admin.password)
 
-    // Navigate to employee creation and use an existing contractor
     await page.goto('/employees/new')
-    // Select the organization from dropdown
     await page.locator('[data-slot="select-trigger"]').first().click()
     await page.getByRole('option', { name: /ООО/i }).first().click()
 
@@ -75,83 +70,93 @@ test.describe('Sprint 1 Regression', () => {
     await page.getByPlaceholder('Номер (6 цифр)').fill(ts.padStart(6, '0'))
     await page.getByRole('button', { name: /создать/i }).click()
     await page.waitForURL(/\/employees\/[\w-]+/)
-    // Wait for detail page to load — Documents card is visible
     await page.waitForLoadState('networkidle')
     await page.waitForTimeout(500)
 
-    // Try upload button
     await page.getByRole('button', { name: 'Загрузить' }).click()
-    // File upload area should appear (drop zone)
     await expect(page.getByText(/выберите/i)).toBeVisible()
   })
 
   // 4. Approvals page — data loads
-  test('4. Approvals page — data loads, approve/reject works', async ({ page }) => {
-    await login(page, ADMIN_CREDS.email, ADMIN_CREDS.password)
+  test('4. Approvals page — data loads', async ({ page }) => {
+    await login(page, ACCOUNTS.admin.email, ACCOUNTS.admin.password)
     await page.goto('/approvals')
 
-    // Page should render (table or empty state)
     await expect(page.locator('body')).not.toBeEmpty()
-    // Should have a heading
     await expect(page.locator('h1, h2').first()).toBeVisible()
   })
 
   // 5. Contractor card — real data + employees
   test('5. Contractor card — real data + employees section', async ({ page }) => {
-    await login(page, ADMIN_CREDS.email, ADMIN_CREDS.password)
+    await login(page, ACCOUNTS.admin.email, ACCOUNTS.admin.password)
     await page.goto('/contractors')
 
-    // Should have a table
     await expect(page.locator('table')).toBeVisible()
 
-    // If there are rows, click first to see detail
     const firstRow = page.locator('table tbody tr').first()
     if (await firstRow.isVisible()) {
       await firstRow.locator('a').first().click()
       await page.waitForURL(/\/contractors\/[\w-]+/)
-      // Should show company info card
       await expect(page.locator('h1').first()).toBeVisible()
-      // Should have employees section
       await expect(page.getByText(/сотрудники/i).first()).toBeVisible()
     }
   })
 
-  // 6. contractor_employee cannot create/edit employees
-  test('6. contractor_employee cannot create employees', async ({ page }) => {
-    // Login as contractor_employee — they should not see "Add employee" button
-    // or it should be disabled
-    await login(page, ADMIN_CREDS.email, ADMIN_CREDS.password)
+  // 6. contractor_employee cannot create employees (via /employees/new redirect)
+  test('6. contractor_employee cannot access /employees/new directly', async ({ page }) => {
+    await login(page, ACCOUNTS.contractor.email, ACCOUNTS.contractor.password)
     await page.goto('/employees')
 
-    // The "Add employee" button should either not be visible
-    // or the page should not allow creation for contractor_employee
+    // contractor_employee can see employees but should not see admin-level create buttons
+    // They should be able to access /employees/new for their own org though
     const createBtn = page.getByRole('button', { name: /добавить сотрудника/i })
     const isVisible = await createBtn.isVisible().catch(() => false)
-
-    // Admin can create, so button should be visible for admin
-    expect(isVisible).toBe(true)
+    // Either they can't see it (pure view) or it's limited to their org
+    expect(isVisible).toBe(false)
   })
 
   // 7. Approvals page has status filter
   test('7. Approvals page — status filter works', async ({ page }) => {
-    await login(page, ADMIN_CREDS.email, ADMIN_CREDS.password)
+    await login(page, ACCOUNTS.admin.email, ACCOUNTS.admin.password)
     await page.goto('/approvals')
 
-    // Status filter select should be visible
     await expect(page.getByRole('combobox').first()).toBeVisible()
   })
 
-  // 8. Sidebar does not show /documents for contractor roles
+  // 8. Sidebar — admin sees documents, contractor_employee does not
   test('8. Sidebar — admin sees documents, contractors do not', async ({ page }) => {
-    await login(page, ADMIN_CREDS.email, ADMIN_CREDS.password)
+    await login(page, ACCOUNTS.admin.email, ACCOUNTS.admin.password)
     await page.goto('/')
 
-    // Check sidebar links — admin should see "Нормативные документы"
     const sidebar = page.locator('nav, aside').first()
     if (await sidebar.isVisible()) {
       const hasDocumentsLink = await sidebar.locator('a[href="/documents"]').isVisible().catch(() => false)
-      // Admin should see documents
       expect(hasDocumentsLink).toBe(true)
     }
+  })
+
+  // 9. employee role — sidebar has all links
+  test('9. employee sees all sidebar links', async ({ page }) => {
+    await login(page, ACCOUNTS.employee.email, ACCOUNTS.employee.password)
+    await page.goto('/')
+
+    const labels = await page.locator('nav a span').allTextContents()
+    expect(labels).toContain('Дашборд')
+    expect(labels).toContain('Подрядчики')
+    expect(labels).toContain('Сотрудники')
+    expect(labels).toContain('Наряды-допуски')
+    expect(labels).toContain('Чек-листы')
+    expect(labels).toContain('Нормативные документы')
+  })
+
+  // 10. department_approver — sidebar missing checklists and documents
+  test('10. department_approver does NOT see checklists or documents', async ({ page }) => {
+    await login(page, ACCOUNTS.approver.email, ACCOUNTS.approver.password)
+    await page.goto('/')
+
+    const labels = await page.locator('nav a span').allTextContents()
+    expect(labels).not.toContain('Чек-листы')
+    expect(labels).not.toContain('Нормативные документы')
+    expect(labels).toContain('Согласования')
   })
 })

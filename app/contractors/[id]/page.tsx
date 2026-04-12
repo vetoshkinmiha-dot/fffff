@@ -220,11 +220,13 @@ export default function ContractorDetailPage() {
               <p className="text-sm text-zinc-500">
                 Сотрудники ещё не добавлены
               </p>
+              {(userRole === "admin" || userRole === "contractor_employee") && (
               <Link href={`/employees/new?contractorId=${contractor.id}`}>
                 <Button variant="outline" size="sm" className="mt-3">
                   Добавить сотрудника
                 </Button>
               </Link>
+              )}
             </div>
           ) : (
             <Table>

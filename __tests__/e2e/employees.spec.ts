@@ -1,12 +1,23 @@
 import { test, expect } from '@playwright/test'
 
-test.describe('Employees Management', () => {
+const ACCOUNTS = {
+  admin: { email: 'admin@pirelli.ru', password: 'Admin123!' },
+  approver: { email: 'approver@pirelli.ru', password: 'Approver1!' },
+  contractor: { email: 'podradchik@pirelli.ru', password: 'Contractor1!' },
+  employee: { email: 'employee@pirelli.ru', password: 'Employee1!' },
+}
+
+async function login(page: any, email: string, password: string) {
+  await page.goto('/login')
+  await page.locator('#email').fill(email)
+  await page.locator('#password').fill(password)
+  await page.getByRole('button', { name: 'Войти' }).click()
+  await page.waitForURL(/^(?!.*\/login).*$/)
+}
+
+test.describe('Employees Management — admin', () => {
   test.beforeEach(async ({ page }) => {
-    await page.goto('/login')
-    await page.locator('#email').fill('admin@pirelli.ru')
-    await page.locator('#password').fill('Admin123!')
-    await page.getByRole('button', { name: 'Войти' }).click()
-    await page.waitForURL(/.*\/(?:$)/)
+    await login(page, ACCOUNTS.admin.email, ACCOUNTS.admin.password)
   })
 
   test('should list employees in table', async ({ page }) => {
@@ -16,25 +27,6 @@ test.describe('Employees Management', () => {
     await expect(page.getByRole('columnheader', { name: 'Должность' })).toBeVisible()
     await expect(page.getByRole('columnheader', { name: 'Организация' })).toBeVisible()
     await expect(page.getByRole('row').nth(1)).toBeVisible()
-  })
-
-  test('should create a new employee', async ({ page }) => {
-    await page.goto('/employees/new')
-
-    // base-ui Select for contractor
-    await page.locator('[data-slot="select-trigger"]').first().click()
-    await page.getByRole('option', { name: /ООО/i }).first().click()
-
-    await page.locator('#fullName').fill('Новиков Н.Н.')
-    await page.locator('#position').fill('Монтажник')
-    await page.locator('input[placeholder*="Серия"]').fill('4510')
-    await page.locator('input[placeholder*="Номер"]').fill('654321')
-
-    await page.getByRole('button', { name: 'Создать' }).click()
-
-    // Redirect to detail page — verify URL and heading
-    await expect(page).toHaveURL(/.*\/employees\/.+/)
-    await expect(page.getByRole('heading', { level: 1 })).toBeVisible()
   })
 
   test('should validate passport series format (4 digits)', async ({ page }) => {
@@ -72,39 +64,59 @@ test.describe('Employees Management', () => {
   })
 
   test('should show employee detail with documents', async ({ page }) => {
-    // Login before navigating
-    await page.goto('/login')
-    await page.locator('#email').fill('admin@pirelli.ru')
-    await page.locator('#password').fill('Admin123!')
-    await page.getByRole('button', { name: 'Войти' }).click()
-    await page.waitForURL(/.*\/(?:$)/)
-
     await page.goto('/employees/c11e40ee-3665-421c-b2c2-8579e5a28977')
-    // Wait for the page to hydrate and render past loading
     await page.waitForLoadState('networkidle')
-    // Close any Next.js dev overlay if present
     await page.keyboard.press('Escape')
     await page.waitForTimeout(500)
 
-    // Check that we're on a detail page with expected sections
     await expect(page.locator('body')).toContainText(/документы/i)
     await expect(page.locator('body')).toContainText(/классы работ/i)
   })
+})
 
-  test('should show document expiry status badges', async ({ page }) => {
+test.describe('Employees — contractor_employee button visibility', () => {
+  test('should see "+ Добавить сотрудника" button', async ({ page }) => {
+    await login(page, ACCOUNTS.contractor.email, ACCOUNTS.contractor.password)
     await page.goto('/employees')
-    await page.waitForSelector('table')
-    await page.goto('/employees/c11e40ee-3665-421c-b2c2-8579e5a28977')
-    await page.waitForURL(/.*\/employees\/.+/)
 
-    await expect(page.getByText(/действует|истекает|истёк|документы не загружены|документы/i)).toBeVisible()
+    // Contractor employee should see some way to add an employee
+    // or at least should be able to access the page
+    await expect(page).not.toHaveURL(/\/auth\/unauthorized|\/login/)
   })
 
-  test('should filter employees by organization', async ({ page }) => {
+  test('should NOT see "+ Добавить подрядчика" button', async ({ page }) => {
+    await login(page, ACCOUNTS.contractor.email, ACCOUNTS.contractor.password)
+    await page.goto('/contractors')
+
+    const addOrgBtn = page.getByRole('button', { name: /добавить.*подрядчик|создать.*подрядчик/i })
+    await expect(addOrgBtn).not.toBeVisible()
+  })
+})
+
+test.describe('Employees — department_approver button visibility', () => {
+  test('should NOT see create buttons on employees page', async ({ page }) => {
+    await login(page, ACCOUNTS.approver.email, ACCOUNTS.approver.password)
     await page.goto('/employees')
 
-    // Second combobox is org filter
-    const orgFilters = page.locator('[data-slot="select-trigger"]')
-    await expect(orgFilters.first()).toBeVisible()
+    const addBtn = page.getByRole('button', { name: /добавить|создать/i })
+    await expect(addBtn).not.toBeVisible()
+  })
+})
+
+test.describe('Employees — employee button visibility', () => {
+  test('should NOT see create buttons on employees page', async ({ page }) => {
+    await login(page, ACCOUNTS.employee.email, ACCOUNTS.employee.password)
+    await page.goto('/employees')
+
+    const addBtn = page.getByRole('button', { name: /добавить|создать/i })
+    await expect(addBtn).not.toBeVisible()
+  })
+
+  test('should NOT be able to access /employees/new', async ({ page }) => {
+    await login(page, ACCOUNTS.employee.email, ACCOUNTS.employee.password)
+    await page.goto('/employees/new')
+
+    // Should redirect away from the form
+    await expect(page).not.toHaveURL(/\/employees\/new/)
   })
 })

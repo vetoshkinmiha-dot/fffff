@@ -69,6 +69,7 @@ export default function PermitsPage() {
   const [totalPages, setTotalPages] = useState(1);
   const [statusFilter, setStatusFilter] = useState("all");
   const [search, setSearch] = useState("");
+  const [userRole, setUserRole] = useState<string>("");
   const limit = 20;
 
   const fetchPermits = useCallback(async () => {
@@ -96,6 +97,12 @@ export default function PermitsPage() {
 
   useEffect(() => {
     fetchPermits();
+    fetch("/api/auth/me", { credentials: "include" })
+      .then((r) => (r.ok ? r.json() : null))
+      .then((data) => {
+        if (data?.user?.role) setUserRole(data.user.role);
+      })
+      .catch(() => {});
   }, [fetchPermits]);
 
   const handleStatusChange = useCallback((value: string | null) => {
@@ -114,12 +121,14 @@ export default function PermitsPage() {
             Регистрация и учёт наряд-допусков
           </p>
         </div>
+        {(userRole === "admin" || userRole === "contractor_employee") && (
         <Link href="/permits/new">
           <Button variant="default" size="lg">
             <Plus />
             Создать наряд-допуск
           </Button>
         </Link>
+        )}
       </div>
 
       <div className="flex items-center gap-3 flex-wrap">

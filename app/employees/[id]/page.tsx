@@ -153,13 +153,13 @@ export default function EmployeeDetailPage({
   const [employee, setEmployee] = useState<Employee | null>(null);
   const [loading, setLoading] = useState(true);
   const [id, setId] = useState<string | null>(null);
+  const [userRole, setUserRole] = useState<string>("");
   const [showUpload, setShowUpload] = useState(false);
   const [approvalDialogOpen, setApprovalDialogOpen] = useState(false);
   const [selectedDepts, setSelectedDepts] = useState<string[]>([]);
   const [deadline, setDeadline] = useState("");
   const [submittingApproval, setSubmittingApproval] = useState(false);
   const [approvalError, setApprovalError] = useState("");
-  const [userRole, setUserRole] = useState<string | null>(null);
 
   const DEPARTMENTS: { key: string; label: string }[] = [
     { key: "security", label: "Служба безопасности" },
@@ -232,13 +232,20 @@ export default function EmployeeDetailPage({
     async function fetchEmployee() {
       setLoading(true);
       try {
-        const res = await fetch(`/api/employees/${id}`, { credentials: "include" });
+        const [res, userRes] = await Promise.all([
+          fetch(`/api/employees/${id}`, { credentials: "include" }),
+          fetch("/api/auth/me", { credentials: "include" }),
+        ]);
         if (res.status === 404) {
           setEmployee(null);
         } else if (res.status === 401) {
           window.location.href = "/login";
         } else if (res.ok) {
           setEmployee(await res.json());
+        }
+        if (userRes.ok) {
+          const userData = await userRes.json();
+          setUserRole(userData.user?.role || "");
         }
       } catch {
         setEmployee(null);
@@ -349,6 +356,7 @@ export default function EmployeeDetailPage({
       <Card>
         <CardHeader className="flex flex-row items-center justify-between">
           <CardTitle className="text-base">Документы</CardTitle>
+          {(userRole === "admin" || userRole === "contractor_employee") && (
           <Button
             variant="outline"
             size="sm"
@@ -358,6 +366,7 @@ export default function EmployeeDetailPage({
             <Plus className="h-4 w-4" />
             Загрузить
           </Button>
+          )}
         </CardHeader>
         <CardContent className="p-0">
           {showUpload && id && (

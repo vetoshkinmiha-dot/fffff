@@ -44,7 +44,21 @@ function NewEmployeeForm() {
   const [photoFile, setPhotoFile] = useState<File | null>(null);
   const [photoPreview, setPhotoPreview] = useState<string | null>(null);
 
+  const [authorized, setAuthorized] = useState<boolean | null>(null);
+
   useEffect(() => {
+    fetch("/api/auth/me", { credentials: "include" })
+      .then((r) => (r.ok ? r.json() : null))
+      .then((data) => {
+        const role = data?.user?.role;
+        if (role === "admin" || role === "contractor_employee") {
+          setAuthorized(true);
+        } else {
+          setAuthorized(false);
+        }
+      })
+      .catch(() => setAuthorized(false));
+
     fetch("/api/organizations", { credentials: "include" })
       .then((r) => r.json())
       .then((data) => {
@@ -53,6 +67,19 @@ function NewEmployeeForm() {
       })
       .catch(() => setLoading(false));
   }, []);
+
+  if (authorized === null || loading) {
+    return (
+      <div className="flex items-center justify-center py-20">
+        <Loader2 className="h-6 w-6 animate-spin text-zinc-400" />
+      </div>
+    );
+  }
+
+  if (!authorized) {
+    router.push("/employees");
+    return null;
+  }
 
   function validate() {
     const errs: Record<string, string> = {};

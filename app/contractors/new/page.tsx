@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, FormEvent } from "react";
+import { useState, useEffect, FormEvent } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { ArrowLeft, Loader2, AlertCircle } from "lucide-react";
@@ -14,7 +14,7 @@ export default function NewContractorPage() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
-
+  const [authorized, setAuthorized] = useState<boolean | null>(null);
   const [form, setForm] = useState({
     name: "",
     inn: "",
@@ -24,6 +24,32 @@ export default function NewContractorPage() {
     contactPhone: "",
     contactEmail: "",
   });
+
+  useEffect(() => {
+    fetch("/api/auth/me", { credentials: "include" })
+      .then((r) => (r.ok ? r.json() : null))
+      .then((data) => {
+        if (data?.user?.role === "admin") {
+          setAuthorized(true);
+        } else {
+          setAuthorized(false);
+        }
+      })
+      .catch(() => setAuthorized(false));
+  }, []);
+
+  if (authorized === null) {
+    return (
+      <div className="flex items-center justify-center py-20">
+        <Loader2 className="h-6 w-6 animate-spin text-zinc-400" />
+      </div>
+    );
+  }
+
+  if (!authorized) {
+    router.push("/contractors");
+    return null;
+  }
 
   function validate() {
     const errs: Record<string, string> = {};

@@ -16,6 +16,7 @@ export default function EditContractorPage() {
 
   const [loading, setLoading] = useState(false);
   const [fetching, setFetching] = useState(true);
+  const [authorized, setAuthorized] = useState<boolean | null>(null);
   const [error, setError] = useState("");
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
 
@@ -30,6 +31,17 @@ export default function EditContractorPage() {
   });
 
   useEffect(() => {
+    fetch("/api/auth/me", { credentials: "include" })
+      .then((r) => (r.ok ? r.json() : null))
+      .then((data) => {
+        if (data?.user?.role === "admin") {
+          setAuthorized(true);
+        } else {
+          setAuthorized(false);
+        }
+      })
+      .catch(() => setAuthorized(false));
+
     async function loadContractor() {
       try {
         const res = await fetch(`/api/organizations/${id}`, { credentials: "include" });
@@ -55,6 +67,19 @@ export default function EditContractorPage() {
     }
     loadContractor();
   }, [id]);
+
+  if (authorized === null || fetching) {
+    return (
+      <div className="flex items-center justify-center py-20">
+        <Loader2 className="h-6 w-6 animate-spin text-zinc-400" />
+      </div>
+    );
+  }
+
+  if (!authorized) {
+    router.push("/contractors");
+    return null;
+  }
 
   function validate() {
     const errs: Record<string, string> = {};

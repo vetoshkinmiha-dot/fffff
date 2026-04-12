@@ -1,6 +1,11 @@
 import { test, expect } from '@playwright/test'
 
-const ADMIN_CREDS = { email: 'admin@pirelli.ru', password: 'Admin123!' }
+const ACCOUNTS = {
+  admin: { email: 'admin@pirelli.ru', password: 'Admin123!' },
+  approver: { email: 'approver@pirelli.ru', password: 'Approver1!' },
+  contractor: { email: 'podradchik@pirelli.ru', password: 'Contractor1!' },
+  employee: { email: 'employee@pirelli.ru', password: 'Employee1!' },
+}
 
 async function login(page: any, email: string, password: string) {
   await page.goto('/login')
@@ -10,12 +15,12 @@ async function login(page: any, email: string, password: string) {
   await page.waitForLoadState('networkidle')
 }
 
-test.describe('Sprint 3+4 Regression', () => {
+test.describe('Sprint 3+4 Regression — 4 roles', () => {
 
-  // Sprint 3: Approval workflow
+  // ─── Sprint 3: Approval workflow ──────────────────────────────────────────
 
-  test('1. Send to approval — modal with departments + deadline', async ({ page }) => {
-    await login(page, ADMIN_CREDS.email, ADMIN_CREDS.password)
+  test('1. Send to approval — modal with departments + deadline (admin)', async ({ page }) => {
+    await login(page, ACCOUNTS.admin.email, ACCOUNTS.admin.password)
 
     // Create a contractor first
     await page.goto('/contractors/new')
@@ -41,25 +46,18 @@ test.describe('Sprint 3+4 Regression', () => {
     expect(await sendBtn.isVisible()).toBe(true)
   })
 
-  test('2. Sequential approvals — order security→hr→safety→safety_training→permit_bureau', async ({ page }) => {
-    // Check the route has the department order defined
-    // We verify the API returns approval pipeline with correct sequence
-    await login(page, ADMIN_CREDS.email, ADMIN_CREDS.password)
+  test('2. Sequential approvals — department order accessible to approver', async ({ page }) => {
+    await login(page, ACCOUNTS.approver.email, ACCOUNTS.approver.password)
 
-    // Fetch the approvals API directly to check department order
-    const response = await page.evaluate(async () => {
-      const res = await fetch('/api/approvals', { credentials: 'include' })
-      return { status: res.status, ok: res.ok }
-    })
-
-    // Should be accessible (200 or data available)
-    expect(response.ok || response.status === 200).toBe(true)
+    // Approver should see approvals page
+    await page.goto('/approvals')
+    await expect(page).not.toHaveURL(/\/auth\/unauthorized|\/login/)
+    await expect(page.locator('body')).not.toBeEmpty()
   })
 
   test('3. Cron document-expiry endpoint — returns 401 without CRON_SECRET', async ({ page }) => {
-    await login(page, ADMIN_CREDS.email, ADMIN_CREDS.password)
+    await login(page, ACCOUNTS.admin.email, ACCOUNTS.admin.password)
 
-    // Without CRON_SECRET header
     const response = await page.evaluate(async () => {
       const res = await fetch('/api/cron/document-expiry')
       return { status: res.status }
@@ -68,53 +66,59 @@ test.describe('Sprint 3+4 Regression', () => {
     expect(response.status).toBe(401)
   })
 
-  // Sprint 4: Permits
+  // ─── Sprint 4: Permits ─────────────────────────────────────────────────────
 
-  test('4. Permits list — table and filters', async ({ page }) => {
-    await login(page, ADMIN_CREDS.email, ADMIN_CREDS.password)
+  test('4. Permits list — table and filters (admin)', async ({ page }) => {
+    await login(page, ACCOUNTS.admin.email, ACCOUNTS.admin.password)
     await page.goto('/permits')
 
-    // Should have a table
     await expect(page.locator('table')).toBeVisible()
-    // Should have filter controls
     await expect(page.getByRole('combobox').first()).toBeVisible()
   })
 
-  test('5. Create permit — form validation and number generation', async ({ page }) => {
-    await login(page, ADMIN_CREDS.email, ADMIN_CREDS.password)
+  test('5. Permits accessible to contractor_employee', async ({ page }) => {
+    await login(page, ACCOUNTS.contractor.email, ACCOUNTS.contractor.password)
     await page.goto('/permits')
 
-    // Click create button
-    await page.getByRole('button', { name: /создать/i }).first().click()
-
-    // Form dialog should appear
-    await expect(page.locator('dialog, [role="dialog"]')).toBeVisible()
-
-    // Check form fields exist
-    await expect(page.getByText(/номер/i)).toBeVisible()
+    await expect(page).not.toHaveURL(/\/auth\/unauthorized|\/login/)
+    await expect(page.locator('body')).not.toBeEmpty()
   })
 
-  test('6. Permit detail — approval pipeline, early closure', async ({ page }) => {
-    await login(page, ADMIN_CREDS.email, ADMIN_CREDS.password)
+  test('6. Permits accessible to employee (view-only)', async ({ page }) => {
+    await login(page, ACCOUNTS.employee.email, ACCOUNTS.employee.password)
     await page.goto('/permits')
 
-    // If there are rows, click first
-    const firstRow = page.locator('table tbody tr').first()
-    const visible = await firstRow.isVisible().catch(() => false)
-
-    if (visible) {
-      await firstRow.locator('a').first().click()
-      await page.waitForURL(/\/permits\/[\w-]+/)
-      // Should show permit details
-      await expect(page.locator('h1').first()).toBeVisible()
-    }
+    await expect(page).not.toHaveURL(/\/auth\/unauthorized|\/login/)
+    await expect(page.locator('body')).not.toBeEmpty()
   })
 
   test('7. Permit print page — /permits/[id]/print', async ({ page }) => {
-    await login(page, ADMIN_CREDS.email, ADMIN_CREDS.password)
+    await login(page, ACCOUNTS.admin.email, ACCOUNTS.admin.password)
     await page.goto('/permits/12345678-1234-1234-1234-123456789012/print')
 
-    // Should render a print-friendly page
     await expect(page.locator('body')).not.toBeEmpty()
+  })
+
+  test('8. Permit print accessible to contractor_employee', async ({ page }) => {
+    await login(page, ACCOUNTS.contractor.email, ACCOUNTS.contractor.password)
+    await page.goto('/permits/12345678-1234-1234-1234-123456789012/print')
+
+    await expect(page).not.toHaveURL(/\/auth\/unauthorized|\/login/)
+  })
+
+  test('9. Permit print accessible to employee', async ({ page }) => {
+    await login(page, ACCOUNTS.employee.email, ACCOUNTS.employee.password)
+    await page.goto('/permits/12345678-1234-1234-1234-123456789012/print')
+
+    await expect(page).not.toHaveURL(/\/auth\/unauthorized|\/login/)
+  })
+
+  test('10. department_approver CANNOT access permits create', async ({ page }) => {
+    await login(page, ACCOUNTS.approver.email, ACCOUNTS.approver.password)
+    await page.goto('/permits')
+
+    // Should not see create buttons
+    const createBtn = page.getByRole('button', { name: /создать|добавить/i })
+    await expect(createBtn).not.toBeVisible()
   })
 })

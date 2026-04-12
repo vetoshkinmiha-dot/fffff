@@ -60,6 +60,7 @@ export default function EmployeesPage() {
   const [page, setPage] = useState(1);
   const [total, setTotal] = useState(0);
   const [totalPages, setTotalPages] = useState(1);
+  const [userRole, setUserRole] = useState<string>("");
   const limit = 20;
 
   // Unique orgs for filter dropdown (id is UUID, needed for API filtering)
@@ -104,6 +105,12 @@ export default function EmployeesPage() {
 
   useEffect(() => {
     fetchEmployees();
+    fetch("/api/auth/me", { credentials: "include" })
+      .then((r) => (r.ok ? r.json() : null))
+      .then((data) => {
+        if (data?.user?.role) setUserRole(data.user.role);
+      })
+      .catch(() => {});
   }, [fetchEmployees]);
 
   const handleStatusChange = useCallback(
@@ -149,12 +156,14 @@ export default function EmployeesPage() {
             Реестр сотрудников подрядных организаций
           </p>
         </div>
+        {(userRole === "admin" || userRole === "contractor_employee") && (
         <Link href="/employees/new">
           <Button variant="default" size="lg">
             <Plus />
             Добавить сотрудника
           </Button>
         </Link>
+        )}
       </div>
 
       <div className="flex items-center gap-3 flex-wrap">
