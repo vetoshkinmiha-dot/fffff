@@ -8,12 +8,13 @@ const PUBLIC_ROUTES = ["/login", "/register", "/auth/unauthorized"];
 const PUBLIC_PREFIXES = ["/_next", "/favicon.ico", "/api/health", "/api/auth/"];
 
 // Role → allowed route patterns
-// employee: view-only access (no approvals, no admin pages)
+// All roles get /api/* — API routes handle their own role-based access
+// employee: view-only access (no approvals, no checklists, no admin pages)
 const ROLE_ROUTES: Record<string, string[]> = {
   admin: ["/*"],
-  employee: ["/", "/contractors", "/contractors/*", "/employees", "/employees/*", "/permits", "/permits/*", "/permits/*/print", "/violations", "/violations/*", "/violations/*/print", "/checklists", "/checklists/*", "/documents", "/documents/*"],
-  contractor_employee: ["/contractors", "/contractors/*", "/employees", "/employees/*", "/permits", "/permits/*", "/permits/*/print", "/violations", "/violations/*", "/violations/*/print", "/checklists", "/checklists/*", "/approvals", "/approvals/*", "/"],
-  department_approver: ["/contractors", "/contractors/*", "/employees", "/employees/*", "/approvals", "/approvals/*", "/permits", "/permits/*", "/permits/*/print", "/violations", "/violations/*", "/violations/*/print", "/"],
+  employee: ["/api/*", "/", "/contractors", "/contractors/*", "/employees", "/employees/*", "/permits", "/permits/*", "/permits/*/print", "/violations", "/violations/*", "/violations/*/print", "/documents", "/documents/*"],
+  contractor_employee: ["/api/*", "/contractors", "/contractors/*", "/employees", "/employees/*", "/permits", "/permits/*", "/permits/*/print", "/violations", "/violations/*", "/violations/*/print", "/checklists", "/checklists/*", "/approvals", "/approvals/*", "/"],
+  department_approver: ["/api/*", "/contractors", "/contractors/*", "/employees", "/employees/*", "/approvals", "/approvals/*", "/permits", "/permits/*", "/permits/*/print", "/violations", "/violations/*", "/violations/*/print", "/"],
 };
 
 export async function middleware(request: NextRequest) {
