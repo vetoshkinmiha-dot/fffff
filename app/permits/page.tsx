@@ -156,7 +156,7 @@ export default function PermitsPage() {
         </Select>
       </div>
 
-      <div className="rounded-xl border border-zinc-200 bg-white overflow-x-auto">
+      <div className="rounded-xl border border-zinc-200 bg-white">
         <Table>
           <TableHeader>
             <TableRow>
