@@ -187,31 +187,31 @@ export default function PermitsPage() {
             ) : (
               permits.map((permit) => (
                 <TableRow key={permit.id}>
-                  <TableCell className="font-mono text-xs text-zinc-700 whitespace-nowrap">
+                  <TableCell className="font-mono text-xs text-zinc-700">
                     {permit.permitNumber}
                   </TableCell>
-                  <TableCell className="whitespace-nowrap">{categoryLabels[permit.category] ?? permit.category}</TableCell>
+                  <TableCell>{categoryLabels[permit.category] ?? permit.category}</TableCell>
                   <TableCell className="max-w-[200px] truncate text-zinc-900">
                     {permit.contractor?.name ?? "—"}
                   </TableCell>
-                  <TableCell className="whitespace-nowrap text-zinc-600">
+                  <TableCell className="text-zinc-600">
                     {formatDate(permit.openDate)}
                   </TableCell>
-                  <TableCell className="whitespace-nowrap text-zinc-600">
+                  <TableCell className="text-zinc-600">
                     {formatDate(permit.expiryDate)}
                   </TableCell>
                   <TableCell className="max-w-[200px] truncate text-sm text-zinc-600">
                     {permit.workSite}
                   </TableCell>
-                  <TableCell className="max-w-[150px] truncate text-sm text-zinc-600 whitespace-nowrap">
+                  <TableCell className="max-w-[150px] truncate text-sm text-zinc-600">
                     {permit.responsiblePerson}
                   </TableCell>
-                  <TableCell className="whitespace-nowrap">
+                  <TableCell>
                     <Badge variant={statusConfig[permit.status]?.variant ?? "secondary"}>
                       {statusConfig[permit.status]?.label ?? permit.status}
                     </Badge>
                   </TableCell>
-                  <TableCell className="text-right whitespace-nowrap">
+                  <TableCell className="text-right">
                     <Link href={`/permits/${permit.id}`}>
                       <Button variant="ghost" size="sm">
                         <Eye className="size-4 mr-1" />
