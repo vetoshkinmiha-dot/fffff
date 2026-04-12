@@ -160,15 +160,15 @@ export default function PermitsPage() {
         <Table>
           <TableHeader>
             <TableRow>
-              <TableHead className="font-medium">Номер наряда</TableHead>
-              <TableHead className="font-medium">Категория</TableHead>
-              <TableHead className="font-medium max-w-[180px]">Подрядчик</TableHead>
-              <TableHead className="font-medium whitespace-nowrap">Дата открытия</TableHead>
-              <TableHead className="font-medium whitespace-nowrap">Срок действия</TableHead>
-              <TableHead className="font-medium max-w-[160px]">Участок</TableHead>
-              <TableHead className="font-medium max-w-[140px]">Ответственный</TableHead>
-              <TableHead className="font-medium">Статус</TableHead>
-              <TableHead className="text-right font-medium w-[100px]">Действия</TableHead>
+              <TableHead className="whitespace-nowrap">Номер наряда</TableHead>
+              <TableHead className="whitespace-nowrap">Категория</TableHead>
+              <TableHead>Подрядчик</TableHead>
+              <TableHead className="whitespace-nowrap">Дата открытия</TableHead>
+              <TableHead className="whitespace-nowrap">Срок действия</TableHead>
+              <TableHead>Участок</TableHead>
+              <TableHead className="whitespace-nowrap">Ответственный</TableHead>
+              <TableHead className="whitespace-nowrap">Статус</TableHead>
+              <TableHead className="text-right">Действия</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -191,7 +191,7 @@ export default function PermitsPage() {
                     {permit.permitNumber}
                   </TableCell>
                   <TableCell className="whitespace-nowrap">{categoryLabels[permit.category] ?? permit.category}</TableCell>
-                  <TableCell className="max-w-[180px] truncate text-zinc-900">
+                  <TableCell className="text-zinc-900">
                     {permit.contractor?.name ?? "—"}
                   </TableCell>
                   <TableCell className="text-zinc-600 whitespace-nowrap">
@@ -200,22 +200,18 @@ export default function PermitsPage() {
                   <TableCell className="text-zinc-600 whitespace-nowrap">
                     {formatDate(permit.expiryDate)}
                   </TableCell>
-                  <TableCell className="max-w-[160px]">
-                    <span className="text-sm text-zinc-600 line-clamp-2" title={permit.workSite}>
-                      {permit.workSite}
-                    </span>
+                  <TableCell className="text-sm text-zinc-600">
+                    {permit.workSite}
                   </TableCell>
-                  <TableCell className="max-w-[140px] truncate">
-                    <span className="text-sm text-zinc-600" title={permit.responsiblePerson}>
-                      {permit.responsiblePerson}
-                    </span>
+                  <TableCell className="text-sm text-zinc-600 whitespace-nowrap">
+                    {permit.responsiblePerson}
                   </TableCell>
                   <TableCell className="whitespace-nowrap">
                     <Badge variant={statusConfig[permit.status]?.variant ?? "secondary"}>
                       {statusConfig[permit.status]?.label ?? permit.status}
                     </Badge>
                   </TableCell>
-                  <TableCell className="text-right whitespace-nowrap pr-4">
+                  <TableCell className="text-right whitespace-nowrap">
                     <Link href={`/permits/${permit.id}`}>
                       <Button variant="ghost" size="sm">
                         <Eye className="size-4 mr-1" />
