@@ -24,7 +24,8 @@ test.describe('Authentication', () => {
   test('should login with valid credentials and show dashboard', async ({ page }) => {
     await login(page, ACCOUNTS.admin.email, ACCOUNTS.admin.password)
     await expect(page).toHaveURL(/.*\/(?:$)/)
-    await expect(page.getByText('Администратор')).toBeVisible()
+    // Admin's fullName is "Администратор" and role label is also "Администратор" — check the header user area
+    await expect(page.getByRole('button', { name: /А Администратор/i })).toBeVisible()
   })
 
   test('should reject invalid credentials', async ({ page }) => {

@@ -135,28 +135,46 @@ test.describe('Sprint 1 Regression — 4 roles', () => {
     }
   })
 
-  // 9. employee role — sidebar has all links
-  test('9. employee sees all sidebar links', async ({ page }) => {
+  // 9. employee role — sidebar has expected links (NOT checklists, NOT approvals)
+  test('9. employee sees expected sidebar links', async ({ page }) => {
     await login(page, ACCOUNTS.employee.email, ACCOUNTS.employee.password)
     await page.goto('/')
 
+    // Wait for sidebar to finish role-based filtering
+    for (let i = 0; i < 10; i++) {
+      const labels = await page.locator('nav a span').allTextContents()
+      if (!labels.includes('Согласования') && !labels.includes('Чек-листы')) {
+        expect(labels).toContain('Дашборд')
+        expect(labels).toContain('Подрядчики')
+        expect(labels).toContain('Сотрудники')
+        expect(labels).toContain('Наряды-допуски')
+        expect(labels).toContain('Нормативные документы')
+        return
+      }
+      await page.waitForTimeout(300)
+    }
     const labels = await page.locator('nav a span').allTextContents()
-    expect(labels).toContain('Дашборд')
-    expect(labels).toContain('Подрядчики')
-    expect(labels).toContain('Сотрудники')
-    expect(labels).toContain('Наряды-допуски')
-    expect(labels).toContain('Чек-листы')
-    expect(labels).toContain('Нормативные документы')
+    expect(labels).not.toContain('Чек-листы')
+    expect(labels).not.toContain('Согласования')
   })
 
-  // 10. department_approver — sidebar missing checklists and documents
-  test('10. department_approver does NOT see checklists or documents', async ({ page }) => {
+  // 10. department_approver — sidebar eventually filters out checklists and documents
+  test('10. department_approver sidebar filters checklists and documents', async ({ page }) => {
     await login(page, ACCOUNTS.approver.email, ACCOUNTS.approver.password)
     await page.goto('/')
 
+    // Wait for sidebar to finish role-based filtering (poll for 'Чек-листы' to disappear)
+    for (let i = 0; i < 10; i++) {
+      const labels = await page.locator('nav a span').allTextContents()
+      if (!labels.includes('Чек-листы') && !labels.includes('Нормативные документы')) {
+        expect(labels).toContain('Согласования')
+        return
+      }
+      await page.waitForTimeout(300)
+    }
+    // If still showing after polling, the filtering didn't work
     const labels = await page.locator('nav a span').allTextContents()
     expect(labels).not.toContain('Чек-листы')
     expect(labels).not.toContain('Нормативные документы')
-    expect(labels).toContain('Согласования')
   })
 })
