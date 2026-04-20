@@ -246,8 +246,8 @@ export default function ViolationsPage() {
             <h1 className="text-2xl font-semibold tracking-tight text-zinc-900">
               {activeTab === "violations" ? "Акты нарушений" : "Жалобы"}
             </h1>
-            {/* Tab switcher — only visible to admin */}
-            {isAdminRole && (
+            {/* Tab switcher — admin + contractor roles */}
+            {(isAdminRole || isContractorRole) && (
               <div className="flex items-center gap-1 rounded-lg border border-zinc-200 bg-zinc-100 p-1">
                 <button
                   onClick={() => setActiveTab("violations")}
@@ -295,8 +295,7 @@ export default function ViolationsPage() {
               </Button>
             </Link>
           )}
-          {/* Contractor roles: show complaint button instead of create violation */}
-          {activeTab === "violations" && isContractorRole && (
+          {activeTab === "complaints" && isContractorRole && (
             <Button variant="default" size="lg" onClick={() => { setComplaintModalOpen(true); fetchOrgViolations(); }}>
               <MessageSquare />
               Подать жалобу
