@@ -61,6 +61,7 @@ export default function EmployeesPage() {
   const [total, setTotal] = useState(0);
   const [totalPages, setTotalPages] = useState(1);
   const [userRole, setUserRole] = useState<string>("");
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const limit = 20;
 
   // Unique orgs for filter dropdown (id is UUID, needed for API filtering)
@@ -117,6 +118,7 @@ export default function EmployeesPage() {
     (value: string | null) => {
       setStatusFilter(value ?? "all");
       setPage(1);
+      setSelectedIds(new Set());
     },
     []
   );
@@ -125,6 +127,7 @@ export default function EmployeesPage() {
     (value: string | null) => {
       setOrgFilter(value ?? "all");
       setPage(1);
+      setSelectedIds(new Set());
     },
     []
   );
@@ -143,6 +146,43 @@ export default function EmployeesPage() {
     if (counts.expired > 0) return { text: `${counts.expired} проср.`, variant: "destructive" as const };
     if (counts.expiring > 0) return { text: `${counts.expiring} истекают`, variant: "secondary" as const };
     return { text: `${counts.valid} валидны`, variant: "outline" as const };
+  };
+
+  const toggleSelect = (id: string) => {
+    setSelectedIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  };
+
+  const toggleSelectAll = () => {
+    if (selectedIds.size === employees.length && employees.length > 0) {
+      setSelectedIds(new Set());
+    } else {
+      setSelectedIds(new Set(employees.map((e) => e.id)));
+    }
+  };
+
+  const exportCSV = () => {
+    const selected = employees.filter((e) => selectedIds.has(e.id));
+    if (selected.length === 0) return;
+    const headers = ["ФИО", "Организация", "Должность", "Классы работ"];
+    const rows = selected.map((e) => [
+      e.fullName,
+      e.organization.name,
+      e.position,
+      (e.workClasses ?? []).join(", "),
+    ]);
+    const csv = [headers, ...rows].map((r) => r.map((c) => `"${c}"`).join(",")).join("\n");
+    const blob = new Blob(["\ufeff" + csv], { type: "text/csv;charset=utf-8;" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `employees_export_${Date.now()}.csv`;
+    a.click();
+    URL.revokeObjectURL(url);
   };
 
   return (
@@ -205,10 +245,31 @@ export default function EmployeesPage() {
         </Select>
       </div>
 
+      {/* Bulk action bar */}
+      {selectedIds.size > 0 && (
+        <div className="flex items-center gap-3 rounded-lg border border-blue-200 bg-blue-50 px-4 py-3">
+          <span className="text-sm font-medium text-blue-700">Выбрано: {selectedIds.size}</span>
+          <Button variant="outline" size="sm" onClick={exportCSV}>
+            Экспорт в CSV
+          </Button>
+          <Button variant="ghost" size="sm" onClick={() => setSelectedIds(new Set())}>
+            Сбросить
+          </Button>
+        </div>
+      )}
+
       <div className="overflow-x-auto rounded-xl border border-zinc-200 bg-white">
         <Table>
           <TableHeader>
             <TableRow>
+              <TableHead className="w-[40px]">
+                <input
+                  type="checkbox"
+                  checked={employees.length > 0 && selectedIds.size === employees.length}
+                  onChange={toggleSelectAll}
+                  className="h-4 w-4 rounded border-zinc-300"
+                />
+              </TableHead>
               <TableHead className="max-w-[200px]">ФИО</TableHead>
               <TableHead className="max-w-[180px]">Организация</TableHead>
               <TableHead className="max-w-[180px]">Должность</TableHead>
@@ -221,13 +282,13 @@ export default function EmployeesPage() {
           <TableBody>
             {loading ? (
               <TableRow>
-                <TableCell colSpan={7} className="py-8 text-center text-sm text-zinc-500">
+                <TableCell colSpan={8} className="py-8 text-center text-sm text-zinc-500">
                   Загрузка...
                 </TableCell>
               </TableRow>
             ) : employees.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={7} className="py-8 text-center text-sm text-zinc-500">
+                <TableCell colSpan={8} className="py-8 text-center text-sm text-zinc-500">
                   Сотрудники не найдены
                 </TableCell>
               </TableRow>
@@ -237,6 +298,14 @@ export default function EmployeesPage() {
                 const db = docBadge(emp.documentCounts);
                 return (
                   <TableRow key={emp.id}>
+                    <TableCell>
+                      <input
+                        type="checkbox"
+                        checked={selectedIds.has(emp.id)}
+                        onChange={() => toggleSelect(emp.id)}
+                        className="h-4 w-4 rounded border-zinc-300"
+                      />
+                    </TableCell>
                     <TableCell className="font-medium max-w-[200px] truncate">
                       <span title={emp.fullName}>{sanitize(emp.fullName)}</span>
                     </TableCell>

@@ -222,6 +222,7 @@ model Employee {
 
   @@unique([organizationId, passportSeries, passportNumber]) /// Уникальность паспорта в рамках организации
   @@index([organizationId])
+  @@index([fullName])
   @@map("employee")
 }
 
@@ -324,6 +325,8 @@ model Permit {
   @@index([contractorId])
   @@index([status])
   @@index([expiryDate])
+  @@index([permitNumber])
+  @@index([createdAt])
   @@map("permit")
 }
 
@@ -388,6 +391,7 @@ model ViolationComplaint {
   violation Violation @relation("ViolationComplaints", fields: [violationId], references: [id], onDelete: Cascade)
 
   @@index([violationId])
+  @@index([department])
   @@map("violation_complaint")
 }
 
@@ -487,6 +491,8 @@ model RegDocument {
 
   @@index([sectionId])
   @@index([fileType])
+  @@index([createdById])
+  @@index([createdAt])
   @@map("reg_document")
 }
 

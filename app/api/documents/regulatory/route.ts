@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { authMiddleware } from "@/lib/api-middleware";
-import { createRegDocumentSchema } from "@/lib/validations";
+import { createRegDocumentSchema, paginationSchema } from "@/lib/validations";
 import { uploadFile } from "@/lib/file-storage";
 import { sendRegDocUpdated } from "@/lib/email";
 import { createNotification } from "@/lib/notifications";
@@ -11,21 +11,35 @@ export async function GET(req: NextRequest) {
   if (authResult instanceof NextResponse) return authResult;
 
   const { searchParams } = new URL(req.url);
+  const query = paginationSchema.parse(Object.fromEntries(searchParams));
   const sectionId = searchParams.get("sectionId");
 
   const where: any = {};
   if (sectionId) where.sectionId = sectionId;
 
-  const documents = await prisma.regDocument.findMany({
-    where,
-    include: {
-      section: { select: { name: true } },
-      createdBy: { select: { fullName: true } },
-    },
-    orderBy: { createdAt: "desc" },
-  });
+  const [total, documents] = await Promise.all([
+    prisma.regDocument.count({ where }),
+    prisma.regDocument.findMany({
+      where,
+      include: {
+        section: { select: { name: true } },
+        createdBy: { select: { fullName: true } },
+      },
+      orderBy: { createdAt: "desc" },
+      skip: (query.page - 1) * query.limit,
+      take: query.limit,
+    }),
+  ]);
 
-  return NextResponse.json({ data: documents });
+  return NextResponse.json({
+    data: documents,
+    pagination: {
+      page: query.page,
+      limit: query.limit,
+      total,
+      pages: Math.ceil(total / query.limit),
+    },
+  });
 }
 
 export async function POST(req: NextRequest) {
@@ -94,13 +108,15 @@ export async function POST(req: NextRequest) {
       select: { id: true },
     });
 
-    for (const user of allActiveUsers) {
-      await createNotification({
-        userId: user.id,
-        type: "document_added",
-        title: "Новый нормативный документ",
-        message: doc.title,
-        link: "/documents",
+    if (allActiveUsers.length > 0) {
+      await prisma.notification.createMany({
+        data: allActiveUsers.map((user) => ({
+          userId: user.id,
+          type: "document_added",
+          title: "Новый нормативный документ",
+          message: doc.title,
+          link: "/documents",
+        })),
       });
     }
 
