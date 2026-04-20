@@ -69,6 +69,7 @@ export default function PermitsPage() {
   const [totalPages, setTotalPages] = useState(1);
   const [statusFilter, setStatusFilter] = useState("all");
   const [userRole, setUserRole] = useState<string>("");
+  const [permitSearch, setPermitSearch] = useState("");
   const limit = 20;
 
   const fetchPermits = useCallback(async () => {
@@ -108,8 +109,6 @@ export default function PermitsPage() {
     setPage(1);
   }, []);
 
-  const [permitSearch, setPermitSearch] = useState("");
-
   const filteredPermits = permits.filter((p) => {
     if (!permitSearch) return true;
     const q = permitSearch.toLowerCase();
@@ -130,7 +129,7 @@ export default function PermitsPage() {
             Регистрация и учёт наряд-допусков
           </p>
         </div>
-        {(userRole === "admin" || userRole === "contractor_employee") && (
+        {(userRole === "admin" || userRole === "contractor_admin") && (
         <Link href="/permits/new">
           <Button variant="default" size="lg">
             <Plus />
@@ -150,9 +149,9 @@ export default function PermitsPage() {
             className="pl-9"
           />
         </div>
-        <Select value={statusFilter} onValueChange={handleStatusChange}>
+        <Select value={statusFilter} onValueChange={handleStatusChange} itemToStringLabel={(v) => ({ all: "Все статусы", active: "Открытые", closed: "Закрытые", early_closed: "Закрыты досрочно", draft: "Черновики", pending_approval: "На согласовании" }[v] ?? v)}>
           <SelectTrigger className="w-[180px]">
-            <SelectValue placeholder="Все статусы" />
+            <SelectValue>{(v: string) => ({ all: "Все статусы", active: "Открытые", closed: "Закрытые", early_closed: "Закрыты досрочно", draft: "Черновики", pending_approval: "На согласовании" }[v] ?? v ?? "Все статусы")}</SelectValue>
           </SelectTrigger>
           <SelectContent>
             <SelectItem value="all">Все статусы</SelectItem>
@@ -165,62 +164,94 @@ export default function PermitsPage() {
         </Select>
       </div>
 
-      <div className="overflow-x-auto rounded-xl border border-zinc-200 bg-white">
-        <table className="w-full caption-bottom text-sm">
-          <thead>
-            <tr className="border-b">
-              <th className="h-10 px-2 text-left align-middle font-medium">Номер наряда</th>
-              <th className="h-10 px-2 text-left align-middle font-medium">Категория</th>
-              <th className="h-10 px-2 text-left align-middle font-medium">Подрядчик</th>
-              <th className="h-10 px-2 text-left align-middle font-medium">Дата открытия</th>
-              <th className="h-10 px-2 text-left align-middle font-medium">Срок действия</th>
-              <th className="h-10 px-2 text-left align-middle font-medium">Участок</th>
-              <th className="h-10 px-2 text-left align-middle font-medium">Ответственный</th>
-              <th className="h-10 px-2 text-left align-middle font-medium">Статус</th>
-              <th className="h-10 px-2 text-right align-middle font-medium">Действия</th>
-            </tr>
-          </thead>
-          <tbody className="[&_tr:last-child]:border-0">
+      {/* Desktop table */}
+      <div className="hidden md:block overflow-x-auto rounded-xl border border-zinc-200 bg-white">
+        <Table>
+          <TableHeader>
+            <TableRow>
+              <TableHead>Номер наряда</TableHead>
+              <TableHead>Категория</TableHead>
+              <TableHead>Подрядчик</TableHead>
+              <TableHead>Дата открытия</TableHead>
+              <TableHead>Срок действия</TableHead>
+              <TableHead>Участок</TableHead>
+              <TableHead>Ответственный</TableHead>
+              <TableHead>Статус</TableHead>
+              <TableHead className="text-right">Действия</TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
             {loading ? (
-              <tr className="border-b">
-                <td colSpan={9} className="p-2 py-8 text-center text-sm text-zinc-500">
+              <TableRow>
+                <TableCell colSpan={9} className="py-8 text-center text-sm text-zinc-500">
                   Загрузка...
-                </td>
-              </tr>
+                </TableCell>
+              </TableRow>
             ) : filteredPermits.length === 0 ? (
-              <tr className="border-b">
-                <td colSpan={9} className="p-2 py-8 text-center text-sm text-zinc-500">
-                  Наряды-допуски не найдены
-                </td>
-              </tr>
+              <TableRow>
+                <TableCell colSpan={9} className="py-8 text-center">
+                  <div className="flex flex-col items-center gap-3">
+                    <p className="text-sm text-zinc-500">Наряды-допуски не найдены</p>
+                    {(userRole === "admin" || userRole === "contractor_admin") && (
+                      <Link href="/permits/new">
+                        <Button variant="outline" size="sm" className="gap-1.5">
+                          <Plus className="h-4 w-4" />
+                          Создать наряд-допуск
+                        </Button>
+                      </Link>
+                    )}
+                  </div>
+                </TableCell>
+              </TableRow>
             ) : (
               filteredPermits.map((permit) => (
-                <tr key={permit.id} className="border-b transition-colors hover:bg-muted/50">
-                  <td className="p-2 font-mono text-xs text-zinc-700">{permit.permitNumber}</td>
-                  <td className="p-2 text-sm text-zinc-900">{categoryLabels[permit.category] ?? permit.category}</td>
-                  <td className="p-2 text-sm text-zinc-900 max-w-[200px] truncate">{permit.contractor?.name ?? "—"}</td>
-                  <td className="p-2 text-sm text-zinc-600">{formatDate(permit.openDate)}</td>
-                  <td className="p-2 text-sm text-zinc-600">{formatDate(permit.expiryDate)}</td>
-                  <td className="p-2 text-sm text-zinc-600 max-w-[200px] truncate">{permit.workSite}</td>
-                  <td className="p-2 text-sm text-zinc-600 max-w-[150px] truncate">{permit.responsiblePerson}</td>
-                  <td className="p-2">
+                <TableRow key={permit.id}>
+                  <TableCell className="font-mono text-xs text-zinc-700">{permit.permitNumber}</TableCell>
+                  <TableCell className="text-sm text-zinc-900">{categoryLabels[permit.category] ?? permit.category}</TableCell>
+                  <TableCell className="text-sm text-zinc-900 max-w-[200px] truncate">{permit.contractor?.name ?? "—"}</TableCell>
+                  <TableCell className="text-sm text-zinc-600">{formatDate(permit.openDate)}</TableCell>
+                  <TableCell className="text-sm text-zinc-600">{formatDate(permit.expiryDate)}</TableCell>
+                  <TableCell className="text-sm text-zinc-600 max-w-[200px] truncate">{permit.workSite}</TableCell>
+                  <TableCell className="text-sm text-zinc-600 max-w-[150px] truncate">{permit.responsiblePerson}</TableCell>
+                  <TableCell>
                     <Badge variant={statusConfig[permit.status]?.variant ?? "secondary"}>
                       {statusConfig[permit.status]?.label ?? permit.status}
                     </Badge>
-                  </td>
-                  <td className="p-2 text-right">
+                  </TableCell>
+                  <TableCell className="text-right">
                     <Link href={`/permits/${permit.id}`}>
                       <Button variant="ghost" size="sm">
                         <Eye className="size-4 mr-1" />
                         Подробнее
                       </Button>
                     </Link>
-                  </td>
-                </tr>
+                  </TableCell>
+                </TableRow>
               ))
             )}
-          </tbody>
-        </table>
+          </TableBody>
+        </Table>
+      </div>
+
+      {/* Mobile cards */}
+      <div className="md:hidden space-y-3">
+        {filteredPermits.map((permit) => (
+          <div key={permit.id} className="rounded-xl border border-zinc-200 bg-white p-4 space-y-2">
+            <div className="flex items-center justify-between">
+              <span className="font-mono text-xs text-zinc-700">{permit.permitNumber}</span>
+              <Badge variant={statusConfig[permit.status]?.variant ?? "secondary"}>
+                {statusConfig[permit.status]?.label ?? permit.status}
+              </Badge>
+            </div>
+            <div className="text-xs text-zinc-500">
+              {permit.contractor?.name ?? "—"} &bull; {formatDate(permit.openDate)} — {formatDate(permit.expiryDate)}
+            </div>
+            <div className="text-sm text-zinc-700">{permit.workSite}</div>
+            <Link href={`/permits/${permit.id}`} className="block">
+              <Button variant="outline" size="sm" className="w-full">Подробнее</Button>
+            </Link>
+          </div>
+        ))}
       </div>
 
       {totalPages > 1 && (

@@ -8,7 +8,9 @@ export type NotificationType =
   | "document_expired"
   | "permit_expiring"
   | "permit_closed"
-  | "complaint_submitted";
+  | "complaint_submitted"
+  | "violation_created"
+  | "checklist_assigned";
 
 interface CreateNotification {
   userId: string;
@@ -49,5 +51,38 @@ export async function createNotificationsForRole(
       link: options.link,
     })),
   });
+  return users.length;
+}
+
+/**
+ * Send notification to all contractor employees and admins of an organization
+ */
+export async function notifyOrganizationContractors(
+  organizationId: string,
+  options: {
+    type: NotificationType;
+    title: string;
+    message: string;
+    link?: string;
+  }
+) {
+  const users = await prisma.user.findMany({
+    where: {
+      isActive: true,
+      organizationId,
+      role: { in: ["contractor_employee", "contractor_admin"] },
+    },
+    select: { id: true },
+  });
+
+  for (const u of users) {
+    await createNotification({
+      userId: u.id,
+      type: options.type,
+      title: options.title,
+      message: options.message,
+      link: options.link,
+    });
+  }
   return users.length;
 }

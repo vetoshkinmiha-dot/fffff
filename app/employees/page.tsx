@@ -13,14 +13,6 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
 import { sanitize } from "@/lib/utils";
 
 interface EmployeeDoc {
@@ -61,6 +53,7 @@ export default function EmployeesPage() {
   const [total, setTotal] = useState(0);
   const [totalPages, setTotalPages] = useState(1);
   const [userRole, setUserRole] = useState<string>("");
+  const [currentEmployeeId, setCurrentEmployeeId] = useState<string | null>(null);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const limit = 20;
 
@@ -110,6 +103,7 @@ export default function EmployeesPage() {
       .then((r) => (r.ok ? r.json() : null))
       .then((data) => {
         if (data?.user?.role) setUserRole(data.user.role);
+        if (data?.user?.employeeId) setCurrentEmployeeId(data.user.employeeId);
       })
       .catch(() => {});
   }, [fetchEmployees]);
@@ -185,6 +179,12 @@ export default function EmployeesPage() {
     URL.revokeObjectURL(url);
   };
 
+  const showActionColumn = (emp: EmployeeWithDocs) => {
+    if (userRole === "employee") return false;
+    if (userRole === "contractor_employee") return emp.id === currentEmployeeId;
+    return true;
+  };
+
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
@@ -196,7 +196,7 @@ export default function EmployeesPage() {
             Реестр сотрудников подрядных организаций
           </p>
         </div>
-        {(userRole === "admin" || userRole === "contractor_employee") && (
+        {(userRole === "admin" || userRole === "contractor_admin") && (
         <Link href="/employees/new">
           <Button variant="default" size="lg">
             <Plus />
@@ -215,13 +215,14 @@ export default function EmployeesPage() {
             onChange={(e) => {
               setSearch(e.target.value);
               setPage(1);
+              setSelectedIds(new Set());
             }}
             className="pl-9"
           />
         </div>
-        <Select value={orgFilter} onValueChange={handleOrgChange}>
+        <Select value={orgFilter} onValueChange={handleOrgChange} itemToStringLabel={(v) => uniqueOrgs.find((o) => o.id === v)?.name ?? v}>
           <SelectTrigger className="w-[220px]">
-            <SelectValue placeholder="Все организации" />
+            <SelectValue placeholder="Все организации">{(v) => v && v !== "all" ? uniqueOrgs.find((o) => o.id === v)?.name ?? v : "Все организации"}</SelectValue>
           </SelectTrigger>
           <SelectContent>
             <SelectItem value="all">Все организации</SelectItem>
@@ -232,9 +233,9 @@ export default function EmployeesPage() {
             ))}
           </SelectContent>
         </Select>
-        <Select value={statusFilter} onValueChange={handleStatusChange}>
+        <Select value={statusFilter} onValueChange={handleStatusChange} itemToStringLabel={(v) => ({ all: "Все статусы", approved: "Согласованные", pending: "В процессе", rejected: "Отклонённые" }[v] ?? v)}>
           <SelectTrigger className="w-[200px]">
-            <SelectValue placeholder="Все статусы" />
+            <SelectValue>{(v: string) => ({ all: "Все статусы", approved: "Согласованные", pending: "В процессе", rejected: "Отклонённые" }[v] ?? v ?? "Все статусы")}</SelectValue>
           </SelectTrigger>
           <SelectContent>
             <SelectItem value="all">Все статусы</SelectItem>
@@ -259,63 +260,75 @@ export default function EmployeesPage() {
       )}
 
       <div className="overflow-x-auto rounded-xl border border-zinc-200 bg-white">
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead className="w-[40px]">
+        <table className="w-full caption-bottom text-sm">
+          <thead>
+            <tr className="border-b">
+              <th className="h-10 px-4 text-left align-middle font-medium w-[40px]">
                 <input
                   type="checkbox"
                   checked={employees.length > 0 && selectedIds.size === employees.length}
                   onChange={toggleSelectAll}
                   className="h-4 w-4 rounded border-zinc-300"
                 />
-              </TableHead>
-              <TableHead className="max-w-[200px]">ФИО</TableHead>
-              <TableHead className="max-w-[180px]">Организация</TableHead>
-              <TableHead className="max-w-[180px]">Должность</TableHead>
-              <TableHead className="max-w-[220px]">Классы работ</TableHead>
-              <TableHead className="w-[120px]">Документы</TableHead>
-              <TableHead className="w-[140px]">Согласования</TableHead>
-              <TableHead className="w-[100px]" />
-            </TableRow>
-          </TableHeader>
-          <TableBody>
+              </th>
+              <th className="h-10 px-4 text-left align-middle font-medium">ФИО</th>
+              <th className="h-10 px-4 text-left align-middle font-medium">Организация</th>
+              <th className="h-10 px-4 text-left align-middle font-medium">Должность</th>
+              <th className="h-10 px-4 text-left align-middle font-medium">Классы работ</th>
+              <th className="h-10 px-4 text-left align-middle font-medium">Документы</th>
+              <th className="h-10 px-4 text-left align-middle font-medium">Согласования</th>
+              {(userRole !== "employee") && (
+              <th className="h-10 px-4 text-right align-middle font-medium" />
+              )}
+            </tr>
+          </thead>
+          <tbody className="[&_tr:last-child]:border-0">
             {loading ? (
-              <TableRow>
-                <TableCell colSpan={8} className="py-8 text-center text-sm text-zinc-500">
+              <tr className="border-b">
+                <td colSpan={8} className="py-8 text-center text-sm text-zinc-500">
                   Загрузка...
-                </TableCell>
-              </TableRow>
+                </td>
+              </tr>
             ) : employees.length === 0 ? (
-              <TableRow>
-                <TableCell colSpan={8} className="py-8 text-center text-sm text-zinc-500">
-                  Сотрудники не найдены
-                </TableCell>
-              </TableRow>
+              <tr className="border-b">
+                <td colSpan={8} className="py-8">
+                  <div className="flex flex-col items-center gap-3">
+                    <p className="text-sm text-zinc-500">Сотрудники не найдены</p>
+                    {(userRole === "admin" || userRole === "contractor_admin") && (
+                      <Link href="/employees/new">
+                        <Button variant="outline" size="sm" className="gap-1.5">
+                          <Plus className="h-4 w-4" />
+                          Добавить сотрудника
+                        </Button>
+                      </Link>
+                    )}
+                  </div>
+                </td>
+              </tr>
             ) : (
               employees.map((emp) => {
                 const ap = approvalStatus(emp.approvals);
                 const db = docBadge(emp.documentCounts);
                 return (
-                  <TableRow key={emp.id}>
-                    <TableCell>
+                  <tr key={emp.id} className="border-b transition-colors hover:bg-muted/50">
+                    <td className="px-4 py-3 align-top">
                       <input
                         type="checkbox"
                         checked={selectedIds.has(emp.id)}
                         onChange={() => toggleSelect(emp.id)}
                         className="h-4 w-4 rounded border-zinc-300"
                       />
-                    </TableCell>
-                    <TableCell className="font-medium max-w-[200px] truncate">
-                      <span title={emp.fullName}>{sanitize(emp.fullName)}</span>
-                    </TableCell>
-                    <TableCell className="text-sm text-zinc-600 max-w-[180px] truncate">
-                      <span title={emp.organization.name}>{sanitize(emp.organization.name)}</span>
-                    </TableCell>
-                    <TableCell className="text-sm text-zinc-500 max-w-[180px] truncate">
-                      <span title={emp.position}>{sanitize(emp.position)}</span>
-                    </TableCell>
-                    <TableCell className="max-w-[220px]">
+                    </td>
+                    <td className="px-4 py-3 font-medium align-top max-w-[180px] truncate" title={emp.fullName}>
+                      {sanitize(emp.fullName)}
+                    </td>
+                    <td className="px-4 py-3 text-sm text-zinc-600 align-top max-w-[180px] truncate" title={emp.organization.name}>
+                      {sanitize(emp.organization.name)}
+                    </td>
+                    <td className="px-4 py-3 text-sm text-zinc-500 align-top max-w-[160px] truncate" title={emp.position}>
+                      {sanitize(emp.position)}
+                    </td>
+                    <td className="px-4 py-3 align-top">
                       <div className="flex flex-wrap gap-1">
                         {(emp.workClasses ?? []).slice(0, 2).map((wc) => (
                           <span
@@ -331,11 +344,11 @@ export default function EmployeesPage() {
                           </span>
                         )}
                       </div>
-                    </TableCell>
-                    <TableCell>
+                    </td>
+                    <td className="px-4 py-3 align-top whitespace-nowrap">
                       <Badge variant={db.variant}>{db.text}</Badge>
-                    </TableCell>
-                    <TableCell>
+                    </td>
+                    <td className="px-4 py-3 align-top whitespace-nowrap">
                       <span className="text-sm font-medium text-zinc-700">
                         {ap.label}
                       </span>
@@ -347,21 +360,23 @@ export default function EmployeesPage() {
                           {ap.badge === "approved" ? "Согласован" : ap.badge === "rejected" ? "Отклонён" : "В процессе"}
                         </Badge>
                       )}
-                    </TableCell>
-                    <TableCell className="text-right">
+                    </td>
+                    {showActionColumn(emp) ? (
+                    <td className="px-4 py-3 text-right align-top">
                       <Link href={`/employees/${emp.id}`}>
                         <Button variant="ghost" size="sm">
                           <Eye className="size-4 mr-1" />
                           Подробнее
                         </Button>
                       </Link>
-                    </TableCell>
-                  </TableRow>
+                    </td>
+                    ) : null}
+                  </tr>
                 );
               })
             )}
-          </TableBody>
-        </Table>
+          </tbody>
+        </table>
       </div>
 
       {totalPages > 1 && (

@@ -46,8 +46,8 @@ export async function POST(req: NextRequest) {
   const authResult = await authMiddleware(req);
   if (authResult instanceof NextResponse) return authResult;
 
-  // Only admin can upload
-  if (authResult.user.role !== "admin") {
+  // Admin, employee, and department_approver can upload documents
+  if (!["admin", "employee", "department_approver"].includes(authResult.user.role)) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
 
@@ -58,8 +58,12 @@ export async function POST(req: NextRequest) {
     const sectionId = formData.get("sectionId") as string;
     const fileType = formData.get("fileType") as string;
 
-    if (!file || !sectionId) {
-      return NextResponse.json({ error: "File and sectionId required" }, { status: 400 });
+    if (!file) {
+      return NextResponse.json({ error: "File is required" }, { status: 400 });
+    }
+
+    if (!sectionId) {
+      return NextResponse.json({ error: "Section is required" }, { status: 400 });
     }
 
     const allowedTypes: Record<string, string> = {
