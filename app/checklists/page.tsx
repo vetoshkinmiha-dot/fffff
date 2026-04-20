@@ -314,44 +314,47 @@ export default function ChecklistsPage() {
             <div className="flex items-center justify-center py-12">
               <Loader2 className="h-6 w-6 animate-spin text-zinc-400" />
             </div>
-          ) : stats ? (
+          ) : stats && stats.total > 0 ? (
             <div className="space-y-6">
               {/* Summary cards */}
               <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-                <div className="rounded-lg border p-3 text-center">
-                  <div className="text-2xl font-bold text-zinc-900">{stats.total}</div>
-                  <div className="text-xs text-zinc-500">Всего</div>
+                <div className="rounded-lg border border-zinc-200 bg-zinc-50 p-4 text-center">
+                  <div className="text-3xl font-bold text-zinc-900">{stats.total}</div>
+                  <div className="text-xs text-zinc-500 mt-1">Всего проверок</div>
                 </div>
-                <div className="rounded-lg border p-3 text-center">
-                  <div className="text-2xl font-bold text-emerald-600">{stats.passed}</div>
-                  <div className="text-xs text-zinc-500">Пройдено</div>
+                <div className="rounded-lg border border-emerald-200 bg-emerald-50 p-4 text-center">
+                  <div className="text-3xl font-bold text-emerald-600">{stats.passed}</div>
+                  <div className="text-xs text-emerald-600 mt-1">Пройдено</div>
                 </div>
-                <div className="rounded-lg border p-3 text-center">
-                  <div className="text-2xl font-bold text-red-600">{stats.failed}</div>
-                  <div className="text-xs text-zinc-500">Не пройдено</div>
+                <div className="rounded-lg border border-red-200 bg-red-50 p-4 text-center">
+                  <div className="text-3xl font-bold text-red-600">{stats.failed}</div>
+                  <div className="text-xs text-red-600 mt-1">Не пройдено</div>
                 </div>
-                <div className="rounded-lg border p-3 text-center">
-                  <div className="text-2xl font-bold text-zinc-900">{stats.avgScore}%</div>
-                  <div className="text-xs text-zinc-500">Ср. балл</div>
+                <div className="rounded-lg border border-blue-200 bg-blue-50 p-4 text-center">
+                  <div className="text-3xl font-bold text-blue-600">{stats.avgScore}%</div>
+                  <div className="text-xs text-blue-600 mt-1">Ср. балл</div>
                 </div>
               </div>
 
-              {/* Monthly trend */}
-              {stats.monthlyTrend.length > 0 && (
+              {/* Monthly trend — only months with data */}
+              {stats.monthlyTrend.filter((m) => m.total > 0).length > 0 && (
                 <div>
-                  <h3 className="text-sm font-medium text-zinc-900 mb-2">Месячная динамика</h3>
+                  <h3 className="text-sm font-medium text-zinc-900 mb-3">Месячная динамика</h3>
                   <div className="space-y-2">
-                    {stats.monthlyTrend.map((m) => (
+                    {stats.monthlyTrend.filter((m) => m.total > 0).map((m) => (
                       <div key={m.month} className="flex items-center gap-3 text-sm">
-                        <span className="w-16 text-xs text-zinc-500 font-mono">{m.month}</span>
-                        <span className="text-zinc-600">{m.total} пров.</span>
-                        <span className="text-zinc-600">{m.avgScore}%</span>
-                        <div className="flex-1 h-2 rounded-full bg-zinc-100 overflow-hidden">
+                        <span className="w-20 text-xs text-zinc-500 font-mono">{m.month}</span>
+                        <span className="w-12 text-xs text-zinc-600 font-medium">{m.total}</span>
+                        <div className="flex-1 h-3 rounded-full bg-zinc-100 overflow-hidden">
                           <div
-                            className="h-full rounded-full"
-                            style={{ width: `${m.passRate}%`, backgroundColor: "#10b981" }}
+                            className="h-full rounded-full transition-all"
+                            style={{
+                              width: `${m.passRate}%`,
+                              backgroundColor: m.passRate >= 70 ? "#10b981" : m.passRate >= 40 ? "#f59e0b" : "#ef4444",
+                            }}
                           />
                         </div>
+                        <span className="w-10 text-xs font-medium text-right">{m.avgScore}%</span>
                       </div>
                     ))}
                   </div>
@@ -361,10 +364,10 @@ export default function ChecklistsPage() {
               {/* Top failed items */}
               {stats.topFailed.length > 0 && (
                 <div>
-                  <h3 className="text-sm font-medium text-zinc-900 mb-2">Топ-5 частых нарушений</h3>
+                  <h3 className="text-sm font-medium text-zinc-900 mb-3">Топ-5 частых нарушений</h3>
                   <div className="space-y-1.5">
                     {stats.topFailed.map((item, i) => (
-                      <div key={i} className="flex items-center justify-between text-sm py-1.5 border-b border-zinc-100 last:border-0">
+                      <div key={i} className="flex items-center justify-between text-sm py-2 border-b border-zinc-100 last:border-0">
                         <span className="text-zinc-700 flex-1">{item.question}</span>
                         <span className="text-zinc-400 text-xs ml-2">{item.failCount}/{item.totalCount}</span>
                         <Badge variant="destructive" className="ml-2">{item.failRate}%</Badge>
@@ -373,6 +376,19 @@ export default function ChecklistsPage() {
                   </div>
                 </div>
               )}
+
+              {/* No top failed */}
+              {stats.topFailed.length === 0 && (
+                <div className="text-center py-6">
+                  <p className="text-sm text-zinc-500">Нет нарушений по результатам проверок</p>
+                </div>
+              )}
+            </div>
+          ) : stats ? (
+            <div className="text-center py-12">
+              <div className="text-4xl mb-3">📋</div>
+              <p className="text-sm text-zinc-500">Пока нет данных о проверках</p>
+              <p className="text-xs text-zinc-400 mt-1">Создайте первый чек-лист проверки</p>
             </div>
           ) : (
             <p className="text-sm text-zinc-500 text-center py-8">Не удалось загрузить статистику</p>
