@@ -482,7 +482,7 @@ export default function DocumentsPage() {
         </div>
 
         <div className="rounded-xl border border-zinc-200 bg-white">
-          <table className="w-full text-sm">
+          <table className="w-full text-sm" style={{ minWidth: "max-content" }}>
             <thead>
               <tr className="border-b border-zinc-200">
                 <th className="text-left font-medium px-4 py-3">Наименование</th>
