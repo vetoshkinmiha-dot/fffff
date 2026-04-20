@@ -185,6 +185,8 @@ export default function EmployeesPage() {
     return true;
   };
 
+  const canBulkExport = userRole === "admin" || userRole === "department_approver" || userRole === "contractor_admin";
+
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
@@ -247,7 +249,7 @@ export default function EmployeesPage() {
       </div>
 
       {/* Bulk action bar — only admin, department_approver, contractor_admin can export CSV */}
-      {selectedIds.size > 0 && (userRole === "admin" || userRole === "department_approver" || userRole === "contractor_admin") && (
+      {selectedIds.size > 0 && canBulkExport && (
         <div className="flex items-center gap-3 rounded-lg border border-blue-200 bg-blue-50 px-4 py-3">
           <span className="text-sm font-medium text-blue-700">Выбрано: {selectedIds.size}</span>
           <Button variant="outline" size="sm" onClick={exportCSV}>
@@ -263,6 +265,7 @@ export default function EmployeesPage() {
         <table className="w-full caption-bottom text-sm" style={{ minWidth: "max-content" }}>
           <thead>
             <tr className="border-b">
+              {canBulkExport && (
               <th className="h-10 px-4 text-left align-middle font-medium w-[40px]">
                 <input
                   type="checkbox"
@@ -271,6 +274,7 @@ export default function EmployeesPage() {
                   className="h-4 w-4 rounded border-zinc-300"
                 />
               </th>
+              )}
               <th className="h-10 px-4 text-left align-middle font-medium">ФИО</th>
               <th className="h-10 px-4 text-left align-middle font-medium">Организация</th>
               <th className="h-10 px-4 text-left align-middle font-medium">Должность</th>
@@ -285,13 +289,13 @@ export default function EmployeesPage() {
           <tbody className="[&_tr:last-child]:border-0">
             {loading ? (
               <tr className="border-b">
-                <td colSpan={8} className="py-8 text-center text-sm text-zinc-500">
+                <td colSpan={canBulkExport ? 8 : userRole !== "employee" ? 7 : 6} className="py-8 text-center text-sm text-zinc-500">
                   Загрузка...
                 </td>
               </tr>
             ) : employees.length === 0 ? (
               <tr className="border-b">
-                <td colSpan={8} className="py-8">
+                <td colSpan={canBulkExport ? 8 : userRole !== "employee" ? 7 : 6} className="py-8">
                   <div className="flex flex-col items-center gap-3">
                     <p className="text-sm text-zinc-500">Сотрудники не найдены</p>
                     {(userRole === "admin" || userRole === "contractor_admin") && (
@@ -311,6 +315,7 @@ export default function EmployeesPage() {
                 const db = docBadge(emp.documentCounts);
                 return (
                   <tr key={emp.id} className="border-b transition-colors hover:bg-muted/50">
+                    {canBulkExport && (
                     <td className="px-4 py-3 align-top">
                       <input
                         type="checkbox"
@@ -319,6 +324,7 @@ export default function EmployeesPage() {
                         className="h-4 w-4 rounded border-zinc-300"
                       />
                     </td>
+                    )}
                     <td className="px-4 py-3 font-medium align-top whitespace-nowrap">
                       {sanitize(emp.fullName)}
                     </td>
