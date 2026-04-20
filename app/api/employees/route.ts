@@ -21,8 +21,12 @@ export async function GET(req: NextRequest) {
     where.organizationId = orgFilter;
   }
 
-  // Contractor employees only see their own org's employees
-  if (authResult.user.role === "contractor_employee" && authResult.user.organizationId) {
+  // contractor_admin sees all employees in their org; contractor_employee only their own
+  if (authResult.user.role === "contractor_employee" && authResult.user.employeeId) {
+    where.id = authResult.user.employeeId;
+  } else if (
+    (authResult.user.role === "contractor_admin") && authResult.user.organizationId
+  ) {
     where.organizationId = authResult.user.organizationId;
   }
 
@@ -32,8 +36,8 @@ export async function GET(req: NextRequest) {
       where,
       include: {
         organization: { select: { name: true, sequentialNumber: true } },
-        documents: { select: { status: true } },
-        approvals: { select: { status: true } },
+        documents: { select: { id: true, name: true, status: true } },
+        approvals: { select: { id: true, department: true, status: true } },
         workClasses: { select: { workClass: true } },
       },
       orderBy: { createdAt: "desc" },
@@ -67,18 +71,30 @@ export async function POST(req: NextRequest) {
   const authResult = await authMiddleware(req);
   if (authResult instanceof NextResponse) return authResult;
 
-  const adminResult = requireAdmin(authResult.user);
-  if (adminResult instanceof NextResponse) return adminResult;
+  const body = await req.json();
+
+  // admin or contractor_admin (own org only) can create employees
+  const role = authResult.user.role;
+  const bodyOrgId = body.organizationId as string | undefined;
+
+  if (role === "admin") {
+    // admin can create for any org
+  } else if (role === "contractor_admin" && authResult.user.organizationId) {
+    if (bodyOrgId !== authResult.user.organizationId) {
+      return NextResponse.json({ error: "Forbidden: can only create employees for your own organization" }, { status: 403 });
+    }
+  } else {
+    return NextResponse.json({ error: "Forbidden: admin or contractor_admin access required" }, { status: 403 });
+  }
 
   try {
-    const body = await req.json();
     const validation = createEmployeeSchema.safeParse(body);
     if (!validation.success) {
       return NextResponse.json({ error: validation.error.issues[0].message }, { status: 400 });
     }
 
     const { workClasses, ...employeeData } = validation.data;
-    const organizationId = body.organizationId as string | undefined;
+    const organizationId = bodyOrgId as string | undefined;
     if (!organizationId) {
       return NextResponse.json({ error: "organizationId is required" }, { status: 400 });
     }

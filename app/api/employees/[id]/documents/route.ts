@@ -48,12 +48,18 @@ export async function POST(
     return NextResponse.json({ error: "Employee not found" }, { status: 404 });
   }
 
-  // Only contractor_employee can upload for their own org's employees
-  if (authResult.user.role === "contractor_employee" && authResult.user.organizationId) {
+  // Admin can upload for any; contractor_admin for own org; contractor_employee only for self
+  if (authResult.user.role === "admin") {
+    // admin can upload for any employee
+  } else if (authResult.user.role === "contractor_admin" && authResult.user.organizationId) {
     if (employee.organizationId !== authResult.user.organizationId) {
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }
-  } else if (authResult.user.role !== "admin") {
+  } else if (authResult.user.role === "contractor_employee" && authResult.user.employeeId) {
+    if (id !== authResult.user.employeeId) {
+      return NextResponse.json({ error: "Forbidden: can only manage your own documents" }, { status: 403 });
+    }
+  } else {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
 
