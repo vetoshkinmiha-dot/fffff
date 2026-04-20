@@ -260,7 +260,7 @@ export default function EmployeesPage() {
       )}
 
       <div className="rounded-xl border border-zinc-200 bg-white overflow-x-auto">
-        <table className="w-full caption-bottom text-sm">
+        <table className="w-full caption-bottom text-sm" style={{ minWidth: "max-content" }}>
           <thead>
             <tr className="border-b">
               <th className="h-10 px-4 text-left align-middle font-medium w-[40px]">
