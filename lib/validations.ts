@@ -177,3 +177,19 @@ export const updateUserSchema = z.object({
 export const resetPasswordSchema = z.object({
   newPassword: z.string().min(8).regex(/[A-Z]/, "Must contain uppercase letter").regex(/[0-9]/, "Must contain a number"),
 });
+
+// ─── Complaint ─────────────────────────────────────────────────────
+export const createComplaintSchema = z.object({
+  complaintText: z.string().min(1).transform(stripHtmlTags),
+  department: z.enum(["hse", "curator", "procurement", "quality", "legal", "finance", "hr_department"]),
+  violationId: z.string().uuid().optional(),
+});
+
+export const resolveComplaintSchema = z.object({
+  status: z.enum(["resolved", "rejected"]),
+  resolutionNotes: z.string().min(1),
+});
+
+export const updateContractorCommentSchema = z.object({
+  contractorComment: z.string().min(1).transform(stripHtmlTags),
+});

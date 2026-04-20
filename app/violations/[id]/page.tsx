@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react";
 import { notFound, useParams } from "next/navigation";
 import Link from "next/link";
-import { ArrowLeft, Loader2, AlertCircle, CheckCircle2, ArrowUp, Printer } from "lucide-react";
+import { ArrowLeft, Loader2, AlertCircle, CheckCircle2, ArrowUp, Printer, Save } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
@@ -62,6 +62,7 @@ interface Violation {
   photoUrl: string | null;
   resolutionNotes: string | null;
   resolvedAt: string | null;
+  contractorComment: string | null;
 }
 
 export default function ViolationDetailPage() {
@@ -76,12 +77,10 @@ export default function ViolationDetailPage() {
   const [userRole, setUserRole] = useState<string>("");
   const [currentUserId, setCurrentUserId] = useState<string>("");
 
-  // Complaint state
-  const [complaintOpen, setComplaintOpen] = useState(false);
-  const [complaintText, setComplaintText] = useState("");
-  const [complaintDept, setComplaintDept] = useState("curator");
-  const [submittingComplaint, setSubmittingComplaint] = useState(false);
-  const [complaintError, setComplaintError] = useState("");
+  // Contractor comment state
+  const [contractorComment, setContractorComment] = useState("");
+  const [savingComment, setSavingComment] = useState(false);
+  const [commentSaved, setCommentSaved] = useState(false);
 
   useEffect(() => {
     fetch("/api/auth/me", { credentials: "include" })
@@ -101,7 +100,9 @@ export default function ViolationDetailPage() {
         if (res.status === 404) {
           notFound();
         } else if (res.ok) {
-          setViolation(await res.json());
+          const data = await res.json();
+          setViolation(data);
+          setContractorComment(data.contractorComment || "");
         }
       } catch {
         notFound();
@@ -132,30 +133,26 @@ export default function ViolationDetailPage() {
     }
   }
 
-  async function handleComplaint() {
-    if (!complaintText.trim()) {
-      setComplaintError("Напишите текст жалобы");
-      return;
-    }
-    setSubmittingComplaint(true);
-    setComplaintError("");
+  async function handleSaveContractorComment() {
+    if (!contractorComment.trim()) return;
+    setSavingComment(true);
+    setCommentSaved(false);
     try {
-      const res = await fetch(`/api/violations/${id}/complaints`, {
-        method: "POST",
+      const res = await fetch(`/api/violations/${id}`, {
+        method: "PATCH",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ text: complaintText.trim(), department: complaintDept }),
+        body: JSON.stringify({ contractorComment: contractorComment.trim() }),
       });
       if (res.ok) {
-        setComplaintOpen(false);
-        setComplaintText("");
-      } else {
-        const data = await res.json();
-        setComplaintError(data.error || "Ошибка при отправке жалобы");
+        const updated = await res.json();
+        setViolation((prev) => prev ? { ...prev, contractorComment: updated.contractorComment } : null);
+        setCommentSaved(true);
+        setTimeout(() => setCommentSaved(false), 3000);
       }
     } catch {
-      setComplaintError("Произошла ошибка. Попробуйте ещё раз.");
+      // ignore
     } finally {
-      setSubmittingComplaint(false);
+      setSavingComment(false);
     }
   }
 
@@ -173,6 +170,8 @@ export default function ViolationDetailPage() {
   }
 
   const sev = severityConfig[violation.severity] ?? severityConfig.medium;
+  const isContractorRole = userRole === "contractor_admin" || userRole === "contractor_employee";
+  const isContractorForThisOrg = isContractorRole && violation.contractor.sequentialNumber !== undefined;
 
   return (
     <div className="space-y-6">
@@ -309,58 +308,50 @@ export default function ViolationDetailPage() {
         </Card>
       )}
 
-      {/* Complaint section (for contractor roles) */}
-      {(userRole === "contractor_employee" || userRole === "contractor_admin") && (
+      {/* Contractor comment section */}
+      {isContractorRole && (
         <Card>
           <CardHeader>
-            <CardTitle className="text-base">Жалоба подрядчика</CardTitle>
+            <CardTitle className="text-base">Комментарий подрядчика</CardTitle>
             <CardDescription>
-              Если вы не согласны с актом нарушения, подайте жалобу
+              Добавьте комментарий для администрации
             </CardDescription>
           </CardHeader>
-          <CardContent>
-            {!complaintOpen ? (
-              <Button variant="outline" onClick={() => setComplaintOpen(true)}>
-                Отправить жалобу
-              </Button>
-            ) : (
-              <div className="space-y-4">
-                <div className="space-y-1.5">
-                  <Label>Департамент</Label>
-                  <Select value={complaintDept} onValueChange={(v) => setComplaintDept(v ?? "")}>
-                    <SelectTrigger>
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {Object.entries(departmentLabels).map(([key, label]) => (
-                        <SelectItem key={key} value={key}>{label}</SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div className="space-y-1.5">
-                  <Label>Текст жалобы</Label>
-                  <Textarea
-                    value={complaintText}
-                    onChange={(e) => setComplaintText(e.target.value)}
-                    placeholder="Опишите причину жалобы..."
-                    rows={3}
-                  />
-                </div>
-                {complaintError && (
-                  <p className="text-sm text-red-600">{complaintError}</p>
+          <CardContent className="space-y-3">
+            <Textarea
+              value={contractorComment}
+              onChange={(e) => setContractorComment(e.target.value)}
+              placeholder="Ваш комментарий по поводу данного акта..."
+              rows={4}
+            />
+            <div className="flex items-center gap-2">
+              <Button
+                onClick={handleSaveContractorComment}
+                disabled={savingComment || !contractorComment.trim()}
+                className="gap-2"
+              >
+                {savingComment ? (
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                ) : commentSaved ? (
+                  <CheckCircle2 className="h-4 w-4" />
+                ) : (
+                  <Save className="h-4 w-4" />
                 )}
-                <div className="flex gap-2">
-                  <Button onClick={handleComplaint} disabled={submittingComplaint}>
-                    {submittingComplaint && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                    Отправить жалобу
-                  </Button>
-                  <Button variant="ghost" onClick={() => { setComplaintOpen(false); setComplaintError(""); }}>
-                    Отмена
-                  </Button>
-                </div>
-              </div>
-            )}
+                {commentSaved ? "Сохранено" : "Сохранить"}
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Admin view of contractor comment (read-only) */}
+      {userRole === "admin" && violation.contractorComment && (
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-base">Комментарий подрядчика</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="text-sm text-zinc-900 whitespace-pre-wrap">{violation.contractorComment}</div>
           </CardContent>
         </Card>
       )}
