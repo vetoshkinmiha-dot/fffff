@@ -47,7 +47,12 @@ export async function GET(req: NextRequest) {
   ]);
 
   return NextResponse.json({
-    data: checklists,
+    data: checklists.map((c) => ({
+      ...c,
+      inspector: c.createdBy?.fullName ?? null,
+      passedItems: c.score !== null ? Math.round((c.score / 100) * (c._count?.items ?? 0)) : 0,
+      totalItems: c._count?.items ?? 0,
+    })),
     pagination: {
       page: query.page,
       limit: query.limit,

@@ -115,12 +115,14 @@ export default function ChecklistsPage() {
       .catch(() => {});
   }, []);
 
-  async function fetchStats() {
-    if (!userOrgId) return;
+  async function fetchStats(overrideOrgId?: string) {
+    const orgId = overrideOrgId ?? userOrgId;
     setStatsLoading(true);
     setStatsOpen(true);
     try {
-      const res = await fetch(`/api/checklists/stats?contractorId=${userOrgId}`, { credentials: "include" });
+      const url = new URL("/api/checklists/stats", window.location.origin);
+      if (orgId) url.searchParams.set("contractorId", orgId);
+      const res = await fetch(url.toString(), { credentials: "include" });
       if (res.ok) {
         const data = await res.json();
         setStats(data);
@@ -134,8 +136,8 @@ export default function ChecklistsPage() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <div>
+      <div className="flex flex-wrap items-center gap-3">
+        <div className="flex-1">
           <h1 className="text-2xl font-semibold tracking-tight text-zinc-900">
             Чек-листы проверок
           </h1>
@@ -143,18 +145,20 @@ export default function ChecklistsPage() {
             Проверка подрядных организаций
           </p>
         </div>
-        {userRole === "admin" && (
-          <Link href="/checklists/new">
-            <Button variant="default" size="lg">
-              <Plus />
-              Создать чек-лист
-            </Button>
-          </Link>
-        )}
-        <Button variant="outline" size="lg" onClick={fetchStats}>
-          <BarChart3 />
-          Статистика
-        </Button>
+        <div className="flex items-center gap-2">
+          {userRole === "admin" && (
+            <Link href="/checklists/new">
+              <Button variant="default" size="lg">
+                <Plus />
+                Создать чек-лист
+              </Button>
+            </Link>
+          )}
+          <Button variant="outline" size="lg" onClick={fetchStats}>
+            <BarChart3 />
+            Статистика
+          </Button>
+        </div>
       </div>
 
       <div className="flex items-center gap-3">
@@ -199,7 +203,7 @@ export default function ChecklistsPage() {
               </TableRow>
             ) : (
               checklists.map((c) => {
-                const pct = Math.round((c.passedItems / c.totalItems) * 100);
+                const pct = c.totalItems > 0 ? Math.round((c.passedItems / c.totalItems) * 100) : 0;
                 return (
                   <TableRow key={c.id}>
                     <TableCell className="text-zinc-600 font-mono text-xs">

@@ -9,11 +9,13 @@ export async function GET(req: NextRequest) {
   const { searchParams } = new URL(req.url);
   const contractorId = searchParams.get("contractorId");
 
-  if (!contractorId) {
-    return NextResponse.json({ error: "contractorId is required" }, { status: 400 });
+  // Admin can view stats for all contractors; others only for their org
+  const where: any = {};
+  if (contractorId) {
+    where.contractorId = contractorId;
+  } else if (authResult.user.role !== "admin" && authResult.user.organizationId) {
+    where.contractorId = authResult.user.organizationId;
   }
-
-  const where: any = { contractorId };
 
   const [total, passed, failed, inProgress, allWithScore, checklists] = await Promise.all([
     prisma.checklist.count({ where }),
