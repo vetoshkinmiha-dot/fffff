@@ -196,7 +196,7 @@ export default function EmployeesPage() {
             Реестр сотрудников подрядных организаций
           </p>
         </div>
-        {(userRole === "admin" || userRole === "contractor_admin") && (
+        {(!userRole || userRole === "admin" || userRole === "contractor_admin") && (
         <Link href="/employees/new">
           <Button variant="default" size="lg">
             <Plus />

@@ -23,9 +23,7 @@ import {
 } from "@/components/ui/table";
 
 const statusConfig: Record<string, { variant: "outline" | "default" | "secondary"; label: string }> = {
-  draft: { variant: "secondary", label: "Черновик" },
   pending_approval: { variant: "outline", label: "На согласовании" },
-  approved: { variant: "default", label: "Согласован" },
   active: { variant: "outline", label: "Открыт" },
   closed: { variant: "secondary", label: "Закрыт" },
   early_closed: { variant: "default", label: "Закрыт досрочно" },
@@ -129,7 +127,7 @@ export default function PermitsPage() {
             Регистрация и учёт наряд-допусков
           </p>
         </div>
-        {(userRole === "admin" || userRole === "contractor_admin") && (
+        {(!userRole || userRole === "admin" || userRole === "contractor_admin") && (
         <Link href="/permits/new">
           <Button variant="default" size="lg">
             <Plus />
@@ -149,16 +147,15 @@ export default function PermitsPage() {
             className="pl-9"
           />
         </div>
-        <Select value={statusFilter} onValueChange={handleStatusChange} itemToStringLabel={(v) => ({ all: "Все статусы", active: "Открытые", closed: "Закрытые", early_closed: "Закрыты досрочно", draft: "Черновики", pending_approval: "На согласовании" }[v] ?? v)}>
+        <Select value={statusFilter} onValueChange={handleStatusChange} itemToStringLabel={(v) => ({ all: "Все статусы", active: "Открытые", closed: "Закрытые", early_closed: "Закрыты досрочно", pending_approval: "На согласовании" }[v] ?? v)}>
           <SelectTrigger className="w-[180px]">
-            <SelectValue>{(v: string) => ({ all: "Все статусы", active: "Открытые", closed: "Закрытые", early_closed: "Закрыты досрочно", draft: "Черновики", pending_approval: "На согласовании" }[v] ?? v ?? "Все статусы")}</SelectValue>
+            <SelectValue>{(v: string) => ({ all: "Все статусы", active: "Открытые", closed: "Закрытые", early_closed: "Закрыты досрочно", pending_approval: "На согласовании" }[v] ?? v ?? "Все статусы")}</SelectValue>
           </SelectTrigger>
           <SelectContent>
             <SelectItem value="all">Все статусы</SelectItem>
             <SelectItem value="active">Открытые</SelectItem>
             <SelectItem value="closed">Закрытые</SelectItem>
             <SelectItem value="early_closed">Закрыты досрочно</SelectItem>
-            <SelectItem value="draft">Черновики</SelectItem>
             <SelectItem value="pending_approval">На согласовании</SelectItem>
           </SelectContent>
         </Select>
@@ -192,7 +189,7 @@ export default function PermitsPage() {
                 <TableCell colSpan={9} className="py-8 text-center">
                   <div className="flex flex-col items-center gap-3">
                     <p className="text-sm text-zinc-500">Наряды-допуски не найдены</p>
-                    {(userRole === "admin" || userRole === "contractor_admin") && (
+                    {(!userRole || userRole === "admin" || userRole === "contractor_admin") && (
                       <Link href="/permits/new">
                         <Button variant="outline" size="sm" className="gap-1.5">
                           <Plus className="h-4 w-4" />
