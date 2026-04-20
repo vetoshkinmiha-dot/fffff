@@ -45,7 +45,6 @@ export async function GET(req: NextRequest) {
       include: {
         createdBy: { select: { fullName: true, id: true } },
         violation: { select: { id: true, violationNumber: true } },
-        contractor: { select: { name: true, sequentialNumber: true } },
       },
       orderBy: { createdAt: "desc" },
       skip: (query.page - 1) * query.limit,
@@ -95,7 +94,6 @@ export async function POST(req: NextRequest) {
       },
       include: {
         createdBy: { select: { fullName: true } },
-        contractor: { select: { name: true } },
       },
     });
 

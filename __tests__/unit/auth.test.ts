@@ -51,9 +51,12 @@ describe('Auth Utilities', () => {
     const validPayload: JWTPayload = {
       userId: '550e8400-e29b-41d4-a716-446655440000',
       email: 'test@example.com',
+      fullName: 'Иванов И.И.',
       role: 'department_approver',
       organizationId: null,
       department: 'safety',
+      employeeId: null,
+      mustChangePwd: false,
     }
 
     it('should generate and verify a valid token', () => {
@@ -71,9 +74,12 @@ describe('Auth Utilities', () => {
       const payload: JWTPayload = {
         userId: 'test-user-id',
         email: 'user@test.com',
+        fullName: 'Петров П.П.',
         role: 'contractor_employee',
         organizationId: 'org-123',
         department: null,
+        employeeId: null,
+        mustChangePwd: false,
       }
       const token = generateAccessToken(payload)
       const decoded = verifyAccessToken(token)!

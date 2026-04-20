@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { authMiddleware, requireAdmin } from "@/lib/api-middleware";
+import { authMiddleware } from "@/lib/api-middleware";
 import { updateOrgSchema } from "@/lib/validations";
 
 export async function GET(
@@ -12,7 +12,9 @@ export async function GET(
 
   const { id } = await params;
 
-  if (authResult.user.role === "contractor_employee" && authResult.user.organizationId) {
+  if (
+    (authResult.user.role === "contractor_employee" || authResult.user.role === "contractor_admin") && authResult.user.organizationId
+  ) {
     if (authResult.user.organizationId !== id) {
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }
@@ -37,10 +39,16 @@ export async function PATCH(
   const authResult = await authMiddleware(req);
   if (authResult instanceof NextResponse) return authResult;
 
-  const roleResult = requireAdmin(authResult.user);
-  if (roleResult instanceof NextResponse) return roleResult;
-
   const { id } = await params;
+
+  // Admin can update any org; contractor_admin can only update their own org
+  if (authResult.user.role === "contractor_admin") {
+    if (authResult.user.organizationId !== id) {
+      return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+    }
+  } else if (authResult.user.role !== "admin") {
+    return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+  }
 
   try {
     const body = await req.json();

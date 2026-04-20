@@ -69,7 +69,7 @@ export async function GET(req: NextRequest) {
 
   // Fetch items for top-failed analysis
   const allItems = await prisma.checklistItem.findMany({
-    where: { checklist: { contractorId } },
+    where: { checklist: { contractorId: contractorId ?? undefined } },
     select: { question: true, answer: true },
   });
 

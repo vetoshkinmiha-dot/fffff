@@ -35,6 +35,7 @@ import { Textarea } from "@/components/ui/textarea";
 const roleLabels: Record<string, string> = {
   admin: "Администратор",
   employee: "Сотрудник",
+  contractor_admin: "Ответственный подрядчика",
   contractor_employee: "Сотрудник подрядчика",
   department_approver: "Согласующий",
 };
@@ -79,7 +80,7 @@ export default function AdminUsersPage() {
     email: "",
     password: "",
     fullName: "",
-    role: "contractor_employee",
+    role: "contractor_admin",
     organizationId: "",
     department: "",
   });
@@ -282,9 +283,9 @@ export default function AdminUsersPage() {
             ))}
           </SelectContent>
         </Select>
-        <Select value={statusFilter} onValueChange={(v) => { setStatusFilter(v ?? "all"); setPage(1); }}>
+        <Select value={statusFilter} onValueChange={(v) => { setStatusFilter(v ?? "all"); setPage(1); }} itemToStringLabel={(v) => ({ all: "Все статусы", active: "Активные", blocked: "Заблокированные" }[v] ?? v)}>
           <SelectTrigger className="w-[160px]">
-            <SelectValue placeholder="Все статусы" />
+            <SelectValue>{(v: string) => ({ all: "Все статусы", active: "Активные", blocked: "Заблокированные" }[v] ?? v ?? "Все статусы")}</SelectValue>
           </SelectTrigger>
           <SelectContent>
             <SelectItem value="all">Все статусы</SelectItem>
@@ -294,7 +295,7 @@ export default function AdminUsersPage() {
         </Select>
       </div>
 
-      <div className="overflow-x-auto rounded-xl border border-zinc-200 bg-white">
+      <div className="rounded-xl border border-zinc-200 bg-white overflow-x-auto">
         <Table>
           <TableHeader>
             <TableRow>
@@ -431,8 +432,8 @@ export default function AdminUsersPage() {
             </div>
             <div className="space-y-1.5">
               <Label>Организация</Label>
-              <Select value={form.organizationId} onValueChange={(v) => setForm((f) => ({ ...f, organizationId: v ?? "" }))}>
-                <SelectTrigger><SelectValue placeholder="Без организации" /></SelectTrigger>
+              <Select value={form.organizationId} onValueChange={(v) => setForm((f) => ({ ...f, organizationId: v ?? "" }))} itemToStringLabel={(v) => organizations.find((o) => o.id === v)?.name ?? ""}>
+                <SelectTrigger><SelectValue placeholder="Без организации">{(v) => v ? organizations.find((o) => o.id === v)?.name ?? "" : "Без организации"}</SelectValue></SelectTrigger>
                 <SelectContent>
                   <SelectItem value="">Без организации</SelectItem>
                   {organizations.map((org) => (

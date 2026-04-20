@@ -389,7 +389,7 @@ export default function ApprovalsPage() {
 
       {/* ── Permits table (admin, mainTab=permits) ── */}
       {isAdmin && mainTab === "permits" && (
-        <div className="overflow-x-auto rounded-xl border border-zinc-200 bg-white">
+        <div className="rounded-xl border border-zinc-200 bg-white overflow-x-auto">
           <Table>
             <TableHeader>
               <TableRow>
@@ -477,7 +477,7 @@ export default function ApprovalsPage() {
 
       {/* ── Employee approvals table ── */}
       {(mainTab === "employees" || isDeptApprover) && (
-        <div className="overflow-x-auto rounded-xl border border-zinc-200 bg-white">
+        <div className="rounded-xl border border-zinc-200 bg-white overflow-x-auto">
           <Table>
             <TableHeader>
               <TableRow>

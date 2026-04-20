@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import Link from "next/link";
-import { ArrowLeft, Plus, Eye, Loader2, AlertCircle, X } from "lucide-react";
+import { ArrowLeft, Plus, Eye, Loader2, AlertCircle, X, Pencil, Trash2 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -91,6 +91,19 @@ export default function ViolationTemplatesPage() {
     department: "hse",
   });
 
+  // Edit template
+  const [editOpen, setEditOpen] = useState(false);
+  const [editTarget, setEditTarget] = useState<Template | null>(null);
+  const [editSubmitting, setEditSubmitting] = useState(false);
+  const [editError, setEditError] = useState("");
+  const [editForm, setEditForm] = useState({ title: "", description: "", defaultSeverity: "medium", department: "hse" });
+
+  // Delete template
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [deleteTarget, setDeleteTarget] = useState<Template | null>(null);
+  const [deleteSubmitting, setDeleteSubmitting] = useState(false);
+  const [deleteError, setDeleteError] = useState("");
+
   useEffect(() => {
     Promise.all([
       fetch("/api/auth/me", { credentials: "include" }),
@@ -160,6 +173,86 @@ export default function ViolationTemplatesPage() {
     }
   }
 
+  async function openEdit(t: Template) {
+    setEditTarget(t);
+    setEditForm({
+      title: t.title,
+      description: t.description,
+      defaultSeverity: t.defaultSeverity,
+      department: t.department,
+    });
+    setEditError("");
+    setEditOpen(true);
+  }
+
+  async function handleEdit(e: React.FormEvent) {
+    e.preventDefault();
+    setEditError("");
+    if (!editTarget) return;
+    if (!editForm.title.trim() || !editForm.description.trim()) {
+      setEditError("Заполните все обязательные поля");
+      return;
+    }
+    setEditSubmitting(true);
+    try {
+      const res = await fetch(`/api/violations/templates/${editTarget.id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({
+          title: editForm.title.trim(),
+          description: editForm.description.trim(),
+          defaultSeverity: editForm.defaultSeverity,
+          department: editForm.department,
+        }),
+      });
+      if (!res.ok) {
+        const data = await res.json();
+        setEditError(data.error || "Ошибка при редактировании");
+        return;
+      }
+      const refetch = await fetch("/api/violations/templates", { credentials: "include" });
+      if (refetch.ok) {
+        const data = await refetch.json();
+        setTemplates(data.data || []);
+      }
+      setEditOpen(false);
+      setEditTarget(null);
+    } catch {
+      setEditError("Произошла ошибка. Попробуйте ещё раз.");
+    } finally {
+      setEditSubmitting(false);
+    }
+  }
+
+  async function handleDelete() {
+    if (!deleteTarget) return;
+    setDeleteSubmitting(true);
+    setDeleteError("");
+    try {
+      const res = await fetch(`/api/violations/templates/${deleteTarget.id}`, {
+        method: "DELETE",
+        credentials: "include",
+      });
+      if (!res.ok) {
+        const data = await res.json();
+        setDeleteError(data.error || "Ошибка при удалении");
+        return;
+      }
+      const refetch = await fetch("/api/violations/templates", { credentials: "include" });
+      if (refetch.ok) {
+        const data = await refetch.json();
+        setTemplates(data.data || []);
+      }
+      setDeleteDialogOpen(false);
+      setDeleteTarget(null);
+    } catch {
+      setDeleteError("Произошла ошибка. Попробуйте ещё раз.");
+    } finally {
+      setDeleteSubmitting(false);
+    }
+  }
+
   if (loading) {
     return (
       <div className="flex items-center justify-center py-20">
@@ -206,9 +299,9 @@ export default function ViolationTemplatesPage() {
             <SelectItem value="procurement">Закупки</SelectItem>
           </SelectContent>
         </Select>
-        <Select value={filterActive} onValueChange={(v) => setFilterActive(v ?? "all")}>
+        <Select value={filterActive} onValueChange={(v) => setFilterActive(v ?? "all")} itemToStringLabel={(v) => ({ all: "Все", active: "Активные", inactive: "Неактивные" }[v] ?? v)}>
           <SelectTrigger className="w-[200px]">
-            <SelectValue placeholder="Все" />
+            <SelectValue>{(v: string) => ({ all: "Все", active: "Активные", inactive: "Неактивные" }[v] ?? v ?? "Все")}</SelectValue>
           </SelectTrigger>
           <SelectContent>
             <SelectItem value="all">Все</SelectItem>
@@ -218,7 +311,7 @@ export default function ViolationTemplatesPage() {
         </Select>
       </div>
 
-      <div className="overflow-x-auto rounded-xl border border-zinc-200 bg-white">
+      <div className="rounded-xl border border-zinc-200 bg-white overflow-x-auto">
         <Table>
           <TableHeader>
             <TableRow>
@@ -264,12 +357,24 @@ export default function ViolationTemplatesPage() {
                     {formatDate(t.createdAt)}
                   </TableCell>
                   <TableCell className="text-right">
-                    <Link href={`/violations/new?templateId=${t.id}`}>
-                      <Button variant="ghost" size="sm">
-                        <Eye className="h-4 w-4 mr-1" />
-                        Применить
-                      </Button>
-                    </Link>
+                    <div className="flex items-center justify-end gap-1">
+                      {isHSE && (
+                        <>
+                          <Button variant="ghost" size="sm" onClick={() => openEdit(t)}>
+                            <Pencil className="h-3.5 w-3.5" />
+                          </Button>
+                          <Button variant="ghost" size="sm" className="text-red-600 hover:text-red-700" onClick={() => { setDeleteTarget(t); setDeleteError(""); setDeleteDialogOpen(true); }}>
+                            <Trash2 className="h-3.5 w-3.5" />
+                          </Button>
+                        </>
+                      )}
+                      <Link href={`/violations/new?templateId=${t.id}`}>
+                        <Button variant="ghost" size="sm">
+                          <Eye className="h-4 w-4 mr-1" />
+                          Применить
+                        </Button>
+                      </Link>
+                    </div>
                   </TableCell>
                 </TableRow>
               ))
@@ -355,6 +460,110 @@ export default function ViolationTemplatesPage() {
               </Button>
             </DialogFooter>
           </form>
+        </DialogContent>
+      </Dialog>
+
+      {/* Edit template dialog */}
+      <Dialog open={editOpen} onOpenChange={setEditOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Редактировать шаблон</DialogTitle>
+            <DialogDescription>
+              Измените информацию о шаблоне
+            </DialogDescription>
+          </DialogHeader>
+          <form onSubmit={handleEdit} className="space-y-4">
+            {editError && (
+              <div className="flex items-center gap-2 rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
+                <AlertCircle className="h-4 w-4 shrink-0" />
+                {editError}
+              </div>
+            )}
+            <div className="space-y-1.5">
+              <Label>Название *</Label>
+              <Input
+                value={editForm.title}
+                onChange={(e) => setEditForm((prev) => ({ ...prev, title: e.target.value }))}
+              />
+            </div>
+            <div className="space-y-1.5">
+              <Label>Описание *</Label>
+              <Textarea
+                value={editForm.description}
+                onChange={(e) => setEditForm((prev) => ({ ...prev, description: e.target.value }))}
+                rows={3}
+              />
+            </div>
+            <div className="grid gap-4 sm:grid-cols-2">
+              <div className="space-y-1.5">
+                <Label>Тяжесть</Label>
+                <Select
+                  value={editForm.defaultSeverity}
+                  onValueChange={(v) => setEditForm((prev) => ({ ...prev, defaultSeverity: v ?? "medium" }))}
+                >
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {Object.entries(severityLabels).map(([key, label]) => (
+                      <SelectItem key={key} value={key}>{label}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-1.5">
+                <Label>Департамент</Label>
+                <Select
+                  value={editForm.department}
+                  onValueChange={(v) => setEditForm((prev) => ({ ...prev, department: v ?? "hse" }))}
+                >
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {Object.entries(departmentLabels).map(([key, label]) => (
+                      <SelectItem key={key} value={key}>{label}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+            <DialogFooter>
+              <Button variant="outline" type="button" onClick={() => { setEditOpen(false); setEditError(""); }}>
+                Отмена
+              </Button>
+              <Button type="submit" disabled={editSubmitting}>
+                {editSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                Сохранить
+              </Button>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
+
+      {/* Delete template dialog */}
+      <Dialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Удалить шаблон</DialogTitle>
+            <DialogDescription>
+              Вы уверены, что хотите удалить шаблон "{deleteTarget?.title}"? Это действие нельзя отменить.
+            </DialogDescription>
+          </DialogHeader>
+          {deleteError && (
+            <div className="rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
+              {deleteError}
+            </div>
+          )}
+          <DialogFooter>
+            <Button variant="outline" onClick={() => { setDeleteDialogOpen(false); setDeleteTarget(null); setDeleteError(""); }} disabled={deleteSubmitting}>
+              Отмена
+            </Button>
+            <Button variant="destructive" onClick={handleDelete} disabled={deleteSubmitting}>
+              {deleteSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+              Удалить
+            </Button>
+          </DialogFooter>
         </DialogContent>
       </Dialog>
     </div>

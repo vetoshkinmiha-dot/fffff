@@ -65,10 +65,10 @@ export async function POST(req: NextRequest) {
   const authResult = await authMiddleware(req);
   if (authResult instanceof NextResponse) return authResult;
 
-  // Only admin and contractor_admin can create permits
+  // Only admin, contractor_admin, and department_approver can create permits
   const { role, organizationId } = authResult.user;
-  if (role !== "admin" && role !== "contractor_admin") {
-    return NextResponse.json({ error: "Forbidden: admin or contractor_admin access required" }, { status: 403 });
+  if (role !== "admin" && role !== "contractor_admin" && role !== "department_approver") {
+    return NextResponse.json({ error: "Forbidden: admin, contractor_admin, or department_approver access required" }, { status: 403 });
   }
 
   try {
@@ -84,6 +84,9 @@ export async function POST(req: NextRequest) {
     if (role === "contractor_admin" && contractorId !== organizationId) {
       return NextResponse.json({ error: "Forbidden: can only create permits for your own organization" }, { status: 403 });
     }
+
+    // Determine permit status based on creator role
+    const permitStatus = role === "admin" ? "active" : "pending_approval";
 
     // Generate permitNumber: {CATEGORY_CODE}-{contractorSeq}-{curatorSeq}-{permitSeqNumber}
     const categoryCode = CATEGORY_CODES[category] || "OT";
@@ -128,6 +131,7 @@ export async function POST(req: NextRequest) {
           responsiblePerson,
           openDate: new Date(openDate),
           expiryDate: new Date(expiryDate),
+          status: permitStatus,
           sequentialNumber: permitSeq,
         },
       });

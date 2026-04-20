@@ -20,9 +20,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { cn } from "@/lib/utils";
 
 const statusConfig: Record<string, { variant: "outline" | "default" | "secondary"; label: string }> = {
-  draft: { variant: "secondary", label: "Черновик" },
   pending_approval: { variant: "outline", label: "На согласовании" },
-  approved: { variant: "default", label: "Согласован" },
   active: { variant: "outline", label: "Открыт" },
   closed: { variant: "secondary", label: "Закрыт" },
   early_closed: { variant: "default", label: "Закрыт досрочно" },
@@ -226,7 +224,7 @@ export default function PermitDetailPage() {
           </Button>
         </Link>
         <div className="flex-1" />
-        {(permit.status === "active" || permit.status === "approved" || permit.status === "draft" || permit.status === "pending_approval") && (userRole === "admin" || userRole === "contractor_admin") && (
+        {(permit.status === "active" || permit.status === "pending_approval") && (userRole === "admin" || userRole === "contractor_admin") && (
           <Link href={`/permits/${permit.id}/edit`}>
             <Button variant="outline" className="gap-2">
               <Pencil className="h-4 w-4" />
@@ -234,7 +232,7 @@ export default function PermitDetailPage() {
             </Button>
           </Link>
         )}
-        {(permit.status === "active" || permit.status === "approved") && (userRole === "admin" || userRole === "contractor_admin") && (
+        {(permit.status === "active") && (userRole === "admin") && (
           <Button
             variant="outline"
             className="gap-2"

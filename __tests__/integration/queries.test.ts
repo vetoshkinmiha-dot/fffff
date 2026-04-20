@@ -37,8 +37,8 @@ vi.mock('../../lib/prisma', () => {
           results = results.filter((r: any) => {
             for (const [key, value] of Object.entries(where)) {
               if (typeof value === 'object' && value !== null) {
-                if ('lte' in value && r[key] && new Date(r[key]) > new Date(value.lte)) return false
-                if ('lt' in value && r[key] && new Date(r[key]) >= new Date(value.lt)) return false
+                if ('lte' in value && r[key] && new Date(r[key] as string | number | Date) > new Date(value.lte as string | number | Date)) return false
+                if ('lt' in value && r[key] && new Date(r[key] as string | number | Date) >= new Date(value.lt as string | number | Date)) return false
                 if ('contains' in value) {
                   const actual = String(r[key] || '').toLowerCase()
                   const search = String(value.contains).toLowerCase()
@@ -89,6 +89,7 @@ vi.mock('../../lib/prisma', () => {
     prisma: {
       organization: modelFor('organization'),
       employee: modelFor('employee'),
+      employeeWorkClass: modelFor('employeeWorkClass'),
       employeeDocument: modelFor('employeeDocument'),
       approvalRequest: modelFor('approvalRequest'),
       user: modelFor('user'),
@@ -111,7 +112,7 @@ describe('Prisma Query Operations (Mocked with in-memory store)', () => {
 
     it('should create and retrieve organization by id', async () => {
       const org = await prisma.organization.create({
-        data: { name: 'ООО Тест', inn: '7707083893', legalAddress: 'Адрес' },
+        data: { name: 'ООО Тест', inn: '7707083893', legalAddress: 'Адрес', sequentialNumber: 1 },
       })
 
       const found = await prisma.organization.findUnique({ where: { id: org.id } })
@@ -122,7 +123,7 @@ describe('Prisma Query Operations (Mocked with in-memory store)', () => {
 
     it('should update organization fields', async () => {
       const org = await prisma.organization.create({
-        data: { name: 'Старое', inn: '7707083894', legalAddress: 'Адрес' },
+        data: { name: 'Старое', inn: '7707083894', legalAddress: 'Адрес', sequentialNumber: 2 },
       })
 
       const updated = await prisma.organization.update({
@@ -137,9 +138,9 @@ describe('Prisma Query Operations (Mocked with in-memory store)', () => {
     it('should support case-insensitive search by name', async () => {
       await prisma.organization.createMany({
         data: [
-          { name: 'ООО Альфа', inn: '7707083895', legalAddress: 'Адрес 1' },
-          { name: 'ООО Бета', inn: '7707083896', legalAddress: 'Адрес 2' },
-          { name: 'ИП Альфаев', inn: '7707083897', legalAddress: 'Адрес 3' },
+          { name: 'ООО Альфа', inn: '7707083895', legalAddress: 'Адрес 1', sequentialNumber: 1 },
+          { name: 'ООО Бета', inn: '7707083896', legalAddress: 'Адрес 2', sequentialNumber: 2 },
+          { name: 'ИП Альфаев', inn: '7707083897', legalAddress: 'Адрес 3', sequentialNumber: 3 },
         ],
       })
 
@@ -153,8 +154,8 @@ describe('Prisma Query Operations (Mocked with in-memory store)', () => {
     it('should filter by status', async () => {
       await prisma.organization.createMany({
         data: [
-          { name: 'Активная', inn: '7707083900', legalAddress: 'Адрес', status: 'active' },
-          { name: 'Ожидающая', inn: '7707083901', legalAddress: 'Адрес', status: 'pending' },
+          { name: 'Активная', inn: '7707083900', legalAddress: 'Адрес', status: 'active', sequentialNumber: 1 },
+          { name: 'Ожидающая', inn: '7707083901', legalAddress: 'Адрес', status: 'pending', sequentialNumber: 2 },
         ],
       })
 
@@ -169,7 +170,7 @@ describe('Prisma Query Operations (Mocked with in-memory store)', () => {
 
     beforeEach(async () => {
       const org = await prisma.organization.create({
-        data: { name: 'ООО Тест', inn: '7707083898', legalAddress: 'Адрес' },
+        data: { name: 'ООО Тест', inn: '7707083898', legalAddress: 'Адрес', sequentialNumber: 1 },
       })
       orgId = org.id
     })
@@ -182,14 +183,26 @@ describe('Prisma Query Operations (Mocked with in-memory store)', () => {
           position: 'Инженер',
           passportSeries: '4510',
           passportNumber: '123456',
-          workClasses: ['Высота', 'Электрика'],
           previouslyAtPirelli: true,
         },
       })
 
+      // Work classes are now a relation — created separately
+      await prisma.employeeWorkClass.createMany({
+        data: [
+          { employeeId: emp.id, workClass: 'Высота' },
+          { employeeId: emp.id, workClass: 'Электрика' },
+        ],
+      })
+
+      // Verify by querying the relation
+      const workClasses = await prisma.employeeWorkClass.findMany({
+        where: { employeeId: emp.id },
+      })
+
       expect(emp.fullName).toBe('Петров П.П.')
       expect(emp.passportSeries).toBe('4510')
-      expect(emp.workClasses).toEqual(['Высота', 'Электрика'])
+      expect(workClasses.map(w => w.workClass)).toEqual(['Высота', 'Электрика'])
       expect(emp.previouslyAtPirelli).toBe(true)
     })
 
@@ -199,7 +212,7 @@ describe('Prisma Query Operations (Mocked with in-memory store)', () => {
       })
 
       const org2 = await prisma.organization.create({
-        data: { name: 'ООО Второй', inn: '7707083899', legalAddress: 'Адрес 2' },
+        data: { name: 'ООО Второй', inn: '7707083899', legalAddress: 'Адрес 2', sequentialNumber: 2 },
       })
       await prisma.employee.create({
         data: { organizationId: org2.id, fullName: 'Б', position: 'Инж', passportSeries: '4510', passportNumber: '222222' },
@@ -263,7 +276,7 @@ describe('Prisma Query Operations (Mocked with in-memory store)', () => {
 
     beforeEach(async () => {
       const org = await prisma.organization.create({
-        data: { name: 'ООО Тест', inn: '7707083999', legalAddress: 'Адрес' },
+        data: { name: 'ООО Тест', inn: '7707083999', legalAddress: 'Адрес', sequentialNumber: 1 },
       })
       const emp = await prisma.employee.create({
         data: { organizationId: org.id, fullName: 'Петров П.П.', position: 'Инженер', passportSeries: '4510', passportNumber: '123456' },

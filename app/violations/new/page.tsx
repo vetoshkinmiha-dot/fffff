@@ -158,9 +158,10 @@ function NewViolationForm() {
             <Select
               value={form.contractorId}
               onValueChange={(v) => setForm((prev) => ({ ...prev, contractorId: v ?? "" }))}
+              itemToStringLabel={(v) => organizations.find((o) => o.id === v)?.name ?? v}
             >
               <SelectTrigger className={fieldErrors.contractorId ? "border-red-300" : ""}>
-                <SelectValue placeholder="Выберите подрядчика" />
+                <SelectValue placeholder="Выберите подрядчика">{(v) => organizations.find((o) => o.id === v)?.name ?? v ?? "Выберите подрядчика"}</SelectValue>
               </SelectTrigger>
               <SelectContent>
                 {organizations.map((org) => (

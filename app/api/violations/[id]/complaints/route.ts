@@ -24,7 +24,6 @@ export async function GET(
     where: { violationId: id },
     include: {
       createdBy: { select: { fullName: true } },
-      contractor: { select: { name: true } },
     },
     orderBy: { createdAt: "desc" },
   });

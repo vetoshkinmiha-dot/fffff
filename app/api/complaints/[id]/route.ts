@@ -20,7 +20,6 @@ export async function GET(
     include: {
       createdBy: { select: { fullName: true, id: true } },
       violation: { select: { id: true, violationNumber: true } },
-      contractor: { select: { name: true, sequentialNumber: true } },
     },
   });
 
@@ -80,7 +79,6 @@ export async function PATCH(
       },
       include: {
         createdBy: { select: { fullName: true } },
-        contractor: { select: { name: true } },
       },
     });
 

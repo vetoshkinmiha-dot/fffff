@@ -70,8 +70,14 @@ export async function PATCH(
 
   const body = await req.json();
 
-  // Early close
+  // Early close — only admin can close active permits
   if (body.status === "early_closed") {
+    if (authResult.user.role !== "admin") {
+      return NextResponse.json({ error: "Forbidden: only admin can close permits" }, { status: 403 });
+    }
+    if (permit.status !== "active") {
+      return NextResponse.json({ error: "Only active permits can be closed" }, { status: 400 });
+    }
     const validation = closePermitSchema.safeParse(body);
     if (!validation.success) {
       return NextResponse.json({ error: validation.error.issues[0].message }, { status: 400 });

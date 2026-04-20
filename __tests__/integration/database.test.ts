@@ -60,7 +60,7 @@ describe('Prisma Database Schema & Integrity (Mocked)', () => {
       } as any)
 
       const org = await prisma.organization.create({
-        data: { name: 'ООО Тест', inn: '7707083893', legalAddress: 'г. Москва, ул. Тестовая, 1' },
+        data: { name: 'ООО Тест', inn: '7707083893', legalAddress: 'г. Москва, ул. Тестовая, 1', sequentialNumber: 1 },
       })
 
       expect(org.name).toBe('ООО Тест')
@@ -75,7 +75,7 @@ describe('Prisma Database Schema & Integrity (Mocked)', () => {
 
       await expect(
         prisma.organization.create({
-          data: { name: 'ООО Второй', inn: '7707083893', legalAddress: 'Адрес 2' },
+          data: { name: 'ООО Второй', inn: '7707083893', legalAddress: 'Адрес 2', sequentialNumber: 99 },
         })
       ).rejects.toThrow()
     })
@@ -93,7 +93,7 @@ describe('Prisma Database Schema & Integrity (Mocked)', () => {
       } as any)
 
       const org = await prisma.organization.create({
-        data: { name: 'ООО Тест', inn: '7707083894', legalAddress: 'Адрес' },
+        data: { name: 'ООО Тест', inn: '7707083894', legalAddress: 'Адрес', sequentialNumber: 2 },
       })
       expect(org.status).toBe('pending')
     })
@@ -122,7 +122,6 @@ describe('Prisma Database Schema & Integrity (Mocked)', () => {
         position: 'Инженер',
         passportSeries: '4510',
         passportNumber: '123456',
-        workClasses: ['Высота', 'Электрика'],
         previouslyAtPirelli: false,
         createdAt: new Date(),
         updatedAt: new Date(),
@@ -135,13 +134,11 @@ describe('Prisma Database Schema & Integrity (Mocked)', () => {
           position: 'Инженер',
           passportSeries: '4510',
           passportNumber: '123456',
-          workClasses: ['Высота', 'Электрика'],
         },
       })
 
       expect(emp.organizationId).toBe('org-1')
       expect(emp.fullName).toBe('Петров П.П.')
-      expect(emp.workClasses).toEqual(['Высота', 'Электрика'])
       expect(emp.previouslyAtPirelli).toBe(false)
     })
 
@@ -345,7 +342,7 @@ describe('Prisma Database Schema & Integrity (Mocked)', () => {
         email: 'security@pirelli.ru',
         passwordHash: 'hash',
         fullName: 'Охранник',
-        role: 'security',
+        role: 'department_approver',
         department: 'security',
         isActive: true,
         mustChangePwd: true,
@@ -358,7 +355,7 @@ describe('Prisma Database Schema & Integrity (Mocked)', () => {
           email: 'security@pirelli.ru',
           passwordHash: 'hash',
           fullName: 'Охранник',
-          role: 'security',
+          role: 'department_approver',
           department: 'security',
         },
       })

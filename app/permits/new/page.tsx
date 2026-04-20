@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, FormEvent, useEffect } from "react";
+import { useState, FormEvent, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { ArrowLeft, Loader2, AlertCircle } from "lucide-react";
@@ -19,6 +19,7 @@ import { Textarea } from "@/components/ui/textarea";
 interface Organization {
   id: string;
   name: string;
+  contactPersonName: string | null;
 }
 
 const CATEGORY_OPTIONS: { value: string; label: string }[] = [
@@ -30,32 +31,42 @@ const CATEGORY_OPTIONS: { value: string; label: string }[] = [
   { value: "other", label: "Прочее" },
 ];
 
+function todayStr(): string {
+  return new Date().toISOString().split("T")[0];
+}
+
 export default function NewPermitPage() {
   const router = useRouter();
 
-  // ALL hooks MUST be called before any early return
   const [organizations, setOrganizations] = useState<Organization[]>([]);
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState("");
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
   const [authorized, setAuthorized] = useState<boolean | null>(null);
+  const [userRole, setUserRole] = useState<string>("");
+  const orgIdRef = useRef<string>("");
+
   const [form, setForm] = useState({
     contractorId: "",
     category: "",
     workSite: "",
     responsiblePerson: "",
-    openDate: "",
+    openDate: todayStr(),
     expiryDate: "",
   });
+
+  const isContractor = userRole === "contractor_admin" || userRole === "contractor_employee";
 
   useEffect(() => {
     fetch("/api/auth/me", { credentials: "include" })
       .then((r) => (r.ok ? r.json() : null))
       .then((data) => {
         const role = data?.user?.role;
-        if (role === "admin" || role === "contractor_employee") {
+        if (role === "admin" || role === "contractor_admin" || role === "department_approver") {
           setAuthorized(true);
+          setUserRole(role);
+          orgIdRef.current = data?.user?.organizationId ?? "";
         } else {
           setAuthorized(false);
         }
@@ -65,13 +76,36 @@ export default function NewPermitPage() {
     fetch("/api/organizations", { credentials: "include" })
       .then((r) => r.json())
       .then((data) => {
-        setOrganizations(data.data || []);
+        const orgs = data.data || [];
+        setOrganizations(orgs);
         setLoading(false);
       })
       .catch(() => setLoading(false));
   }, []);
 
-  // Early returns AFTER all hooks
+  // Auto-fill contractor and responsible person (from org's contactPersonName)
+  useEffect(() => {
+    if (orgIdRef.current && organizations.length > 0) {
+      const ownOrg = organizations.find((o) => o.id === orgIdRef.current);
+      if (ownOrg) {
+        setForm((prev) => ({
+          ...prev,
+          contractorId: ownOrg.id,
+          responsiblePerson: ownOrg.contactPersonName || "",
+        }));
+      }
+    }
+  }, [organizations.length]);
+
+  // Update responsible when contractor selection changes (for admin)
+  useEffect(() => {
+    if (!form.contractorId) return;
+    const org = organizations.find((o) => o.id === form.contractorId);
+    if (org) {
+      setForm((prev) => ({ ...prev, responsiblePerson: org.contactPersonName || "" }));
+    }
+  }, [form.contractorId]);
+
   if (authorized === null || loading) {
     return (
       <div className="flex items-center justify-center py-20">
@@ -90,7 +124,7 @@ export default function NewPermitPage() {
     if (!form.contractorId) errs.contractorId = "Выберите подрядчика";
     if (!form.category) errs.category = "Выберите категорию";
     if (!form.workSite.trim()) errs.workSite = "Обязательное поле";
-    if (!form.responsiblePerson.trim()) errs.responsiblePerson = "Обязательное поле";
+    if (!form.responsiblePerson) errs.responsiblePerson = "Выберите ответственного";
     if (!form.openDate) errs.openDate = "Обязательное поле";
     if (!form.expiryDate) errs.expiryDate = "Обязательное поле";
     if (form.openDate && form.expiryDate && form.expiryDate <= form.openDate)
@@ -109,10 +143,12 @@ export default function NewPermitPage() {
       const res = await fetch("/api/permits", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
+        credentials: "include",
         body: JSON.stringify({
           ...form,
-          openDate: new Date(form.openDate).toISOString(),
-          expiryDate: new Date(form.expiryDate).toISOString(),
+          responsiblePerson: form.responsiblePerson,
+          openDate: new Date(form.openDate + "T00:00:00").toISOString(),
+          expiryDate: new Date(form.expiryDate + "T00:00:00").toISOString(),
         }),
       });
 
@@ -184,23 +220,34 @@ export default function NewPermitPage() {
 
           <div className="space-y-1.5">
             <Label>Подрядчик *</Label>
-            <Select
-              value={form.contractorId}
-              onValueChange={(v) => setForm((prev) => ({ ...prev, contractorId: v ?? "" }))}
-            >
-              <SelectTrigger className={fieldErrors.contractorId ? "border-red-300" : ""}>
-                <SelectValue placeholder="Выберите подрядчика" />
-              </SelectTrigger>
-              <SelectContent>
-                {organizations.map((org) => (
-                  <SelectItem key={org.id} value={org.id}>
-                    {org.name}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-            {fieldErrors.contractorId && (
-              <p className="text-xs text-red-600">{fieldErrors.contractorId}</p>
+            {isContractor ? (
+              <Input
+                value={organizations.find((o) => o.id === form.contractorId)?.name ?? ""}
+                disabled
+                className="bg-zinc-50"
+              />
+            ) : (
+              <>
+                <Select
+                  value={form.contractorId}
+                  onValueChange={(v) => setForm((prev) => ({ ...prev, contractorId: v ?? "" }))}
+                  itemToStringLabel={(v) => organizations.find((o) => o.id === v)?.name ?? v}
+                >
+                  <SelectTrigger className={fieldErrors.contractorId ? "border-red-300" : ""}>
+                    <SelectValue placeholder="Выберите подрядчика">{(v) => organizations.find((o) => o.id === v)?.name ?? v ?? "Выберите подрядчика"}</SelectValue>
+                  </SelectTrigger>
+                  <SelectContent>
+                    {organizations.map((org) => (
+                      <SelectItem key={org.id} value={org.id}>
+                        {org.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                {fieldErrors.contractorId && (
+                  <p className="text-xs text-red-600">{fieldErrors.contractorId}</p>
+                )}
+              </>
             )}
           </div>
         </div>
@@ -223,9 +270,8 @@ export default function NewPermitPage() {
           <Label>Ответственный *</Label>
           <Input
             value={form.responsiblePerson}
-            onChange={(e) => setForm((prev) => ({ ...prev, responsiblePerson: e.target.value }))}
-            placeholder="Иванов И.И."
-            className={fieldErrors.responsiblePerson ? "border-red-300" : ""}
+            disabled
+            className="bg-zinc-50"
           />
           {fieldErrors.responsiblePerson && (
             <p className="text-xs text-red-600">{fieldErrors.responsiblePerson}</p>

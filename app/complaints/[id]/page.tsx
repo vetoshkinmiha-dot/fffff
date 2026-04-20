@@ -16,7 +16,7 @@ const complaintStatusLabels: Record<string, string> = {
   rejected: "Отклонено",
 };
 
-const complaintStatusConfig: Record<string, { className: string }> = {
+const complaintStatusConfig: Record<string, string> = {
   pending: "bg-yellow-50 text-yellow-700 border-yellow-200",
   resolved: "bg-green-50 text-green-700 border-green-200",
   rejected: "bg-red-50 text-red-700 border-red-200",

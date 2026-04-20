@@ -1,7 +1,7 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import { Building2, FileText, Clock, AlertTriangle } from "lucide-react";
+import { useEffect, useState, useCallback } from "react";
+import { Building2, Users, Clock, AlertTriangle, FileText, RefreshCw } from "lucide-react";
 
 interface DashboardData {
   totalContractors: number;
@@ -10,56 +10,118 @@ interface DashboardData {
   monthlyViolations: number;
 }
 
+function fetchDashboard(): Promise<DashboardData | null> {
+  return fetch("/api/dashboard", { credentials: "include" })
+    .then((r) => r.ok ? r.json() : null)
+    .catch(() => null);
+}
+
 export default function HomePage() {
   const [data, setData] = useState<DashboardData | null>(null);
+  const [refreshing, setRefreshing] = useState(false);
+  const [userRole, setUserRole] = useState<string>("");
 
-  useEffect(() => {
-    fetch("/api/dashboard", { credentials: "include" })
-      .then((r) => r.ok ? r.json() : null)
-      .then((d: DashboardData | null) => { if (d) setData(d); })
-      .catch(() => {});
+  const refresh = useCallback(async () => {
+    setRefreshing(true);
+    const d = await fetchDashboard();
+    if (d) setData(d);
+    setRefreshing(false);
   }, []);
 
-  const kpis = [
-    {
-      label: "Всего подрядчиков",
-      value: data?.totalContractors ?? "—",
-      icon: Building2,
-      color: "text-blue-600",
-      bg: "bg-blue-50",
-    },
-    {
-      label: "Активные наряды",
-      value: "Скоро",
-      icon: FileText,
-      color: "text-green-600",
-      bg: "bg-green-50",
-    },
-    {
-      label: "Ожидают согласования",
-      value: data?.pendingApprovals ?? "—",
-      icon: Clock,
-      color: "text-amber-600",
-      bg: "bg-amber-50",
-    },
-    {
-      label: "Нарушения за месяц",
-      value: "Скоро",
-      icon: AlertTriangle,
-      color: "text-red-600",
-      bg: "bg-red-50",
-    },
-  ];
+  useEffect(() => {
+    refresh();
+
+    fetch("/api/auth/me", { credentials: "include" })
+      .then((r) => (r.ok ? r.json() : null))
+      .then((data) => {
+        if (data?.user?.role) setUserRole(data.user.role);
+      })
+      .catch(() => {});
+
+    // Re-fetch when tab becomes visible (user navigated back)
+    const handleVisibility = () => {
+      if (document.visibilityState === "visible") refresh();
+    };
+    document.addEventListener("visibilitychange", handleVisibility);
+    return () => document.removeEventListener("visibilitychange", handleVisibility);
+  }, [refresh]);
+
+  const isApprover = userRole === "department_approver";
+
+  const kpis = isApprover
+    ? [
+        {
+          label: "Всего подрядчиков",
+          value: data?.totalContractors ?? "—",
+          icon: Building2,
+          color: "text-blue-600",
+          bg: "bg-blue-50",
+        },
+        {
+          label: "Всего сотрудников",
+          value: data?.activePermits ?? "—",
+          icon: Users,
+          color: "text-green-600",
+          bg: "bg-green-50",
+        },
+        {
+          label: "Ожидают от меня",
+          value: data?.pendingApprovals ?? "—",
+          icon: Clock,
+          color: "text-amber-600",
+          bg: "bg-amber-50",
+        },
+      ]
+    : [
+        {
+          label: "Всего подрядчиков",
+          value: data?.totalContractors ?? "—",
+          icon: Building2,
+          color: "text-blue-600",
+          bg: "bg-blue-50",
+        },
+        {
+          label: "Активные наряды",
+          value: data?.activePermits ?? "—",
+          icon: FileText,
+          color: "text-green-600",
+          bg: "bg-green-50",
+        },
+        {
+          label: "Ожидают согласования",
+          value: data?.pendingApprovals ?? "—",
+          icon: Clock,
+          color: "text-amber-600",
+          bg: "bg-amber-50",
+        },
+        {
+          label: "Нарушения за месяц",
+          value: data?.monthlyViolations ?? "—",
+          icon: AlertTriangle,
+          color: "text-red-600",
+          bg: "bg-red-50",
+        },
+      ];
 
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-2xl font-semibold tracking-tight text-zinc-900">
-          Панель управления
-        </h1>
-        <p className="mt-1 text-sm text-zinc-500">
-          Обзор текущей активности подрядчиков
-        </p>
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-2xl font-semibold tracking-tight text-zinc-900">
+            Панель управления
+          </h1>
+          <p className="mt-1 text-sm text-zinc-500">
+            Обзор текущей активности подрядчиков
+          </p>
+        </div>
+        <button
+          onClick={refresh}
+          disabled={refreshing}
+          className="inline-flex items-center gap-1.5 rounded-md border border-zinc-200 bg-white px-3 py-1.5 text-sm text-zinc-600 hover:bg-zinc-50 disabled:opacity-50 transition-colors"
+        >
+          <RefreshCw className={`h-4 w-4 ${refreshing ? "animate-spin" : ""}`} />
+          Обновить
+        </button>
       </div>
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
         {kpis.map(({ label, value, icon: Icon, color, bg }) => (

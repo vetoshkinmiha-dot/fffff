@@ -434,7 +434,7 @@ function NewEmployeeForm() {
       </form>
       )}
 
-      {/* Success — credentials card */}
+      {/* Success credentials card */}
       {createdEmployee && (
         <div className="rounded-xl border border-green-200 bg-green-50 p-6 space-y-4">
           <div className="flex items-center gap-2 text-green-800">

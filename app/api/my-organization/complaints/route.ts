@@ -33,7 +33,7 @@ export async function GET(req: NextRequest) {
     data: complaints.map((c) => ({
       id: c.id,
       violationId: c.violationId,
-      violationNumber: c.violation.violationNumber,
+      violationNumber: c.violation?.violationNumber ?? null,
       department: c.department,
       complaintText: c.complaintText,
       createdAt: c.createdAt.toISOString(),

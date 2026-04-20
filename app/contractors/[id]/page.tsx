@@ -7,6 +7,14 @@ import { ArrowLeft, Building2, MapPin, Mail, Hash, Loader2 } from "lucide-react"
 import { sanitize } from "@/lib/utils";
 import type { Contractor, Employee } from "@/app/types";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 
 const departmentLabels: Record<string, string> = {
   security: "Служба безопасности",
@@ -15,7 +23,6 @@ const departmentLabels: Record<string, string> = {
   safety_training: "Охрана труда (инструктаж)",
   permit_bureau: "Бюро пропусков",
 };
-import { Button } from "@/components/ui/button";
 import {
   Card,
   CardContent,
@@ -45,6 +52,7 @@ const approvalStatusMap: Record<string, { label: string; color: string }> = {
   approved: { label: "Одобрено", color: "text-emerald-600" },
   pending: { label: "В процессе", color: "text-amber-600" },
   rejected: { label: "Отклонено", color: "text-red-600" },
+  blocked: { label: "Заблокирован", color: "text-zinc-400" },
 };
 
 export default function ContractorDetailPage() {
@@ -55,6 +63,7 @@ export default function ContractorDetailPage() {
   const [employees, setEmployees] = useState<Employee[]>([]);
   const [loading, setLoading] = useState(true);
   const [userRole, setUserRole] = useState<string>("");
+  const [updatingStatus, setUpdatingStatus] = useState(false);
 
   useEffect(() => {
     let cancelled = false;
@@ -93,6 +102,25 @@ export default function ContractorDetailPage() {
     loadData();
     return () => { cancelled = true; };
   }, [id]);
+
+  async function handleStatusChange(newStatus: string) {
+    if (!contractor) return;
+    setUpdatingStatus(true);
+    try {
+      const res = await fetch(`/api/organizations/${contractor.id}/status`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({ status: newStatus }),
+      });
+      if (res.ok) {
+        const updated = await res.json();
+        setContractor((prev) => prev ? { ...prev, status: updated.status } : prev);
+      }
+    } finally {
+      setUpdatingStatus(false);
+    }
+  }
 
   if (loading) {
     return (
@@ -145,14 +173,34 @@ export default function ContractorDetailPage() {
               <div className="text-xs font-medium text-zinc-400 uppercase tracking-wide">
                 Статус
               </div>
-              <div className="flex items-center gap-1.5">
-                <span
-                  className={`size-2 rounded-full ${contractor.status === "active" ? "bg-emerald-500" : contractor.status === "pending" ? "bg-amber-500" : "bg-red-500"}`}
-                />
-                <Badge variant={statusConfig[contractor.status].variant}>
-                  {statusConfig[contractor.status].label}
-                </Badge>
-              </div>
+              {userRole === "admin" ? (
+                <Select value={contractor.status ?? "pending"} onValueChange={(v) => v && handleStatusChange(v)} disabled={updatingStatus}>
+                  <SelectTrigger className="w-[160px]">
+                    <div className="flex items-center gap-1.5">
+                      <span className={`size-2 rounded-full ${
+                        (contractor.status ?? "pending") === "active" ? "bg-emerald-500"
+                        : (contractor.status ?? "pending") === "pending" ? "bg-amber-500"
+                        : "bg-red-500"
+                      }`} />
+                      <SelectValue />
+                    </div>
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="active">Активен</SelectItem>
+                    <SelectItem value="pending">Ожидает</SelectItem>
+                    <SelectItem value="blocked">Заблокирован</SelectItem>
+                  </SelectContent>
+                </Select>
+              ) : (
+                <div className="flex items-center gap-1.5">
+                  <span
+                    className={`size-2 rounded-full ${contractor.status === "active" ? "bg-emerald-500" : contractor.status === "pending" ? "bg-amber-500" : "bg-red-500"}`}
+                  />
+                  <Badge variant={statusConfig[contractor.status].variant}>
+                    {statusConfig[contractor.status].label}
+                  </Badge>
+                </div>
+              )}
             </div>
 
             <div className="space-y-1">
@@ -220,7 +268,7 @@ export default function ContractorDetailPage() {
               <p className="text-sm text-zinc-500">
                 Сотрудники ещё не добавлены
               </p>
-              {(userRole === "admin" || userRole === "contractor_employee") && (
+              {(userRole === "admin" || userRole === "contractor_admin") && (
               <Link href={`/employees/new?contractorId=${contractor.id}`}>
                 <Button variant="outline" size="sm" className="mt-3">
                   Добавить сотрудника
@@ -229,14 +277,16 @@ export default function ContractorDetailPage() {
               )}
             </div>
           ) : (
+            <div className="rounded-lg border border-zinc-200 overflow-x-auto">
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead className="font-medium">ФИО</TableHead>
-                  <TableHead className="font-medium">Должность</TableHead>
+                  <TableHead className="font-medium min-w-[180px]">ФИО</TableHead>
+                  <TableHead className="font-medium min-w-[160px]">Должность</TableHead>
                   <TableHead className="font-medium">Классы допуска</TableHead>
-                  <TableHead className="font-medium">Согласования</TableHead>
-                  <TableHead className="font-medium">Документы</TableHead>
+                  <TableHead className="font-medium min-w-[180px]">Согласования</TableHead>
+                  <TableHead className="font-medium min-w-[140px]">Документы</TableHead>
+                  <TableHead className="font-medium w-24">Действия</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -253,21 +303,25 @@ export default function ContractorDetailPage() {
 
                   return (
                     <TableRow key={emp.id}>
-                      <TableCell className="font-medium text-zinc-900">
-                        <Link
-                          href={`/employees/${emp.id}`}
-                          className="hover:text-zinc-700 transition-colors"
-                        >
-                          {emp.fullName}
-                        </Link>
+                      <TableCell className="font-medium text-zinc-900 whitespace-nowrap">
+                        {userRole === "employee"
+                          ? sanitize(emp.fullName)
+                          : (
+                            <Link
+                              href={`/employees/${emp.id}`}
+                              className="hover:text-blue-600 transition-colors"
+                            >
+                              {sanitize(emp.fullName)}
+                            </Link>
+                          )}
                       </TableCell>
-                      <TableCell className="text-zinc-600">
+                      <TableCell className="text-zinc-600 whitespace-nowrap">
                         {emp.position}
                       </TableCell>
-                      <TableCell className="max-w-[200px]">
+                      <TableCell>
                         <div className="flex flex-wrap gap-1">
                           {emp.workClasses.slice(0, 3).map((cls) => (
-                            <Badge key={cls} variant="outline" className="text-xs">
+                            <Badge key={cls} variant="outline" className="text-xs whitespace-nowrap">
                               {cls}
                             </Badge>
                           ))}
@@ -278,7 +332,7 @@ export default function ContractorDetailPage() {
                           )}
                         </div>
                       </TableCell>
-                      <TableCell>
+                      <TableCell className="whitespace-nowrap">
                         <div className="flex items-center gap-2 text-xs">
                           <span className="text-zinc-500">
                             {emp.approvals.length} всего
@@ -295,11 +349,11 @@ export default function ContractorDetailPage() {
                           )}
                         </div>
                         <div className="mt-1 space-y-0.5">
-                          {emp.approvals.map((a) => {
+                          {emp.approvals.slice(0, 2).map((a) => {
                             const info = approvalStatusMap[a.status];
                             return (
                               <div
-                                key={`${a.department}-${a.status}-${a.id ?? 'none'}`}
+                                key={a.id}
                                 className="flex items-center justify-between text-xs"
                               >
                                 <span className="text-zinc-500">
@@ -311,11 +365,14 @@ export default function ContractorDetailPage() {
                               </div>
                             );
                           })}
+                          {emp.approvals.length > 2 && (
+                            <span className="text-xs text-zinc-400">+{emp.approvals.length - 2}</span>
+                          )}
                         </div>
                       </TableCell>
-                      <TableCell>
+                      <TableCell className="whitespace-nowrap">
                         <div className="flex flex-col gap-0.5 text-xs">
-                          {emp.documents.map((doc) => (
+                          {emp.documents.slice(0, 2).map((doc) => (
                             <span
                               key={doc.id}
                               className={`inline-flex items-center gap-1 ${
@@ -338,18 +395,29 @@ export default function ContractorDetailPage() {
                               {doc.name}
                             </span>
                           ))}
+                          {emp.documents.length > 2 && (
+                            <span className="text-xs text-zinc-400">+{emp.documents.length - 2}</span>
+                          )}
                         </div>
                         {expiredDocs > 0 && (
-                          <span className="mt-1 text-red-600 font-medium">
-                            {expiredDocs} просрочено
+                          <span className="mt-1 text-red-600 font-medium text-xs">
+                            {expiredDocs} проср.
                           </span>
                         )}
+                      </TableCell>
+                      <TableCell className="text-right whitespace-nowrap">
+                        <Link href={`/employees/${emp.id}`}>
+                          <Button variant="ghost" size="sm">
+                            Подробнее
+                          </Button>
+                        </Link>
                       </TableCell>
                     </TableRow>
                   );
                 })}
               </TableBody>
             </Table>
+            </div>
           )}
         </CardContent>
       </Card>

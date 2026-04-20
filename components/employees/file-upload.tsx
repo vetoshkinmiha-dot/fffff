@@ -16,7 +16,7 @@ const MAX_SIZE = 10 * 1024 * 1024; // 10MB
 
 interface FileUploadProps {
   employeeId: string;
-  onUploaded: (doc: { id: string; name: string; issueDate: string | null; expiryDate: string | null; status: string; createdAt: string }) => void;
+  onUploaded: (doc: { id: string; name: string; fileUrl: string | null; issueDate: string | null; expiryDate: string | null; status: string; createdAt: string }) => void;
 }
 
 export function FileUpload({ employeeId, onUploaded }: FileUploadProps) {

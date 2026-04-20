@@ -334,7 +334,7 @@ export default function ViolationsPage() {
             </Select>
           </div>
 
-          <div className="overflow-x-auto rounded-xl border border-zinc-200 bg-white">
+          <div className="rounded-xl border border-zinc-200 bg-white overflow-x-auto">
             <Table>
               <TableHeader>
                 <TableRow>
@@ -446,7 +446,7 @@ export default function ViolationsPage() {
             </Select>
           </div>
 
-          <div className="overflow-x-auto rounded-xl border border-zinc-200 bg-white">
+          <div className="rounded-xl border border-zinc-200 bg-white overflow-x-auto">
             <Table>
               <TableHeader>
                 <TableRow>

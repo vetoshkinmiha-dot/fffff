@@ -78,7 +78,7 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: validation.error.issues[0].message }, { status: 400 });
     }
 
-    const { items, ...checklistData } = validation.data;
+    const { items, inspectorId: _inspectorId, ...checklistData } = validation.data;
 
     // Calculate score
     const passCount = items.filter((i) => i.answer === "pass").length;

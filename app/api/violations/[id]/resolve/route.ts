@@ -9,8 +9,8 @@ export async function PATCH(
   const authResult = await authMiddleware(req);
   if (authResult instanceof NextResponse) return authResult;
 
-  // Only admin can resolve violations
-  if (authResult.user.role !== "admin") {
+  // Only admin and department_approver can resolve violations
+  if (authResult.user.role !== "admin" && authResult.user.role !== "department_approver") {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
 
@@ -23,6 +23,11 @@ export async function PATCH(
 
   if (violation.status !== "pending") {
     return NextResponse.json({ error: "Violation is not pending" }, { status: 400 });
+  }
+
+  // department_approver can only resolve violations they created
+  if (authResult.user.role === "department_approver" && violation.createdById !== authResult.user.userId) {
+    return NextResponse.json({ error: "Forbidden: can only resolve your own violations" }, { status: 403 });
   }
 
   try {

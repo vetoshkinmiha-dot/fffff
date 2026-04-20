@@ -15,9 +15,7 @@ const categoryLabels: Record<string, string> = {
 };
 
 const statusLabels: Record<string, string> = {
-  draft: "Черновик",
   pending_approval: "На согласовании",
-  approved: "Согласован",
   active: "Открыт",
   closed: "Закрыт",
   early_closed: "Закрыт досрочно",

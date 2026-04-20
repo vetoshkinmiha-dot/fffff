@@ -24,14 +24,62 @@ async function main() {
       },
     }),
     prisma.user.upsert({
-      where: { email: "approver@pirelli.ru" },
+      where: { email: "security@pirelli.ru" },
       update: {},
       create: {
-        email: "approver@pirelli.ru",
+        email: "security@pirelli.ru",
         passwordHash: approverHash,
         fullName: "Иванов А.С.",
         role: "department_approver",
+        department: "security",
+        mustChangePwd: true,
+      },
+    }),
+    prisma.user.upsert({
+      where: { email: "hr@pirelli.ru" },
+      update: {},
+      create: {
+        email: "hr@pirelli.ru",
+        passwordHash: approverHash,
+        fullName: "Петрова Е.В.",
+        role: "department_approver",
+        department: "hr",
+        mustChangePwd: true,
+      },
+    }),
+    prisma.user.upsert({
+      where: { email: "safety@pirelli.ru" },
+      update: {},
+      create: {
+        email: "safety@pirelli.ru",
+        passwordHash: approverHash,
+        fullName: "Сидоров К.Н.",
+        role: "department_approver",
         department: "safety",
+        mustChangePwd: true,
+      },
+    }),
+    prisma.user.upsert({
+      where: { email: "safetytraining@pirelli.ru" },
+      update: {},
+      create: {
+        email: "safetytraining@pirelli.ru",
+        passwordHash: approverHash,
+        fullName: "Козлова М.Р.",
+        role: "department_approver",
+        department: "safety_training",
+        mustChangePwd: true,
+      },
+    }),
+    prisma.user.upsert({
+      where: { email: "permitbureau@pirelli.ru" },
+      update: {},
+      create: {
+        email: "permitbureau@pirelli.ru",
+        passwordHash: approverHash,
+        fullName: "Новиков Д.А.",
+        role: "department_approver",
+        department: "permit_bureau",
         mustChangePwd: true,
       },
     }),
@@ -62,16 +110,10 @@ async function main() {
 
   console.log(`  Created ${users.length} users`);
 
-  // ─── Organizations ──────────────────────────────────────────
+  // ─── Organizations (2 contractors) ──────────────────────────
   const orgData = [
     { id: randomUUID(), name: 'ООО «СтройЭнергоМонтаж»', inn: "7712345678", kpp: "771201001", legalAddress: "г. Москва, ул. Промышленная, д. 15", contactPersonName: "Петров И.С.", contactPhone: "+7(495)123-45-67", contactEmail: "info@stroymont.ru", status: "active" as const },
     { id: randomUUID(), name: 'АО «ТрансТехСервис»', inn: "7723456789", kpp: "772301001", legalAddress: "г. Калуга, пр. Мира, д. 42", contactPersonName: "Сидорова Е.А.", contactPhone: "+7(495)234-56-78", contactEmail: "office@tts-service.ru", status: "active" as const },
-    { id: randomUUID(), name: 'ООО «ПромВентиляция»', inn: "7734567890", kpp: "773401001", legalAddress: "г. Нижний Новгород, ул. Свободы, д. 8", contactPersonName: "Козлов Д.М.", contactPhone: "+7(495)345-67-89", contactEmail: "zakaz@promvent.ru", status: "pending" as const },
-    { id: randomUUID(), name: "ИП Козлов А.В.", inn: "404512345678", kpp: "", legalAddress: "г. Обнинск, ул. Ленина, д. 3", contactPersonName: "Козлов А.В.", contactPhone: "+7(495)456-78-90", contactEmail: "kozlov.av@mail.ru", status: "active" as const },
-    { id: randomUUID(), name: 'ООО «КлиматКонтроль»', inn: "7745678901", kpp: "774501001", legalAddress: "г. Москва, ул. Академика Королёва, д. 21", contactPersonName: "Волкова Н.Г.", contactPhone: "+7(495)567-89-01", contactEmail: "support@climatcontrol.ru", status: "blocked" as const },
-    { id: randomUUID(), name: 'ЗАО «ИнжСистемы»', inn: "7756789012", kpp: "775601001", legalAddress: "г. Санкт-Петербург, Невский пр., д. 100", contactPersonName: "Михайлов С.В.", contactPhone: "+7(495)678-90-12", contactEmail: "info@engsystems.ru", status: "active" as const },
-    { id: randomUUID(), name: 'ООО «ЭлектроЩит»', inn: "7767890123", kpp: "776701001", legalAddress: "г. Тула, ул. Октябрьская, д. 56", contactPersonName: "Новиков П.Л.", contactPhone: "+7(495)789-01-23", contactEmail: "sales@electroshield.ru", status: "pending" as const },
-    { id: randomUUID(), name: 'ООО «АльфаЛогистик»', inn: "7778901234", kpp: "777801001", legalAddress: "г. Москва, Варшавское ш., д. 129", contactPersonName: "Кузнецов Р.А.", contactPhone: "+7(495)890-12-34", contactEmail: "info@alfalog.ru", status: "active" as const },
   ];
 
   const orgs = await Promise.all(
@@ -85,87 +127,167 @@ async function main() {
   );
   console.log(`  Created ${orgs.length} organizations`);
 
-  // ─── Contractor admin user ──────────────────────────────────
-  const contractorAdmin = await prisma.user.upsert({
-    where: { email: "admin@stroymont.ru" },
-    update: {},
-    create: {
-      email: "admin@stroymont.ru",
-      passwordHash: contractorHash,
-      fullName: "Петров И.С.",
-      role: "contractor_employee",
-      organizationId: orgs[0].id,
-      mustChangePwd: true,
-    },
-  });
-  console.log(`  Created contractor admin for ${orgs[0].name}`);
+  // ─── Contractor admin users (one per org) ───────────────────
+  for (const org of orgs) {
+    await prisma.user.upsert({
+      where: { email: `resp_${org.sequentialNumber}@stroymont.ru` },
+      update: {},
+      create: {
+        email: `resp_${org.sequentialNumber}@stroymont.ru`,
+        passwordHash: await hashPassword(`Org${org.sequentialNumber}Admin1!`),
+        fullName: `Ответственный ${org.name}`,
+        role: "contractor_admin",
+        organizationId: org.id,
+        mustChangePwd: true,
+      },
+    });
+  }
+  console.log(`  Created ${orgs.length} contractor_admin users`);
 
-  // ─── Employees ──────────────────────────────────────────────
+  // ─── Employees (8 total, 4 per org) ─────────────────────────
   const now = new Date();
 
   const employeeData = [
+    // Org 1 — СтройЭнергоМонтаж (4 employees)
     {
       orgIndex: 0,
       fullName: "Иванов Сергей Петрович",
       position: "Электромонтажник 4-го разряда",
-      passportSeries: "45 10",
+      passportSeries: "4510",
       passportNumber: "123456",
       previouslyAtPirelli: false,
       workClasses: ["Электромонтажные работы до 1000В", "Работы на высоте", "Пусконаладочные работы", "Земляные работы"],
       documents: [
         { name: "Паспорт РФ", issueDate: new Date("2015-03-12"), expiryDate: new Date("2030-03-12") },
-        { name: "Удостоверение электромонтажника", issueDate: new Date("2022-06-15"), expiryDate: new Date("2025-06-15") },
-        { name: "Мед. справка форма 086/у", issueDate: new Date("2023-01-20"), expiryDate: new Date("2025-01-20") },
-        { name: "Протокол по охране труда", issueDate: new Date("2024-09-01"), expiryDate: new Date("2025-09-01") },
+        { name: "Удостоверение электромонтажника", issueDate: new Date("2022-06-15"), expiryDate: new Date("2027-06-15") },
+        { name: "Мед. справка форма 086/у", issueDate: new Date("2024-01-20"), expiryDate: new Date("2026-01-20") },
       ],
       approvals: [
-        { department: "security" as const, status: "approved" as const, deadline: new Date("2025-04-01"), comment: "Проверка пройдена, замечаний нет" },
-        { department: "hr" as const, status: "approved" as const, deadline: new Date("2025-04-05"), comment: "Трудовая книжка проверена" },
-        { department: "safety" as const, status: "pending" as const, deadline: new Date("2025-04-15") },
-        { department: "safety_training" as const, status: "pending" as const, deadline: new Date("2025-04-20") },
-        { department: "permit_bureau" as const, status: "pending" as const, deadline: new Date("2025-04-25") },
+        { department: "security" as const, status: "approved" as const, deadline: new Date("2026-04-01"), comment: "Проверка пройдена" },
+        { department: "hr" as const, status: "approved" as const, deadline: new Date("2026-04-05"), comment: "Документы в порядке" },
+        { department: "safety" as const, status: "pending" as const, deadline: new Date("2026-04-15") },
       ],
     },
     {
       orgIndex: 0,
       fullName: "Петрова Анна Михайловна",
       position: "Инженер по технике безопасности",
-      passportSeries: "45 11",
+      passportSeries: "4511",
       passportNumber: "654321",
       previouslyAtPirelli: false,
       workClasses: ["Контроль охраны труда", "Аудит производственной безопасности"],
       documents: [
         { name: "Паспорт РФ", issueDate: new Date("2018-07-22"), expiryDate: new Date("2033-07-22") },
-        { name: "Диплом о высшем образовании", issueDate: new Date("2016-06-30"), expiryDate: null },
-        { name: "Сертификат по охране труда", issueDate: new Date("2024-02-10"), expiryDate: new Date("2025-02-10") },
+        { name: "Сертификат по охране труда", issueDate: new Date("2024-02-10"), expiryDate: new Date("2026-05-10") },
       ],
       approvals: [
-        { department: "security" as const, status: "approved" as const, deadline: new Date("2025-03-15"), comment: "Проверка пройдена" },
-        { department: "hr" as const, status: "approved" as const, deadline: new Date("2025-03-20") },
-        { department: "safety" as const, status: "approved" as const, deadline: new Date("2025-03-25"), comment: "Допуск подтверждён" },
-        { department: "safety_training" as const, status: "approved" as const, deadline: new Date("2025-03-28"), comment: "Пройден 25.03.2025" },
-        { department: "permit_bureau" as const, status: "approved" as const, deadline: new Date("2025-04-01"), comment: "Пропуск №П-0042 выдан" },
+        { department: "security" as const, status: "approved" as const, deadline: new Date("2026-03-15"), comment: "Проверка пройдена" },
+        { department: "hr" as const, status: "approved" as const, deadline: new Date("2026-03-20") },
+        { department: "safety" as const, status: "approved" as const, deadline: new Date("2026-03-25"), comment: "Допуск подтверждён" },
+        { department: "safety_training" as const, status: "approved" as const, deadline: new Date("2026-03-28"), comment: "Пройден" },
+        { department: "permit_bureau" as const, status: "approved" as const, deadline: new Date("2026-04-01"), comment: "Пропуск выдан" },
       ],
     },
+    {
+      orgIndex: 0,
+      fullName: "Сидоров Алексей Владимирович",
+      position: "Монтажник-высотник 3-го разряда",
+      passportSeries: "4512",
+      passportNumber: "111222",
+      previouslyAtPirelli: true,
+      workClasses: ["Работы на высоте", "Монтаж металлоконструкций"],
+      documents: [
+        { name: "Паспорт РФ", issueDate: new Date("2016-05-10"), expiryDate: new Date("2031-05-10") },
+        { name: "Удостоверение по работе на высоте", issueDate: new Date("2024-03-01"), expiryDate: new Date("2026-06-01") },
+      ],
+      approvals: [
+        { department: "security" as const, status: "approved" as const, deadline: new Date("2026-04-10"), comment: "ОК" },
+        { department: "hr" as const, status: "pending" as const, deadline: new Date("2026-04-20") },
+      ],
+    },
+    {
+      orgIndex: 0,
+      fullName: "Кузнецов Дмитрий Олегович",
+      position: "Слесарь-сантехник 4-го разряда",
+      passportSeries: "4513",
+      passportNumber: "333444",
+      previouslyAtPirelli: false,
+      workClasses: ["Сантехнические работы", "Работы в confined space"],
+      documents: [
+        { name: "Паспорт РФ", issueDate: new Date("2019-11-15"), expiryDate: new Date("2034-11-15") },
+      ],
+      approvals: [
+        { department: "security" as const, status: "rejected" as const, deadline: new Date("2026-04-05"), comment: "Неполный пакет документов" },
+      ],
+    },
+    // Org 2 — ТрансТехСервис (4 employees)
     {
       orgIndex: 1,
       fullName: "Козлов Дмитрий Андреевич",
       position: "Сварщик 5-го разряда",
-      passportSeries: "46 08",
+      passportSeries: "4608",
       passportNumber: "789012",
       previouslyAtPirelli: true,
       workClasses: ["Сварочные работы ММА", "Сварочные работы TIG", "Работы на высоте", "Огневые работы"],
       documents: [
         { name: "Паспорт РФ", issueDate: new Date("2010-11-05"), expiryDate: new Date("2025-11-05") },
         { name: "Удостоверение сварщика НАКС", issueDate: new Date("2023-08-14"), expiryDate: new Date("2027-08-14") },
-        { name: "Мед. справка форма 086/у", issueDate: new Date("2024-05-01"), expiryDate: new Date("2025-05-01") },
+        { name: "Мед. справка форма 086/у", issueDate: new Date("2024-05-01"), expiryDate: new Date("2026-05-01") },
       ],
       approvals: [
-        { department: "security" as const, status: "rejected" as const, deadline: new Date("2025-04-10"), comment: "Не пройдена проверка по базам МВД" },
-        { department: "hr" as const, status: "pending" as const, deadline: new Date("2025-04-15") },
-        { department: "safety" as const, status: "pending" as const, deadline: new Date("2025-04-20") },
-        { department: "safety_training" as const, status: "pending" as const, deadline: new Date("2025-04-25") },
-        { department: "permit_bureau" as const, status: "pending" as const, deadline: new Date("2025-04-30") },
+        { department: "security" as const, status: "rejected" as const, deadline: new Date("2026-04-10"), comment: "Не пройдена проверка по базам МВД" },
+        { department: "hr" as const, status: "pending" as const, deadline: new Date("2026-04-15") },
+        { department: "safety" as const, status: "pending" as const, deadline: new Date("2026-04-20") },
+      ],
+    },
+    {
+      orgIndex: 1,
+      fullName: "Волкова Наталья Геннадьевна",
+      position: "Инженер-электрик",
+      passportSeries: "4609",
+      passportNumber: "456789",
+      previouslyAtPirelli: false,
+      workClasses: ["Электромонтажные работы до 1000В", "Электролаборатория"],
+      documents: [
+        { name: "Паспорт РФ", issueDate: new Date("2017-04-20"), expiryDate: new Date("2032-04-20") },
+        { name: "Диплом о высшем образовании", issueDate: new Date("2015-06-30"), expiryDate: null },
+      ],
+      approvals: [
+        { department: "security" as const, status: "approved" as const, deadline: new Date("2026-03-20"), comment: "ОК" },
+        { department: "hr" as const, status: "approved" as const, deadline: new Date("2026-03-25") },
+        { department: "safety" as const, status: "pending" as const, deadline: new Date("2026-04-10") },
+      ],
+    },
+    {
+      orgIndex: 1,
+      fullName: "Морозов Игорь Сергеевич",
+      position: "Машинист крана 6-го разряда",
+      passportSeries: "4610",
+      passportNumber: "987654",
+      previouslyAtPirelli: false,
+      workClasses: ["Работы вблизи крановых путей", "Такелажные работы"],
+      documents: [
+        { name: "Паспорт РФ", issueDate: new Date("2014-09-01"), expiryDate: new Date("2029-09-01") },
+        { name: "Удостоверение машиниста крана", issueDate: new Date("2023-01-15"), expiryDate: new Date("2026-07-15") },
+      ],
+      approvals: [
+        { department: "security" as const, status: "approved" as const, deadline: new Date("2026-04-01"), comment: "ОК" },
+        { department: "hr" as const, status: "pending" as const, deadline: new Date("2026-04-15") },
+      ],
+    },
+    {
+      orgIndex: 1,
+      fullName: "Лебедева Ольга Викторовна",
+      position: "Маляр строительный 3-го разряда",
+      passportSeries: "4611",
+      passportNumber: "321654",
+      previouslyAtPirelli: false,
+      workClasses: ["Покрасочные работы", "Работы на высоте"],
+      documents: [
+        { name: "Паспорт РФ", issueDate: new Date("2020-02-28"), expiryDate: new Date("2035-02-28") },
+      ],
+      approvals: [
+        { department: "security" as const, status: "pending" as const, deadline: new Date("2026-04-20") },
       ],
     },
   ];
@@ -200,7 +322,7 @@ async function main() {
           })),
         },
         approvals: {
-          create: emp.approvals.map((a) => ({
+          create: (emp.approvals as Array<{ department: "security" | "hr" | "safety" | "safety_training" | "permit_bureau"; status: "approved" | "rejected" | "pending"; deadline: Date; comment?: string | null }>).map((a) => ({
             department: a.department,
             status: a.status,
             deadline: a.deadline,
@@ -214,6 +336,25 @@ async function main() {
   }
 
   console.log(`  Created ${createdEmployees.length} employees`);
+
+  // ─── 5 predefined regulatory document sections ──────────────
+  const presetSections = [
+    "Безопасность и охрана труда",
+    "Нормативные акты и стандарты",
+    "Инструкции по эксплуатации",
+    "Технические регламенты",
+    "Формы и шаблоны документов",
+  ];
+
+  const sections = await Promise.all(
+    presetSections.map((name, idx) =>
+      prisma.regDocumentSection.create({
+        data: { name, order: idx },
+      }),
+    ),
+  );
+  console.log(`  Created ${sections.length} predefined sections`);
+
   console.log("Seeding complete!");
 }
 

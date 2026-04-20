@@ -154,7 +154,7 @@ export default function ChecklistsPage() {
               </Button>
             </Link>
           )}
-          <Button variant="outline" size="lg" onClick={fetchStats}>
+          <Button variant="outline" size="lg" onClick={() => fetchStats()}>
             <BarChart3 />
             Статистика
           </Button>
@@ -176,7 +176,7 @@ export default function ChecklistsPage() {
       </div>
 
       {/* Desktop table */}
-      <div className="hidden md:block overflow-x-auto rounded-xl border border-zinc-200 bg-white">
+      <div className="hidden md:block rounded-xl border border-zinc-200 bg-white overflow-x-auto">
         <Table>
           <TableHeader>
             <TableRow>

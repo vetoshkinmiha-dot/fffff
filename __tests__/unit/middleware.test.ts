@@ -39,18 +39,26 @@ describe('Auth Middleware', () => {
   const validPayload = {
     userId: 'user-1',
     email: 'test@example.com',
+    fullName: 'Иванов И.И.',
     role: 'employee',
     organizationId: null,
     department: null,
+    employeeId: null,
   }
 
   const activeUser = {
     id: 'user-1',
     email: 'test@example.com',
-    role: 'employee',
+    fullName: 'Иванов И.И.',
+    role: 'employee' as const,
     organizationId: null,
     department: null,
+    employeeId: null,
     isActive: true,
+    createdAt: new Date(),
+    updatedAt: new Date(),
+    passwordHash: 'hash',
+    mustChangePwd: true,
   }
 
   beforeEach(() => {
@@ -116,33 +124,41 @@ describe('Role Guards', () => {
   const adminUser: AuthenticatedUser = {
     userId: '1',
     email: 'admin@test.com',
+    fullName: 'Админ А.А.',
     role: 'admin',
     organizationId: null,
     department: null,
+    employeeId: null,
   }
 
   const employeeUser: AuthenticatedUser = {
     userId: '2',
     email: 'employee@test.com',
+    fullName: 'Сотрудник С.С.',
     role: 'employee',
     organizationId: null,
     department: null,
+    employeeId: null,
   }
 
   const contractorEmployeeUser: AuthenticatedUser = {
     userId: '3',
     email: 'contractor@test.com',
+    fullName: 'Подрядчик П.П.',
     role: 'contractor_employee',
     organizationId: 'org-123',
     department: null,
+    employeeId: null,
   }
 
   const approverUser: AuthenticatedUser = {
     userId: '4',
     email: 'approver@test.com',
+    fullName: 'Согласующий С.С.',
     role: 'department_approver',
     organizationId: null,
     department: 'safety',
+    employeeId: null,
   }
 
   describe('requireRole', () => {

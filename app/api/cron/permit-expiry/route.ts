@@ -17,11 +17,11 @@ export async function POST(req: NextRequest) {
   const now = new Date();
   const results: Array<{ action: string; count: number }> = [];
 
-  // Expire permits where expiryDate has passed and status is still active/approved
+  // Expire permits where expiryDate has passed and status is still active/pending_approval
   const expiredPermits = await prisma.permit.findMany({
     where: {
       expiryDate: { lte: now },
-      status: { in: ["active", "approved", "pending_approval"] },
+      status: { in: ["active", "pending_approval"] },
     },
     include: {
       contractor: { select: { name: true } },

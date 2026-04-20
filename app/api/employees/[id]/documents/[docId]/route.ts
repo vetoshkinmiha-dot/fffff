@@ -21,11 +21,15 @@ export async function DELETE(
     return NextResponse.json({ error: "Document not found" }, { status: 404 });
   }
 
-  // Contractor scoping
-  if (authResult.user.role === "contractor_employee" && authResult.user.organizationId) {
+  // Admin or contractor_admin can delete documents
+  if (authResult.user.role === "admin") {
+    // admin can delete any document
+  } else if (authResult.user.role === "contractor_admin" && authResult.user.organizationId) {
     if (doc.employee.organizationId !== authResult.user.organizationId) {
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }
+  } else {
+    return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
 
   if (doc.fileUrl) {

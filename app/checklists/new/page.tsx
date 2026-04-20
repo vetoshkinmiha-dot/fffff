@@ -33,6 +33,13 @@ interface ChecklistItemForm {
   photoFile: File | null;
 }
 
+interface InspectorUser {
+  id: string;
+  fullName: string;
+  role: string;
+  organizationId: string | null;
+}
+
 function NewChecklistForm() {
   const router = useRouter();
 
@@ -45,11 +52,13 @@ function NewChecklistForm() {
 
   const [form, setForm] = useState({
     contractorId: "",
+    inspectorId: "",
     inspectorName: "",
     date: "",
     comments: "",
   });
 
+  const [inspectors, setInspectors] = useState<InspectorUser[]>([]);
   const [items, setItems] = useState<ChecklistItemForm[]>([
     { question: "", answer: "", comment: "", photoFile: null },
   ]);
@@ -70,6 +79,14 @@ function NewChecklistForm() {
       .then((r) => r.json())
       .then((data) => {
         setContractors(data.data || []);
+      })
+      .catch(() => {});
+
+    // Load inspector candidates (contractor_employee + contractor_admin)
+    fetch("/api/inspectors", { credentials: "include" })
+      .then((r) => r.ok ? r.json() : { data: [] })
+      .then((data) => {
+        setInspectors(data.data || []);
         setLoading(false);
       })
       .catch(() => setLoading(false));
@@ -91,7 +108,7 @@ function NewChecklistForm() {
   function validate() {
     const errs: Record<string, string> = {};
     if (!form.contractorId) errs.contractorId = "Выберите подрядчика";
-    if (!form.inspectorName.trim()) errs.inspectorName = "Обязательное поле";
+    if (!form.inspectorId) errs.inspectorId = "Выберите инспектора";
     if (!form.date) errs.date = "Обязательное поле";
 
     const itemErrors: string[] = [];
@@ -120,13 +137,19 @@ function NewChecklistForm() {
         photoUrl: undefined,
       }));
 
+      const selectedInspector = inspectors.find((i) => i.id === form.inspectorId);
+      const inspectorName = selectedInspector
+        ? selectedInspector.fullName
+        : form.inspectorName.trim();
+
       const res = await fetch("/api/checklists", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         credentials: "include",
         body: JSON.stringify({
           contractorId: form.contractorId,
-          inspectorName: form.inspectorName.trim(),
+          inspectorId: form.inspectorId || undefined,
+          inspectorName,
           date: new Date(form.date).toISOString(),
           comments: form.comments.trim() || undefined,
           items: itemsWithPhotos,
@@ -261,9 +284,10 @@ function NewChecklistForm() {
             <Select
               value={form.contractorId}
               onValueChange={(v) => setForm((prev) => ({ ...prev, contractorId: v ?? "" }))}
+              itemToStringLabel={(v) => contractors.find((c) => c.id === v)?.name ?? v}
             >
               <SelectTrigger className={fieldErrors.contractorId ? "border-red-300" : ""}>
-                <SelectValue placeholder="Выберите подрядчика" />
+                <SelectValue placeholder="Выберите подрядчика">{(v) => contractors.find((c) => c.id === v)?.name ?? v ?? "Выберите подрядчика"}</SelectValue>
               </SelectTrigger>
               <SelectContent>
                 {contractors.map((c) => (
@@ -280,16 +304,26 @@ function NewChecklistForm() {
 
           <div className="space-y-1.5">
             <Label>Инспектор *</Label>
-            <Input
-              value={form.inspectorName}
-              onChange={(e) =>
-                setForm((prev) => ({ ...prev, inspectorName: e.target.value }))
-              }
-              placeholder="ФИО инспектора"
-              className={fieldErrors.inspectorName ? "border-red-300" : ""}
-            />
-            {fieldErrors.inspectorName && (
-              <p className="text-xs text-red-600">{fieldErrors.inspectorName}</p>
+            <Select
+              value={form.inspectorId}
+              onValueChange={(v) => {
+                setForm((prev) => ({ ...prev, inspectorId: v ?? "" }));
+              }}
+              itemToStringLabel={(v) => inspectors.find((i) => i.id === v)?.fullName ?? v}
+            >
+              <SelectTrigger className={fieldErrors.inspectorId ? "border-red-300" : ""}>
+                <SelectValue placeholder="Выберите инспектора">{(v) => inspectors.find((i) => i.id === v)?.fullName ?? v ?? "Выберите инспектора"}</SelectValue>
+              </SelectTrigger>
+              <SelectContent>
+                {inspectors.map((insp) => (
+                  <SelectItem key={insp.id} value={insp.id}>
+                    {insp.fullName} ({insp.role === "contractor_admin" ? "Админ" : "Сотрудник"})
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            {fieldErrors.inspectorId && (
+              <p className="text-xs text-red-600">{fieldErrors.inspectorId}</p>
             )}
           </div>
         </div>
@@ -405,7 +439,6 @@ function NewChecklistForm() {
                       <label className="cursor-pointer">
                         <Input
                           type="file"
-                          accept="image/jpeg,image/png"
                           className="hidden"
                           onChange={(e) => {
                             const file = e.target.files?.[0];
@@ -414,7 +447,7 @@ function NewChecklistForm() {
                         />
                         <div className="flex items-center gap-1 text-zinc-400 hover:text-zinc-600 text-xs">
                           <Upload className="h-3.5 w-3.5" />
-                          <span>Фото</span>
+                          <span>Файл</span>
                         </div>
                       </label>
                     )}
@@ -503,7 +536,6 @@ function NewChecklistForm() {
                 <label className="cursor-pointer block">
                   <Input
                     type="file"
-                    accept="image/jpeg,image/png"
                     className="hidden"
                     onChange={(e) => {
                       const file = e.target.files?.[0];
@@ -512,7 +544,7 @@ function NewChecklistForm() {
                   />
                   <div className="flex w-full items-center justify-center gap-2 rounded-md border border-zinc-200 bg-white px-3 py-1.5 text-sm hover:bg-zinc-50 cursor-pointer">
                     <Upload className="h-4 w-4" />
-                    Прикрепить фото
+                    Прикрепить файл
                   </div>
                 </label>
               )}
