@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react";
 import {
   Plus, Search, Download, FileText, FileSpreadsheet, File, ChevronRight,
-  ChevronDown, Upload, FolderPlus, Pencil, Trash2, Loader2, Edit3
+  ChevronDown, Upload, FolderPlus, Pencil, Trash2, Loader2, Edit3, Eye
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -117,24 +117,50 @@ export default function DocumentsPage() {
   const [deleteTarget, setDeleteTarget] = useState<{ type: "doc" | "section"; id: string; name: string } | null>(null);
   const [deleting, setDeleting] = useState(false);
 
+  // Pagination
+  const [page, setPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
+  const [totalDocs, setTotalDocs] = useState(0);
+  const limit = 20;
+
+  // File preview
+  const [previewDoc, setPreviewDoc] = useState<{ id: string; title: string; fileUrl: string; fileType: string } | null>(null);
+
   useEffect(() => {
     Promise.all([
       fetch("/api/auth/me", { credentials: "include" }).then((r) => r.ok ? r.json() : null),
       fetch("/api/documents/sections", { credentials: "include" }).then((r) => r.ok ? r.json() : { data: [] }),
-      fetch("/api/documents/regulatory", { credentials: "include" }).then((r) => r.ok ? r.json() : { data: [] }),
-    ]).then(([user, secs, docs]) => {
+    ]).then(([user, secs]) => {
       if (user?.user?.role) setUserRole(user.user.role);
       const sectionsData = secs.data || [];
       setSections(sectionsData);
       setTree(buildTree(sectionsData));
-      setDocuments(docs.data || []);
-      setLoading(false);
-    });
+    }).finally(() => setLoading(false));
   }, []);
 
+  const fetchDocuments = async () => {
+    try {
+      const params = new URLSearchParams({ page: String(page), limit: String(limit) });
+      if (search) params.set("search", search);
+      if (selectedSection) params.set("sectionId", selectedSection);
+      const res = await fetch(`/api/documents/regulatory?${params}`, { credentials: "include" });
+      if (res.ok) {
+        const json = await res.json();
+        setDocuments(json.data || []);
+        setTotalPages(json.pagination?.pages ?? 1);
+        setTotalDocs(json.pagination?.total ?? 0);
+      }
+    } catch {
+      // ignore
+    }
+  };
+
+  useEffect(() => {
+    fetchDocuments();
+  }, [page, search, selectedSection]);
+
   const refreshDocuments = async () => {
-    const res = await fetch("/api/documents/regulatory", { credentials: "include" });
-    if (res.ok) setDocuments((await res.json()).data || []);
+    await fetchDocuments();
   };
 
   const refreshSections = async () => {
@@ -173,11 +199,7 @@ export default function DocumentsPage() {
     }
   }
 
-  const filteredDocs = documents.filter((d) => {
-    const matchesSearch = search === "" || d.title.toLowerCase().includes(search.toLowerCase());
-    const matchesSection = selectedSection === null || d.sectionId === selectedSection;
-    return matchesSearch && matchesSection;
-  });
+  const filteredDocs = documents;
 
   async function handleUpload() {
     if (!uploadFile || !uploadTitle.trim() || !uploadSection) {
@@ -417,7 +439,7 @@ export default function DocumentsPage() {
             }`}
           >
             <span className="text-sm">Все документы</span>
-            <span className="text-xs text-zinc-400 ml-auto">{documents.length}</span>
+            <span className="text-xs text-zinc-400 ml-auto">{totalDocs}</span>
           </button>
           {renderSectionTree("__root__")}
         </div>
@@ -500,6 +522,13 @@ export default function DocumentsPage() {
                       <td className="px-4 py-3 text-right">
                         <div className="flex items-center justify-end gap-2">
                           <button
+                            onClick={() => setPreviewDoc({ id: doc.id, title: doc.title, fileUrl: doc.fileUrl, fileType: doc.fileType })}
+                            className="inline-flex items-center gap-1 text-sm text-zinc-500 hover:text-blue-600"
+                            title="Просмотр"
+                          >
+                            <Eye className="h-4 w-4" />
+                          </button>
+                          <button
                             onClick={() => handleDownloadDoc(doc.id, doc.title)}
                             className="inline-flex items-center gap-1 text-sm text-blue-600 hover:underline"
                           >
@@ -538,9 +567,22 @@ export default function DocumentsPage() {
           </table>
         </div>
 
-        <div className="text-xs text-zinc-400">
-          Показано {filteredDocs.length} из {documents.length} документов
-        </div>
+        {totalPages > 1 && (
+          <div className="flex items-center justify-between">
+            <div className="text-xs text-zinc-400">
+              Показано {documents.length} из {totalDocs} документов
+            </div>
+            <div className="flex items-center gap-2">
+              <span className="text-xs text-zinc-500">Страница {page} из {totalPages}</span>
+              <Button variant="outline" size="sm" disabled={page <= 1} onClick={() => setPage((p) => p - 1)}>
+                Назад
+              </Button>
+              <Button variant="outline" size="sm" disabled={page >= totalPages} onClick={() => setPage((p) => p + 1)}>
+                Вперёд
+              </Button>
+            </div>
+          </div>
+        )}
       </div>
 
       {/* Upload dialog */}
@@ -711,6 +753,36 @@ export default function DocumentsPage() {
               Сохранить
             </Button>
           </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* File preview dialog */}
+      <Dialog open={!!previewDoc} onOpenChange={(open) => { if (!open) setPreviewDoc(null); }}>
+        <DialogContent className="max-w-3xl">
+          <DialogHeader>
+            <DialogTitle>{previewDoc?.title ?? "Просмотр документа"}</DialogTitle>
+            <DialogDescription>
+              {previewDoc?.fileType === "pdf" ? "PDF документ" : previewDoc?.fileType === "docx" ? "Документ Word" : previewDoc?.fileType === "xlsx" ? "Таблица Excel" : "Файл"}
+            </DialogDescription>
+          </DialogHeader>
+          <div className="min-h-[400px]">
+            {previewDoc && previewDoc.fileType === "pdf" && (
+              <iframe src={previewDoc.fileUrl} className="w-full h-[500px] rounded-md border border-zinc-200" title={previewDoc.title} />
+            )}
+            {previewDoc && ["image/jpeg", "image/png", "image/jpg", "jpg", "png", "jpeg"].some((t) => previewDoc.fileUrl.toLowerCase().endsWith("." + t) || previewDoc.fileType === t) && (
+              <img src={previewDoc.fileUrl} alt={previewDoc.title} className="max-w-full rounded-md border border-zinc-200 mx-auto" />
+            )}
+            {previewDoc && ["docx", "xlsx"].includes(previewDoc.fileType) && !["image/jpeg", "image/png", "image/jpg", "jpg", "png", "jpeg"].some((t) => previewDoc.fileUrl.toLowerCase().endsWith("." + t)) && (
+              <div className="flex flex-col items-center justify-center h-[300px] gap-4">
+                <FileSpreadsheet className="h-16 w-16 text-zinc-300" />
+                <p className="text-sm text-zinc-500">Предпросмотр данного формата не поддерживается</p>
+                <Button onClick={() => { if (previewDoc) { handleDownloadDoc(previewDoc.id, previewDoc.title); setPreviewDoc(null); } }}>
+                  <Download className="h-4 w-4 mr-2" />
+                  Скачать
+                </Button>
+              </div>
+            )}
+          </div>
         </DialogContent>
       </Dialog>
 

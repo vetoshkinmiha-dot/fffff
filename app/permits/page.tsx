@@ -68,7 +68,6 @@ export default function PermitsPage() {
   const [total, setTotal] = useState(0);
   const [totalPages, setTotalPages] = useState(1);
   const [statusFilter, setStatusFilter] = useState("all");
-  const [search, setSearch] = useState("");
   const [userRole, setUserRole] = useState<string>("");
   const limit = 20;
 
@@ -78,7 +77,6 @@ export default function PermitsPage() {
       const params = new URLSearchParams({
         page: String(page),
         limit: String(limit),
-        ...(search ? { search } : {}),
         ...(statusFilter !== "all" ? { status: statusFilter } : {}),
       });
       const res = await fetch(`/api/permits?${params}`, { credentials: "include" });
@@ -93,7 +91,7 @@ export default function PermitsPage() {
     } finally {
       setLoading(false);
     }
-  }, [page, statusFilter, search]);
+  }, [page, statusFilter]);
 
   useEffect(() => {
     fetchPermits();
@@ -109,6 +107,17 @@ export default function PermitsPage() {
     setStatusFilter(value ?? "all");
     setPage(1);
   }, []);
+
+  const [permitSearch, setPermitSearch] = useState("");
+
+  const filteredPermits = permits.filter((p) => {
+    if (!permitSearch) return true;
+    const q = permitSearch.toLowerCase();
+    return (
+      p.permitNumber.toLowerCase().includes(q) ||
+      p.contractor?.name.toLowerCase().includes(q)
+    );
+  });
 
   return (
     <div className="space-y-6">
@@ -135,9 +144,9 @@ export default function PermitsPage() {
         <div className="relative flex-1 max-w-sm">
           <Search className="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-zinc-400" />
           <Input
-            placeholder="Поиск по номеру или подрядчику..."
-            value={search}
-            onChange={(e) => { setSearch(e.target.value); setPage(1); }}
+            placeholder="Поиск по номеру наряда или подрядчику..."
+            value={permitSearch}
+            onChange={(e) => { setPermitSearch(e.target.value); setPage(1); }}
             className="pl-9"
           />
         </div>
@@ -178,14 +187,14 @@ export default function PermitsPage() {
                   Загрузка...
                 </td>
               </tr>
-            ) : permits.length === 0 ? (
+            ) : filteredPermits.length === 0 ? (
               <tr className="border-b">
                 <td colSpan={9} className="p-2 py-8 text-center text-sm text-zinc-500">
                   Наряды-допуски не найдены
                 </td>
               </tr>
             ) : (
-              permits.map((permit) => (
+              filteredPermits.map((permit) => (
                 <tr key={permit.id} className="border-b transition-colors hover:bg-muted/50">
                   <td className="p-2 font-mono text-xs text-zinc-700">{permit.permitNumber}</td>
                   <td className="p-2 text-sm text-zinc-900">{categoryLabels[permit.category] ?? permit.category}</td>
@@ -217,7 +226,7 @@ export default function PermitsPage() {
       {totalPages > 1 && (
         <div className="flex items-center justify-between">
           <div className="text-xs text-zinc-400">
-            Показано {permits.length} из {total} нарядов-допусков
+            Показано {filteredPermits.length} из {total} нарядов-допусков
           </div>
           <div className="flex gap-2">
             <Button variant="outline" size="sm" disabled={page <= 1} onClick={() => setPage((p) => p - 1)}>
