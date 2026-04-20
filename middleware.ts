@@ -5,7 +5,7 @@ import { verifyAccessToken } from "./lib/auth-edge";
 const PUBLIC_ROUTES = ["/login", "/register", "/auth/unauthorized"];
 
 // Routes that bypass auth (static files, API health, etc.)
-const PUBLIC_PREFIXES = ["/_next", "/favicon.ico", "/api/health", "/api/auth/"];
+const PUBLIC_PREFIXES = ["/_next", "/favicon.ico", "/api/health", "/api/auth/", "/uploads/"];
 
 // Role → allowed route patterns (based on ролевая модель.docx)
 const ROLE_ROUTES: Record<string, string[]> = {
