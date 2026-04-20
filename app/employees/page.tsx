@@ -259,7 +259,7 @@ export default function EmployeesPage() {
         </div>
       )}
 
-      <div className="rounded-xl border border-zinc-200 bg-white">
+      <div className="rounded-xl border border-zinc-200 bg-white overflow-x-auto">
         <table className="w-full caption-bottom text-sm">
           <thead>
             <tr className="border-b">
