@@ -11,9 +11,48 @@ interface ContractorAccount {
   fullName: string;
   email: string;
   temporaryPassword: string | null;
-  organizationId: string | null;
-  createdAt: string;
 }
+
+const DEMO_ACCOUNTS: {
+  group: string;
+  items: { label: string; sub?: string; email: string; password: string; highlight?: boolean }[];
+}[] = [
+  {
+    group: "Администратор",
+    items: [
+      { label: "Администратор", sub: "полный доступ", email: "admin@pirelli.ru", password: "Admin123!" },
+    ],
+  },
+  {
+    group: "Сотрудник завода",
+    items: [
+      { label: "Просматривающий", sub: "только просмотр", email: "employee@pirelli.ru", password: "Employee1!" },
+    ],
+  },
+  {
+    group: "Согласующие департаментов",
+    items: [
+      { label: "Иванов А.С.", sub: "Служба безопасности", email: "security@pirelli.ru", password: "Approver1!" },
+      { label: "Петрова Е.В.", sub: "Отдел кадров", email: "hr@pirelli.ru", password: "Approver1!" },
+      { label: "Сидоров К.Н.", sub: "Охрана труда (допуск)", email: "safety@pirelli.ru", password: "Approver1!" },
+      { label: "Козлова М.Р.", sub: "Охрана труда (инструктаж)", email: "safetytraining@pirelli.ru", password: "Approver1!" },
+      { label: "Новиков Д.А.", sub: "Бюро пропусков", email: "permitbureau@pirelli.ru", password: "Approver1!" },
+    ],
+  },
+  {
+    group: 'ООО «СтройЭнергоМонтаж»',
+    items: [
+      { label: "Ответственный", sub: "contractor_admin", email: "resp_1@stroymont.ru", password: "Org1Admin1!", highlight: true },
+      { label: "Сидоров П.И.", sub: "contractor_employee", email: "podradchik@pirelli.ru", password: "Contractor1!" },
+    ],
+  },
+  {
+    group: 'АО «ТрансТехСервис»',
+    items: [
+      { label: "Ответственный", sub: "contractor_admin", email: "resp_2@stroymont.ru", password: "Org2Admin1!", highlight: true },
+    ],
+  },
+];
 
 export default function LoginPage() {
   const router = useRouter();
@@ -22,11 +61,8 @@ export default function LoginPage() {
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
   const [accounts, setAccounts] = useState<ContractorAccount[]>([]);
-  const [accountsLoading, setAccountsLoading] = useState(false);
 
   useEffect(() => {
-    // Fetch contractor_employee accounts for display
-    setAccountsLoading(true);
     fetch("/api/auth/accounts", { credentials: "include" })
       .then((r) => {
         if (r.ok) return r.json();
@@ -35,8 +71,7 @@ export default function LoginPage() {
       .then((data) => {
         if (data?.data) setAccounts(data.data);
       })
-      .catch(() => {})
-      .finally(() => setAccountsLoading(false));
+      .catch(() => {});
   }, []);
 
   const handleSubmit = async (e: FormEvent) => {
@@ -66,8 +101,8 @@ export default function LoginPage() {
         department_approver: "/",
       };
       const redirectTo = roleRedirects[data.user?.role] ?? "/contractors";
-      router.push(redirectTo);
-      router.refresh();
+      // Full page reload to ensure new cookies are applied
+      window.location.href = redirectTo;
     } catch {
       setError("Произошла ошибка. Попробуйте ещё раз.");
     } finally {
@@ -75,14 +110,14 @@ export default function LoginPage() {
     }
   };
 
-  function setCredentials(email: string) {
+  function setCredentials(email: string, pwd: string) {
     setEmail(email);
-    setPassword("password");
+    setPassword(pwd);
   }
 
   return (
     <div className="flex min-h-screen items-center justify-center bg-zinc-50 px-4 py-8">
-      <div className="w-full max-w-md space-y-8">
+      <div className="w-full max-w-md space-y-6">
         {/* Logo / Title */}
         <div className="text-center">
           <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-xl bg-blue-600">
@@ -140,193 +175,53 @@ export default function LoginPage() {
           </Button>
         </form>
 
-        {/* Demo Credentials */}
+        {/* Demo Credentials — from seed data */}
         <div className="rounded-xl border border-zinc-200 bg-white p-5 space-y-3">
-          <p className="text-sm font-medium text-zinc-700">Демо-учётные записи (пароль везде: <code className="bg-zinc-100 px-1 rounded">password</code>):</p>
+          <p className="text-sm font-medium text-zinc-700">Демо-учётные записи</p>
           <div className="space-y-2 text-xs">
-            {/* Admin */}
-            <div
-              className="flex items-center justify-between rounded-lg bg-zinc-50 px-3 py-2 cursor-pointer hover:bg-zinc-100 transition-colors"
-              onClick={() => setCredentials("admin@vshz.ru")}
-            >
-              <div>
-                <span className="font-medium text-zinc-800">Администратор</span>
-                <span className="text-zinc-500 ml-1">(полный доступ)</span>
+            {DEMO_ACCOUNTS.map((group) => (
+              <div key={group.group}>
+                <div className="border-t border-zinc-200 pt-2 mt-2 first:mt-0 first:border-0 first:pt-0">
+                  <span className="font-medium text-zinc-700">{group.group}</span>
+                </div>
+                {group.items.map((item) => (
+                  <div
+                    key={item.email}
+                    className={`flex items-center justify-between rounded-lg px-3 py-2 cursor-pointer hover:opacity-80 transition-opacity mt-1 ${
+                      item.highlight ? "bg-amber-50" : "bg-zinc-50"
+                    }`}
+                    onClick={() => setCredentials(item.email, item.password)}
+                  >
+                    <div>
+                      <span className={`font-medium ${item.highlight ? "text-amber-900" : "text-zinc-800"}`}>
+                        {item.label}
+                      </span>
+                      {item.sub && (
+                        <span className={`ml-1 text-[10px] font-semibold ${item.highlight ? "text-amber-600" : "text-zinc-500"}`}>
+                          ({item.sub})
+                        </span>
+                      )}
+                    </div>
+                    <code className={`${item.highlight ? "text-amber-700" : "text-zinc-500"}`}>{item.email}</code>
+                  </div>
+                ))}
               </div>
-              <code className="text-zinc-500">admin@vshz.ru</code>
-            </div>
-
-            {/* Approvers */}
-            <div className="border-t border-zinc-200 pt-2 mt-1">
-              <span className="font-medium text-zinc-700">Согласующие</span>
-            </div>
-            <div
-              className="flex items-center justify-between rounded-lg bg-zinc-50 px-3 py-2 cursor-pointer hover:bg-zinc-100 transition-colors"
-              onClick={() => setCredentials("dp.security@vshz.ru")}
-            >
-              <div>
-                <span className="font-medium text-zinc-800">Иванов А.С.</span>
-                <span className="text-zinc-500 ml-1">(СБ)</span>
-              </div>
-              <code className="text-zinc-500">dp.security@vshz.ru</code>
-            </div>
-            <div
-              className="flex items-center justify-between rounded-lg bg-zinc-50 px-3 py-2 cursor-pointer hover:bg-zinc-100 transition-colors"
-              onClick={() => setCredentials("dp.hr@vshz.ru")}
-            >
-              <div>
-                <span className="font-medium text-zinc-800">Петрова Е.В.</span>
-                <span className="text-zinc-500 ml-1">(HR)</span>
-              </div>
-              <code className="text-zinc-500">dp.hr@vshz.ru</code>
-            </div>
-            <div
-              className="flex items-center justify-between rounded-lg bg-zinc-50 px-3 py-2 cursor-pointer hover:bg-zinc-100 transition-colors"
-              onClick={() => setCredentials("dp.safety@vshz.ru")}
-            >
-              <div>
-                <span className="font-medium text-zinc-800">Сидоров К.Н.</span>
-                <span className="text-zinc-500 ml-1">(ОТ)</span>
-              </div>
-              <code className="text-zinc-500">dp.safety@vshz.ru</code>
-            </div>
-            <div
-              className="flex items-center justify-between rounded-lg bg-zinc-50 px-3 py-2 cursor-pointer hover:bg-zinc-100 transition-colors"
-              onClick={() => setCredentials("dp.safety.tr@vshz.ru")}
-            >
-              <div>
-                <span className="font-medium text-zinc-800">Козлова М.Р.</span>
-                <span className="text-zinc-500 ml-1">(Инструктаж)</span>
-              </div>
-              <code className="text-zinc-500">dp.safety.tr@vshz.ru</code>
-            </div>
-            <div
-              className="flex items-center justify-between rounded-lg bg-zinc-50 px-3 py-2 cursor-pointer hover:bg-zinc-100 transition-colors"
-              onClick={() => setCredentials("dp.permit@vshz.ru")}
-            >
-              <div>
-                <span className="font-medium text-zinc-800">Новиков Д.А.</span>
-                <span className="text-zinc-500 ml-1">(Пропуска)</span>
-              </div>
-              <code className="text-zinc-500">dp.permit@vshz.ru</code>
-            </div>
-
-            {/* Employee */}
-            <div
-              className="flex items-center justify-between rounded-lg bg-zinc-50 px-3 py-2 cursor-pointer hover:bg-zinc-100 transition-colors"
-              onClick={() => setCredentials("employee@vshz.ru")}
-            >
-              <div>
-                <span className="font-medium text-zinc-800">Сотрудник завода</span>
-                <span className="text-zinc-500 ml-1">(только просмотр)</span>
-              </div>
-              <code className="text-zinc-500">employee@vshz.ru</code>
-            </div>
-
-            {/* Contractor Org 1 */}
-            <div className="border-t border-zinc-200 pt-2 mt-1">
-              <span className="font-medium text-zinc-700">ООО «СтройМонтаж»</span>
-            </div>
-            <div
-              className="flex items-center justify-between rounded-lg bg-amber-50 px-3 py-2 cursor-pointer hover:bg-amber-100 transition-colors"
-              onClick={() => setCredentials("morozov@stroymontazh.ru")}
-            >
-              <div>
-                <span className="font-medium text-amber-900">Морозов И.С.</span>
-                <span className="text-amber-600 ml-1 text-[10px] font-semibold">ОТВЕТСТВЕННЫЙ</span>
-              </div>
-              <code className="text-amber-700">morozov@stroymontazh.ru</code>
-            </div>
-            <div
-              className="flex items-center justify-between rounded-lg bg-white px-3 py-1.5 cursor-pointer hover:bg-zinc-50 transition-colors"
-              onClick={() => setCredentials("smirnov@stroymontazh.ru")}
-            >
-              <div>
-                <span className="text-zinc-800">Смирнов А.В. — сварщик</span>
-              </div>
-              <code className="text-zinc-500">smirnov@stroymontazh.ru</code>
-            </div>
-            <div
-              className="flex items-center justify-between rounded-lg bg-white px-3 py-1.5 cursor-pointer hover:bg-zinc-50 transition-colors"
-              onClick={() => setCredentials("kuznetsova@stroymontazh.ru")}
-            >
-              <div>
-                <span className="text-zinc-800">Кузнецова М.И. — электрик</span>
-              </div>
-              <code className="text-zinc-500">kuznetsova@stroymontazh.ru</code>
-            </div>
-            <div
-              className="flex items-center justify-between rounded-lg bg-white px-3 py-1.5 cursor-pointer hover:bg-zinc-50 transition-colors"
-              onClick={() => setCredentials("popov@stroymontazh.ru")}
-            >
-              <div>
-                <span className="text-zinc-800">Попов Д.С. — монтажник</span>
-              </div>
-              <code className="text-zinc-500">popov@stroymontazh.ru</code>
-            </div>
-
-            {/* Contractor Org 2 */}
-            <div className="border-t border-zinc-200 pt-2 mt-1">
-              <span className="font-medium text-zinc-700">АО «ЭнергоСервис»</span>
-            </div>
-            <div
-              className="flex items-center justify-between rounded-lg bg-amber-50 px-3 py-2 cursor-pointer hover:bg-amber-100 transition-colors"
-              onClick={() => setCredentials("volkov@energoservis.ru")}
-            >
-              <div>
-                <span className="font-medium text-amber-900">Волков А.Н.</span>
-                <span className="text-amber-600 ml-1 text-[10px] font-semibold">ОТВЕТСТВЕННЫЙ</span>
-              </div>
-              <code className="text-amber-700">volkov@energoservis.ru</code>
-            </div>
-            <div
-              className="flex items-center justify-between rounded-lg bg-white px-3 py-1.5 cursor-pointer hover:bg-zinc-50 transition-colors"
-              onClick={() => setCredentials("lebedeva@energoservis.ru")}
-            >
-              <div>
-                <span className="text-zinc-800">Лебедева Е.Д. — слесарь</span>
-              </div>
-              <code className="text-zinc-500">lebedeva@energoservis.ru</code>
-            </div>
-            <div
-              className="flex items-center justify-between rounded-lg bg-white px-3 py-1.5 cursor-pointer hover:bg-zinc-50 transition-colors"
-              onClick={() => setCredentials("novikov.s@energoservis.ru")}
-            >
-              <div>
-                <span className="text-zinc-800">Новиков С.П. — каменщик</span>
-              </div>
-              <code className="text-zinc-500">novikov.s@energoservis.ru</code>
-            </div>
-            <div
-              className="flex items-center justify-between rounded-lg bg-white px-3 py-1.5 cursor-pointer hover:bg-zinc-50 transition-colors"
-              onClick={() => setCredentials("fedorov@energoservis.ru")}
-            >
-              <div>
-                <span className="text-zinc-800">Федоров Н.А. — плотник</span>
-              </div>
-              <code className="text-zinc-500">fedorov@energoservis.ru</code>
-            </div>
+            ))}
           </div>
         </div>
 
-        <p className="text-center text-[10px] text-zinc-400">
-          Нажмите на учётную запись чтобы автоматически подставить email и пароль
-        </p>
-
-        {/* Auto-created contractor_employee accounts */}
+        {/* Auto-created contractor_employee accounts (from add-employee) */}
         {accounts.length > 0 && (
           <div className="rounded-xl border border-blue-200 bg-blue-50 p-5 space-y-3">
-            <p className="text-sm font-medium text-blue-800">Учётные записи сотрудников подрядчиков</p>
+            <p className="text-sm font-medium text-blue-800">Автоматически созданные учётные записи</p>
             <div className="space-y-2 text-xs">
               {accounts.map((acc, i) => (
                 <div
                   key={i}
                   className="rounded-lg bg-white px-3 py-2 border border-blue-100 cursor-pointer hover:bg-blue-100 transition-colors"
                   onClick={() => {
-                    if (acc.email) {
-                      setEmail(acc.email);
-                      setPassword(acc.temporaryPassword ?? "");
-                    }
+                    setEmail(acc.email);
+                    setPassword(acc.temporaryPassword ?? "");
                   }}
                 >
                   <div className="font-medium text-zinc-800">{acc.fullName}</div>
@@ -341,16 +236,10 @@ export default function LoginPage() {
             </div>
           </div>
         )}
-        {!accountsLoading && accounts.length === 0 && (
-          <div className="rounded-xl border border-zinc-200 bg-white p-5 text-center text-sm text-zinc-500">
-            Нет учётных записей сотрудников подрядчиков
-          </div>
-        )}
-        {accountsLoading && (
-          <div className="rounded-xl border border-zinc-200 bg-white p-5 text-center text-sm text-zinc-500">
-            Загрузка учётных записей...
-          </div>
-        )}
+
+        <p className="text-center text-[10px] text-zinc-400">
+          Нажмите на учётную запись чтобы автоматически подставить email и пароль
+        </p>
       </div>
     </div>
   );
