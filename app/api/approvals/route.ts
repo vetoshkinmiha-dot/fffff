@@ -8,6 +8,7 @@ export async function GET(req: NextRequest) {
 
   const { searchParams } = new URL(req.url);
   const statusFilter = searchParams.get("status");
+  const typeFilter = searchParams.get("type"); // "employee" | "permit"
 
   const role = authResult.user.role;
 
@@ -16,9 +17,8 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
 
-  // contractor_employee: no decision capability — they just view status
-  if (role === "contractor_employee") {
-    // Return all approvals for employees of their organization
+  // contractor_employee / contractor_admin: no decision capability — they just view status
+  if (role === "contractor_employee" || role === "contractor_admin") {
     const employees = await prisma.employee.findMany({
       where: { organizationId: authResult.user.organizationId! },
       select: { id: true },
@@ -35,6 +35,7 @@ export async function GET(req: NextRequest) {
       include: {
         employee: {
           select: {
+            id: true,
             fullName: true,
             organization: { select: { name: true } },
           },
@@ -46,7 +47,7 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ data: approvals });
   }
 
-  // department_approver: only pending approvals of their department
+  // department_approver: only pending approvals of their department (employee only, no permit access)
   if (role === "department_approver") {
     const where: any = {
       department: authResult.user.department,
@@ -58,8 +59,11 @@ export async function GET(req: NextRequest) {
       include: {
         employee: {
           select: {
+            id: true,
             fullName: true,
             organization: { select: { name: true } },
+            position: true,
+            workClasses: { select: { workClass: true } },
           },
         },
       },
@@ -69,7 +73,26 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ data: approvals });
   }
 
-  // admin: see all approvals
+  // admin: see all approvals, with optional type filter
+  if (typeFilter === "permit") {
+    const permitsWhere: any = {};
+    if (statusFilter && statusFilter !== "all") {
+      permitsWhere.status = statusFilter;
+    }
+
+    const permits = await prisma.permit.findMany({
+      where: permitsWhere,
+      include: {
+        contractor: { select: { id: true, name: true } },
+        approvals: { orderBy: { createdAt: "asc" } },
+      },
+      orderBy: { openDate: "desc" },
+    });
+
+    return NextResponse.json({ data: permits });
+  }
+
+  // type=employee or not specified: return employee approvals
   const where: any = {};
   if (statusFilter && statusFilter !== "all") {
     where.status = statusFilter;
@@ -80,8 +103,11 @@ export async function GET(req: NextRequest) {
     include: {
       employee: {
         select: {
+          id: true,
           fullName: true,
           organization: { select: { name: true } },
+          position: true,
+          workClasses: { select: { workClass: true } },
         },
       },
     },

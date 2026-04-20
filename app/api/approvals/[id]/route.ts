@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { prisma } from "@/lib/prisma";
+import { prisma, $Enums } from "@/lib/prisma";
 import { authMiddleware } from "@/lib/api-middleware";
 import { decideApprovalSchema } from "@/lib/validations";
 import { sendApprovalResult, sendApprovalNotification } from "@/lib/email";
@@ -20,22 +20,30 @@ const DEPARTMENT_LABELS: Record<string, string> = {
   permit_bureau: "Бюро пропусков",
 };
 
-async function notifyNextApproval(employeeId: string, currentDept: string) {
+/**
+ * When an approval is approved, find the next blocked department
+ * and change its status to "pending", then notify its approvers.
+ */
+async function unblockNextApproval(employeeId: string, currentDept: string) {
   const currentIndex = APPROVAL_ORDER.indexOf(currentDept as any);
   if (currentIndex === -1 || currentIndex >= APPROVAL_ORDER.length - 1) return;
 
   const nextDept = APPROVAL_ORDER[currentIndex + 1];
 
-  // Next approvals are already in "pending" status — just notify approvers
   const nextApproval = await prisma.approvalRequest.findFirst({
     where: {
       employeeId,
       department: nextDept,
-      status: "pending",
+      status: $Enums.ApprovalStatus.blocked,
     },
   });
 
   if (nextApproval) {
+    await prisma.approvalRequest.update({
+      where: { id: nextApproval.id },
+      data: { status: $Enums.ApprovalStatus.pending },
+    });
+
     const employee = await prisma.employee.findUnique({
       where: { id: employeeId },
       include: { organization: { select: { name: true } } },
@@ -46,21 +54,39 @@ async function notifyNextApproval(employeeId: string, currentDept: string) {
         where: { isActive: true, department: nextDept },
       });
 
-      const deadline = nextApproval.deadline.toISOString();
+      const approvals = await prisma.approvalRequest.findMany({
+        where: { employeeId, department: nextDept, status: $Enums.ApprovalStatus.pending },
+      });
+      const deadline = approvals[0]?.deadline.toISOString();
+
       for (const approver of approvers) {
-        await sendApprovalNotification(
-          approver.email,
-          approver.fullName,
-          employee.fullName,
-          employee.organization.name,
-          nextDept,
-          deadline,
-        );
+        if (deadline) {
+          await sendApprovalNotification(
+            approver.email,
+            approver.fullName,
+            employee.fullName,
+            employee.organization.name,
+            nextDept,
+            deadline,
+          );
+        }
+        await prisma.notification.create({
+          data: {
+            userId: approver.id,
+            type: "approval_requested",
+            title: "Новое согласование",
+            message: `Сотрудник ${employee.fullName} (${employee.organization.name}) — этап: ${DEPARTMENT_LABELS[nextDept]}`,
+            link: "/approvals",
+          },
+        });
       }
     }
   }
 }
 
+/**
+ * When an approval is rejected, auto-reject all remaining pending/blocked stages.
+ */
 async function autoRejectRemaining(employeeId: string, currentDept: string) {
   const currentIndex = APPROVAL_ORDER.indexOf(currentDept as any);
   if (currentIndex === -1) return;
@@ -72,10 +98,10 @@ async function autoRejectRemaining(employeeId: string, currentDept: string) {
     where: {
       employeeId,
       department: { in: remainingDepts as unknown as typeof APPROVAL_ORDER[number][] },
-      status: "pending",
+      status: { in: [$Enums.ApprovalStatus.pending, $Enums.ApprovalStatus.blocked] },
     },
     data: {
-      status: "rejected",
+      status: $Enums.ApprovalStatus.rejected,
       comment: "Автоматически отклонено в связи с отклонением предыдущего этапа",
       decidedAt: new Date(),
     },
@@ -104,26 +130,25 @@ export async function PATCH(
   }
 
   // Role-based decision rights
-  if (authResult.user.role === "contractor_employee") {
-    return NextResponse.json({ error: "Forbidden: contractor_employee cannot decide approvals" }, { status: 403 });
+  if (authResult.user.role === "contractor_employee" || authResult.user.role === "contractor_admin") {
+    return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
 
-  // department_approver can only decide approvals for their own department
+  // department_approver can only decide for their own department
   if (authResult.user.role === "department_approver") {
     if (approval.department !== authResult.user.department) {
       return NextResponse.json({ error: "Forbidden: not your department" }, { status: 403 });
     }
   }
 
-  // admin can decide any approval; other roles without department get 403
   if (
     authResult.user.role !== "admin" &&
     authResult.user.role !== "department_approver"
   ) {
-    return NextResponse.json({ error: "Forbidden: insufficient permissions" }, { status: 403 });
+    return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
 
-  // Sequential check: previous department must be approved
+  // Sequential check: previous department must be approved (if this is not the first stage)
   const currentIdx = APPROVAL_ORDER.indexOf(approval.department as any);
   if (currentIdx > 0) {
     const prevDept = APPROVAL_ORDER[currentIdx - 1];
@@ -149,7 +174,6 @@ export async function PATCH(
       return NextResponse.json({ error: validation.error.issues[0].message }, { status: 400 });
     }
 
-    // Reject requires a comment
     if (validation.data.status === "rejected" && !validation.data.comment?.trim()) {
       return NextResponse.json({ error: "Comment required for rejection" }, { status: 400 });
     }
@@ -166,9 +190,9 @@ export async function PATCH(
       },
     });
 
-    // If approved — unblock next department
+    // If approved — unblock next department and notify
     if (validation.data.status === "approved") {
-      await notifyNextApproval(updated.employeeId, approval.department);
+      await unblockNextApproval(updated.employeeId, approval.department);
     }
 
     // If rejected — auto-reject remaining
@@ -176,17 +200,17 @@ export async function PATCH(
       await autoRejectRemaining(updated.employeeId, approval.department);
     }
 
-    // Send email notification to contractor admin
+    // Notify contractor admins/employees of the decision
     const org = await prisma.organization.findUnique({
       where: { id: updated.employee.organizationId },
-      select: { name: true, id: true },
+      select: { name: true },
     });
 
-    const contractorAdmins = await prisma.user.findMany({
+    const contractorUsers = await prisma.user.findMany({
       where: {
         isActive: true,
         organizationId: updated.employee.organizationId,
-        role: "contractor_employee",
+        role: { in: ["contractor_employee", "contractor_admin"] },
       },
     });
 
@@ -194,9 +218,9 @@ export async function PATCH(
     const employeeFullName = updated.employee.fullName;
     const orgName = org?.name || "";
 
-    for (const admin of contractorAdmins) {
+    for (const user of contractorUsers) {
       await sendApprovalResult(
-        admin.email,
+        user.email,
         employeeFullName,
         orgName,
         deptLabel,
@@ -204,10 +228,9 @@ export async function PATCH(
         validation.data.comment ?? null,
         updated.employee.id,
       );
-      // In-app notification
       await prisma.notification.create({
         data: {
-          userId: admin.id,
+          userId: user.id,
           type: "approval_result",
           title: "Решение по согласованию",
           message: `${deptLabel}: ${validation.data.status === "approved" ? "Одобрено" : "Отклонено"} — ${employeeFullName}`,
@@ -216,8 +239,8 @@ export async function PATCH(
       });
     }
 
-    // Notify organization owner (admin tied to this organization)
-    const orgOwners = await prisma.user.findMany({
+    // Also notify admin users tied to the organization
+    const orgAdmins = await prisma.user.findMany({
       where: {
         isActive: true,
         organizationId: updated.employee.organizationId,
@@ -225,7 +248,7 @@ export async function PATCH(
       },
     });
 
-    for (const owner of orgOwners) {
+    for (const owner of orgAdmins) {
       await prisma.notification.create({
         data: {
           userId: owner.id,
