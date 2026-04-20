@@ -32,8 +32,12 @@ export async function GET(
     workClasses: employee.workClasses.map((wc) => wc.workClass),
   };
 
-  // Contractor employees can only see their own org's employees
-  if (authResult.user.role === "contractor_employee" && authResult.user.organizationId) {
+  // contractor_admin can see any employee in their org; contractor_employee can only see themselves
+  if (authResult.user.role === "contractor_employee") {
+    if (authResult.user.employeeId !== employee.id) {
+      return NextResponse.json({ error: "Forbidden: you can only view your own profile" }, { status: 403 });
+    }
+  } else if (authResult.user.role === "contractor_admin" && authResult.user.organizationId) {
     if (employee.organizationId !== authResult.user.organizationId) {
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }
@@ -51,16 +55,17 @@ export async function POST(
 
   const { id: orgId } = await params;
 
-  // Only contractor_employee (own org) or admin
-  const isContractorEmployee = authResult.user.role === "contractor_employee";
+  // Only admin or contractor_admin (own org) can create employees
+  const role = authResult.user.role;
 
-  if (isContractorEmployee) {
+  if (role === "admin") {
+    // admin can create for any org
+  } else if (role === "contractor_admin" && authResult.user.organizationId) {
     if (authResult.user.organizationId !== orgId) {
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }
   } else {
-    const adminResult = requireAdmin(authResult.user);
-    if (adminResult instanceof NextResponse) return adminResult;
+    return NextResponse.json({ error: "Forbidden: admin or contractor_admin access required" }, { status: 403 });
   }
 
   try {
@@ -106,12 +111,20 @@ export async function PATCH(
     return NextResponse.json({ error: "Employee not found" }, { status: 404 });
   }
 
-  // Only contractor_employee can edit their own org's employees
-  if (authResult.user.role === "contractor_employee" && authResult.user.organizationId) {
+  // Authorization for editing employee
+  if (authResult.user.role === "admin") {
+    // admin can edit any employee
+  } else if (authResult.user.role === "contractor_admin" && authResult.user.organizationId) {
+    // contractor_admin can edit employees in their own org
     if (employee.organizationId !== authResult.user.organizationId) {
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }
-  } else if (authResult.user.role !== "admin") {
+  } else if (authResult.user.role === "contractor_employee") {
+    // contractor_employee can only edit themselves
+    if (authResult.user.employeeId !== id) {
+      return NextResponse.json({ error: "Forbidden: can only edit your own profile" }, { status: 403 });
+    }
+  } else {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
 
@@ -167,15 +180,23 @@ export async function DELETE(
     return NextResponse.json({ error: "Employee not found" }, { status: 404 });
   }
 
-  if (authResult.user.role === "contractor_employee" && authResult.user.organizationId) {
+  // Authorization for deleting employee
+  if (authResult.user.role === "admin") {
+    // admin can delete any employee
+  } else if (authResult.user.role === "contractor_admin" && authResult.user.organizationId) {
+    // contractor_admin can delete employees in their own org
     if (employee.organizationId !== authResult.user.organizationId) {
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }
-  } else if (authResult.user.role !== "admin") {
+  } else {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
 
-  await prisma.employee.delete({ where: { id } });
+  // Delete any linked User account before deleting the Employee
+  await prisma.$transaction([
+    prisma.user.deleteMany({ where: { employeeId: id } }),
+    prisma.employee.delete({ where: { id } }),
+  ]);
   return NextResponse.json({ success: true });
 }
 

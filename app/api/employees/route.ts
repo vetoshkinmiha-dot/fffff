@@ -2,6 +2,69 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { authMiddleware, requireAdmin } from "@/lib/api-middleware";
 import { paginationSchema, createEmployeeSchema } from "@/lib/validations";
+import { hashPassword } from "@/lib/auth";
+
+// Transliterate Cyrillic full name to latin email local-part
+// "Иванов Иван Иванович" → "ivanov.ivan"
+function transliterateName(fullName: string): string {
+  const cyrillicMap: Record<string, string> = {
+    а: "a", б: "b", в: "v", г: "g", д: "d", е: "e", ё: "yo", ж: "zh",
+    з: "z", и: "i", й: "y", к: "k", л: "l", м: "m", н: "n", о: "o",
+    п: "p", р: "r", с: "s", т: "t", у: "u", ф: "f", х: "kh", ц: "ts",
+    ч: "ch", ш: "sh", щ: "shch", ъ: "", ы: "y", ь: "", э: "e", ю: "yu",
+    я: "ya",
+  };
+
+  const parts = fullName.trim().toLowerCase().split(/\s+/);
+  return parts
+    .map((part) =>
+      part
+        .split("")
+        .map((ch) => cyrillicMap[ch] ?? ch)
+        .join("")
+    )
+    .slice(0, 2) // first two words (surname + first name)
+    .join(".");
+}
+
+// Generate random 12-char password: lowercase + uppercase + digits
+function generateRandomPassword(): string {
+  const lowercase = "abcdefghijklmnopqrstuvwxyz";
+  const uppercase = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
+  const digits = "0123456789";
+  const all = lowercase + uppercase + digits;
+  const chars: string[] = [];
+  // Ensure at least one of each category
+  chars.push(lowercase[Math.floor(Math.random() * lowercase.length)]);
+  chars.push(uppercase[Math.floor(Math.random() * uppercase.length)]);
+  chars.push(digits[Math.floor(Math.random() * digits.length)]);
+  for (let i = 3; i < 12; i++) {
+    chars.push(all[Math.floor(Math.random() * all.length)]);
+  }
+  // Shuffle
+  for (let i = chars.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [chars[i], chars[j]] = [chars[j], chars[i]];
+  }
+  return chars.join("");
+}
+
+// Find a unique email for the new user
+async function findUniqueEmail(baseName: string): Promise<string> {
+  let candidate = `${baseName}@vshz.ru`;
+  let attempts = 0;
+  while (true) {
+    const existing = await prisma.user.findUnique({ where: { email: candidate } });
+    if (!existing) return candidate;
+    attempts++;
+    candidate = `${baseName}${attempts}@vshz.ru`;
+    if (attempts > 100) {
+      // Fallback: use a random suffix
+      candidate = `${baseName}${Date.now()}@vshz.ru`;
+      return candidate;
+    }
+  }
+}
 
 export async function GET(req: NextRequest) {
   const authResult = await authMiddleware(req);
@@ -110,7 +173,37 @@ export async function POST(req: NextRequest) {
       },
     });
 
-    return NextResponse.json(employee, { status: 201 });
+    // Auto-create a contractor_employee User account
+    const emailLocalPart = transliterateName(employeeData.fullName);
+    const email = await findUniqueEmail(emailLocalPart);
+    const plainPassword = generateRandomPassword();
+    const passwordHash = await hashPassword(plainPassword);
+
+    await prisma.user.create({
+      data: {
+        email,
+        passwordHash,
+        fullName: employeeData.fullName,
+        role: "contractor_employee",
+        organizationId,
+        employeeId: employee.id,
+        temporaryPassword: plainPassword,
+        mustChangePwd: true,
+        isActive: true,
+      },
+    });
+
+    return NextResponse.json(
+      {
+        id: employee.id,
+        fullName: employee.fullName,
+        loginCredentials: {
+          email,
+          password: plainPassword,
+        },
+      },
+      { status: 201 }
+    );
   } catch (err) {
     console.error("Create employee error:", err);
     return NextResponse.json({ error: "Internal server error" }, { status: 500 });

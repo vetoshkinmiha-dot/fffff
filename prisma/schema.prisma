@@ -4,7 +4,7 @@ generator client {
 }
 
 datasource db {
-  provider = "sqlite"
+  provider = "postgresql"
 }
 
 // ════════════════════════════════════════════════════════════════
@@ -63,9 +63,7 @@ enum PermitWorkCategory {
 
 /// Статус наряда-допуска
 enum PermitStatus {
-  draft            /// Черновик
   pending_approval /// На согласовании
-  approved         /// Согласован
   active           /// Действует
   early_closed     /// Закрыт досрочно
   closed           /// Закрыт по истечению срока
@@ -85,6 +83,13 @@ enum ViolationStatus {
   pending    /// Ожидает
   resolved   /// Устранено
   escalated  /// Эскалировано
+}
+
+/// Статус жалобы подрядчика
+enum ViolationComplaintStatus {
+  pending    /// Ожидает
+  resolved   /// Рассмотрено
+  rejected   /// Отклонено
 }
 
 /// Статус чек-листа проверки
@@ -165,12 +170,19 @@ model User {
   createdRegDocuments       RegDocument[]       @relation("RegDocCreator")
   notificationSubscriptions NotificationSubscription[] @relation("NotificationSubscriber")
   notifications             Notification[]      @relation("UserNotifications")
+  createdComplaints         ViolationComplaint[] @relation("ComplaintCreator")
+  resolvedComplaints        ViolationComplaint[] @relation("ComplaintResolver")
+
+  employeeId     String?   @unique @map("employee_id") /// Привязка к сотруднику (для contractor_employee)
+  temporaryPassword String? @map("temporary_password") /// Временный пароль (показывается только при создании)
+
+  employee       Employee? @relation(fields: [employeeId], references: [id], onDelete: SetNull)
+  refreshTokens RefreshToken[]
 
   @@index([organizationId])
   @@index([department])
+  @@index([employeeId])
   @@map("user")
-
-  refreshTokens RefreshToken[]
 }
 
 // ════════════════════════════════════════════════════════════════
@@ -221,6 +233,7 @@ model Employee {
   updatedAt           DateTime  @updatedAt @map("updated_at")
 
   organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  user         User?
   workClasses  EmployeeWorkClass[]
   documents    EmployeeDocument[]
   approvals    ApprovalRequest[]
@@ -317,7 +330,7 @@ model Permit {
   responsiblePerson String             @map("responsible_person") /// Ответственное лицо
   openDate          DateTime           @map("open_date") /// Дата открытия
   expiryDate        DateTime           @map("expiry_date") /// Дата окончания срока
-  status            PermitStatus       @default(draft)
+  status            PermitStatus       @default(active)
   closeReason       String?            @map("close_reason") /// Причина досрочного закрытия
   closedAt          DateTime?          @map("closed_at") /// Дата закрытия
   sequentialNumber  Int                @default(0) @map("sequential_number") /// Порядковый номер у подрядчика
@@ -368,6 +381,7 @@ model Violation {
   department        String           /// Департамент на кого оформлен (hse, curator, procurement)
   createdById       String            @map("created_by_id") /// Кто зафиксировал
   photoUrl          String?           @map("photo_url") /// Фото нарушения
+  contractorComment String?           @map("contractor_comment") /// Комментарий подрядчика для админа
   resolvedAt        DateTime?         @map("resolved_at") /// Дата устранения
   resolutionNotes   String?           @map("resolution_notes") /// Примечания по устранению
   sequentialNumber  Int                @default(0) @map("sequential_number") /// Порядковый номер для атомарной нумерации
@@ -385,18 +399,28 @@ model Violation {
   @@map("violation")
 }
 
-/// Жалобы подрядчиков на акты о нарушениях
+/// Жалобы подрядчиков — свободные (не привязаны к конкретному акту)
 model ViolationComplaint {
-  id             String   @id @default(uuid())
-  violationId    String   @map("violation_id") /// ID нарушения
-  complaintText  String   @map("complaint_text") /// Текст жалобы
-  department     String   /// Департамент, на который направлена жалоба
-  createdAt      DateTime @default(now()) @map("created_at")
+  id             String             @id @default(uuid())
+  contractorId   String             @map("contractor_id") /// Подрядная организация
+  complaintText  String             @map("complaint_text") /// Текст жалобы
+  department     String             /// Департамент (hse, curator, procurement, quality, legal, finance, hr_department)
+  violationId    String?            @map("violation_id") /// Привязка к акту (опционально)
+  status         ViolationComplaintStatus @default(pending)
+  resolutionNotes String?           @map("resolution_notes") /// Примечания админа
+  createdBy      User               @relation("ComplaintCreator", fields: [createdById], references: [id])
+  createdById    String             @map("created_by_id")
+  resolvedBy     User?              @relation("ComplaintResolver", fields: [resolvedById], references: [id])
+  resolvedById   String?            @map("resolved_by_id")
+  createdAt      DateTime           @default(now()) @map("created_at")
+  resolvedAt     DateTime?          @map("resolved_at")
+  updatedAt      DateTime           @updatedAt @map("updated_at")
 
-  violation Violation @relation("ViolationComplaints", fields: [violationId], references: [id], onDelete: Cascade)
+  violation      Violation?         @relation("ViolationComplaints", fields: [violationId], references: [id], onDelete: SetNull)
 
-  @@index([violationId])
+  @@index([contractorId])
   @@index([department])
+  @@index([status])
   @@map("violation_complaint")
 }
 

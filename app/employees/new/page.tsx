@@ -3,7 +3,7 @@
 import { Suspense, useState, FormEvent, useEffect } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
-import { ArrowLeft, Loader2, AlertCircle, Plus, X } from "lucide-react";
+import { ArrowLeft, Loader2, AlertCircle, Plus, X, CheckCircle, Download } from "lucide-react";
 import type { Contractor } from "@/app/types";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -43,6 +43,12 @@ function NewEmployeeForm() {
   const [newWorkClass, setNewWorkClass] = useState("");
   const [photoFile, setPhotoFile] = useState<File | null>(null);
   const [photoPreview, setPhotoPreview] = useState<string | null>(null);
+  const [createdEmployee, setCreatedEmployee] = useState<{
+    id: string;
+    fullName: string;
+    email: string;
+    password: string;
+  } | null>(null);
 
   const [authorized, setAuthorized] = useState<boolean | null>(null);
 
@@ -51,7 +57,7 @@ function NewEmployeeForm() {
       .then((r) => (r.ok ? r.json() : null))
       .then((data) => {
         const role = data?.user?.role;
-        if (role === "admin" || role === "contractor_employee") {
+        if (role === "admin" || role === "contractor_admin" || role === "contractor_employee") {
           setAuthorized(true);
         } else {
           setAuthorized(false);
@@ -138,7 +144,17 @@ function NewEmployeeForm() {
         }
       }
 
-      router.push(`/employees/${data.id}`);
+      // Show credentials instead of redirecting
+      if (data.loginCredentials) {
+        setCreatedEmployee({
+          id: data.id,
+          fullName: data.fullName,
+          email: data.loginCredentials.email,
+          password: data.loginCredentials.password,
+        });
+      } else {
+        router.push(`/employees/${data.id}`);
+      }
     } catch {
       setError("Произошла ошибка. Попробуйте ещё раз.");
     } finally {
@@ -187,6 +203,8 @@ function NewEmployeeForm() {
         </div>
       </div>
 
+      {/* Show form only if no employee has been created yet in this session */}
+      {!createdEmployee && (
       <form
         onSubmit={handleSubmit}
         className="rounded-xl border border-zinc-200 bg-white p-6 space-y-5"
@@ -203,9 +221,10 @@ function NewEmployeeForm() {
           <Select
             value={form.contractorId}
             onValueChange={(v) => setForm((prev) => ({ ...prev, contractorId: v ?? "" }))}
+            itemToStringLabel={(v) => contractors.find((c) => c.id === v)?.name ?? v}
           >
             <SelectTrigger className={fieldErrors.contractorId ? "border-red-300" : ""}>
-              <SelectValue placeholder="Выберите подрядчика" />
+              <SelectValue placeholder="Выберите подрядчика">{(v) => contractors.find((c) => c.id === v)?.name ?? v ?? "Выберите подрядчика"}</SelectValue>
             </SelectTrigger>
             <SelectContent>
               {contractors.map((c) => (
@@ -413,6 +432,56 @@ function NewEmployeeForm() {
           </Button>
         </div>
       </form>
+      )}
+
+      {/* Success — credentials card */}
+      {createdEmployee && (
+        <div className="rounded-xl border border-green-200 bg-green-50 p-6 space-y-4">
+          <div className="flex items-center gap-2 text-green-800">
+            <CheckCircle className="h-5 w-5" />
+            <span className="font-semibold">
+              Сотрудник {createdEmployee.fullName} успешно добавлен
+            </span>
+          </div>
+
+          <div className="rounded-lg bg-white border border-green-200 p-4 space-y-2 text-sm">
+            <p><span className="text-zinc-600">Логин (email):</span> <code className="bg-zinc-100 px-1.5 py-0.5 rounded">{createdEmployee.email}</code></p>
+            <p><span className="text-zinc-600">Пароль:</span> <code className="bg-zinc-100 px-1.5 py-0.5 rounded">{createdEmployee.password}</code></p>
+            <p className="text-xs text-amber-700">Сотрудник должен сменить пароль при первом входе.</p>
+          </div>
+
+          <div className="flex gap-2">
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={() => {
+                const text = `Сотрудник: ${createdEmployee.fullName}\nЛогин: ${createdEmployee.email}\nПароль: ${createdEmployee.password}\n`;
+                const blob = new Blob([text], { type: "text/plain" });
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement("a");
+                a.href = url;
+                a.download = `credentials-${createdEmployee.fullName.replace(/\s+/g, "-")}.txt`;
+                a.click();
+                URL.revokeObjectURL(url);
+              }}
+            >
+              <Download className="h-4 w-4 mr-1" />
+              Скачать .txt
+            </Button>
+            <Button
+              type="button"
+              size="sm"
+              onClick={() => {
+                setCreatedEmployee(null);
+                router.push(`/employees/${createdEmployee.id}`);
+              }}
+            >
+              Перейти к сотруднику
+            </Button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
