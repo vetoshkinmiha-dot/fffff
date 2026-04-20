@@ -302,8 +302,8 @@ export default function EmployeeDetailPage({
         setEditOwnError(data.error || "Ошибка при сохранении");
         return;
       }
-      const updated = await res.json();
-      setEmployee(updated);
+      const empRes = await fetch(`/api/employees/${id}`, { credentials: "include" });
+      if (empRes.ok) setEmployee(await empRes.json());
       setEditingOwn(false);
     } catch {
       setEditOwnError("Произошла ошибка. Попробуйте ещё раз.");
@@ -376,8 +376,8 @@ export default function EmployeeDetailPage({
         setAdminEditError(data.error || "Ошибка при сохранении");
         return;
       }
-      const updated = await res.json();
-      setEmployee(updated);
+      const empRes = await fetch(`/api/employees/${id}`, { credentials: "include" });
+      if (empRes.ok) setEmployee(await empRes.json());
       setAdminEditOpen(false);
     } catch {
       setAdminEditError("Произошла ошибка. Попробуйте ещё раз.");
@@ -482,13 +482,14 @@ export default function EmployeeDetailPage({
     .map((n) => n[0])
     .join("");
 
-  const approvedCount = employee.approvals.filter(
+  const approvals = employee.approvals ?? [];
+  const approvedCount = approvals.filter(
     (a) => a.status === "approved"
   ).length;
-  const totalStages = employee.approvals.length;
+  const totalStages = approvals.length;
 
   // Departments that already have an approval request (any status)
-  const requestedDeptKeys = new Set(employee.approvals.map((a) => a.department));
+  const requestedDeptKeys = new Set(approvals.map((a) => a.department));
   const remainingDepts = DEPARTMENTS.filter((d) => !requestedDeptKeys.has(d.key));
   const allRequested = remainingDepts.length === 0;
 
@@ -782,8 +783,8 @@ export default function EmployeeDetailPage({
         </CardHeader>
         <CardContent>
           <div className="space-y-0">
-            {employee.approvals.map((approval, index) => {
-              const isLast = index === employee.approvals.length - 1;
+            {approvals.map((approval, index) => {
+              const isLast = index === approvals.length - 1;
               const connectorColor =
                 approval.status === "approved"
                   ? "bg-green-400"
@@ -852,7 +853,7 @@ export default function EmployeeDetailPage({
                 </div>
               );
             })}
-            {employee.approvals.length === 0 && (
+            {approvals.length === 0 && (
               <p className="text-sm text-zinc-500 text-center py-4">
                 Согласование не инициировано
               </p>
