@@ -246,8 +246,8 @@ export default function EmployeesPage() {
         </Select>
       </div>
 
-      {/* Bulk action bar */}
-      {selectedIds.size > 0 && (
+      {/* Bulk action bar — only admin, department_approver, contractor_admin can export CSV */}
+      {selectedIds.size > 0 && (userRole === "admin" || userRole === "department_approver" || userRole === "contractor_admin") && (
         <div className="flex items-center gap-3 rounded-lg border border-blue-200 bg-blue-50 px-4 py-3">
           <span className="text-sm font-medium text-blue-700">Выбрано: {selectedIds.size}</span>
           <Button variant="outline" size="sm" onClick={exportCSV}>

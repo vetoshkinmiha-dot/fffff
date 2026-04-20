@@ -21,11 +21,9 @@ export async function GET(req: NextRequest) {
     where.organizationId = orgFilter;
   }
 
-  // contractor_admin sees all employees in their org; contractor_employee only their own
-  if (authResult.user.role === "contractor_employee" && authResult.user.employeeId) {
-    where.id = authResult.user.employeeId;
-  } else if (
-    (authResult.user.role === "contractor_admin") && authResult.user.organizationId
+  // Both contractor roles see all employees in their org
+  if (
+    (authResult.user.role === "contractor_employee" || authResult.user.role === "contractor_admin") && authResult.user.organizationId
   ) {
     where.organizationId = authResult.user.organizationId;
   }
