@@ -85,8 +85,11 @@ export async function DELETE(
   // Remove file from disk (only if local)
   if (!doc.fileUrl.startsWith("http")) {
     try {
-      const filePath = path.join(process.cwd(), doc.fileUrl);
-      await unlink(filePath);
+      const uploadsDir = path.join(process.cwd(), "public/uploads");
+      const filePath = path.normalize(path.join(process.cwd(), doc.fileUrl));
+      if (filePath.startsWith(uploadsDir)) {
+        await unlink(filePath);
+      }
     } catch {
       // File may not exist
     }

@@ -36,13 +36,22 @@ export async function uploadFile(file: File, subDir: string): Promise<string> {
   return path.posix.join("/uploads", subDir, fileName);
 }
 
+function resolveUploadPath(url: string): string {
+  const uploadsDir = path.join(process.cwd(), "public/uploads");
+  const fullPath = path.normalize(path.join(uploadsDir, path.relative(uploadsDir, path.join(process.cwd(), url))));
+  if (!fullPath.startsWith(uploadsDir)) {
+    throw new Error("Invalid file path: path traversal detected");
+  }
+  return fullPath;
+}
+
 export async function deleteFile(url: string): Promise<void> {
   if (process.env.NODE_ENV === "production" && !s3Client) {
     throw new Error("S3 storage is required in production but is not configured");
   }
 
   try {
-    const fullPath = path.join(process.cwd(), url);
+    const fullPath = resolveUploadPath(url);
     await unlink(fullPath);
   } catch {
     // File may not exist, ignoring
@@ -54,6 +63,6 @@ export async function getFile(url: string): Promise<Buffer> {
     throw new Error("S3 storage is required in production but is not configured");
   }
 
-  const fullPath = path.join(process.cwd(), url);
+  const fullPath = resolveUploadPath(url);
   return readFile(fullPath);
 }

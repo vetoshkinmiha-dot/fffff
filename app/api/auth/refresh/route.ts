@@ -27,7 +27,17 @@ export async function POST(req: NextRequest) {
 
   // Rotate: revoke old token, issue new one
   await revokeRefreshToken(refreshToken);
-  const { token: newRefresh, expiresAt } = await generateRefreshToken(user.id);
+  const { token: newRefresh } = await generateRefreshToken(user.id);
+
+  // Resolve employeeId for contractor_employee users
+  let employeeId: string | null = null;
+  if (user.role === "contractor_employee" && user.organizationId) {
+    const employee = await prisma.employee.findFirst({
+      where: { organizationId: user.organizationId },
+      select: { id: true },
+    });
+    employeeId = employee?.id ?? null;
+  }
 
   const payload: Parameters<typeof generateAccessToken>[0] = {
     userId: user.id,
@@ -36,7 +46,8 @@ export async function POST(req: NextRequest) {
     role: user.role,
     organizationId: user.organizationId,
     department: user.department,
-    employeeId: null,
+    employeeId,
+    mustChangePwd: user.mustChangePwd,
   };
   const newAccess = generateAccessToken(payload);
 

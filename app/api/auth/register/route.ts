@@ -55,6 +55,7 @@ export async function POST(req: NextRequest) {
       organizationId: user.organizationId,
       department: user.department,
       employeeId: null,
+      mustChangePwd: user.mustChangePwd,
     };
 
     const token = generateAccessToken(payload);

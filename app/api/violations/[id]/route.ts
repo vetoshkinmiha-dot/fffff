@@ -47,15 +47,28 @@ export async function PATCH(
   const authResult = await authMiddleware(req);
   if (authResult instanceof NextResponse) return authResult;
 
-  if (!isAuthorizedForViolations(authResult.user.role)) {
-    return NextResponse.json({ error: "Forbidden" }, { status: 403 });
-  }
-
   const { id } = await params;
 
   const violation = await prisma.violation.findUnique({ where: { id } });
   if (!violation) {
     return NextResponse.json({ error: "Violation not found" }, { status: 404 });
+  }
+
+  // Admin, department_approver, or the creator (employee) can edit
+  if (authResult.user.role === "admin") {
+    // admin can edit any
+  } else if (authResult.user.role === "department_approver") {
+    // department_approver can only edit their own violations
+    if (violation.createdById !== authResult.user.userId) {
+      return NextResponse.json({ error: "Forbidden: can only edit your own violations" }, { status: 403 });
+    }
+  } else if (authResult.user.role === "employee") {
+    // employee can only edit their own violations
+    if (violation.createdById !== authResult.user.userId) {
+      return NextResponse.json({ error: "Forbidden: can only edit your own violations" }, { status: 403 });
+    }
+  } else {
+    return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
 
   try {

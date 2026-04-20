@@ -53,6 +53,12 @@ export async function middleware(request: NextRequest) {
     return NextResponse.next();
   }
 
+  // Check mustChangePwd — enforce password change on first login
+  if (payload.mustChangePwd && pathname !== "/change-password" && pathname !== "/api/auth/change-password") {
+    const changePwdUrl = new URL("/change-password", request.url);
+    return NextResponse.redirect(changePwdUrl);
+  }
+
   // Check role-based access
   const allowedPatterns = ROLE_ROUTES[payload.role] || [];
 
