@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react";
 import { notFound, useParams } from "next/navigation";
 import Link from "next/link";
-import { ArrowLeft, CheckCircle2, Clock, XCircle, Printer, Archive, Loader2 } from "lucide-react";
+import { ArrowLeft, CheckCircle2, Clock, Lock, XCircle, Printer, Archive, Loader2, Pencil } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
@@ -208,6 +208,8 @@ export default function PermitDetailPage() {
         return <Badge variant="destructive">Отклонено</Badge>;
       case "pending":
         return <Badge variant="secondary" className="bg-amber-100 text-amber-800 border-amber-200">Ожидает</Badge>;
+      case "blocked":
+        return <Badge variant="secondary" className="bg-zinc-200 text-zinc-500 border-zinc-300">Заблокирован</Badge>;
       default:
         return null;
     }
@@ -224,7 +226,15 @@ export default function PermitDetailPage() {
           </Button>
         </Link>
         <div className="flex-1" />
-        {(permit.status === "active" || permit.status === "approved") && (userRole === "admin" || userRole === "contractor_employee") && (
+        {(permit.status === "active" || permit.status === "approved" || permit.status === "draft" || permit.status === "pending_approval") && (userRole === "admin" || userRole === "contractor_admin") && (
+          <Link href={`/permits/${permit.id}/edit`}>
+            <Button variant="outline" className="gap-2">
+              <Pencil className="h-4 w-4" />
+              Редактировать
+            </Button>
+          </Link>
+        )}
+        {(permit.status === "active" || permit.status === "approved") && (userRole === "admin" || userRole === "contractor_admin") && (
           <Button
             variant="outline"
             className="gap-2"
@@ -322,19 +332,21 @@ export default function PermitDetailPage() {
                           "flex h-8 w-8 shrink-0 items-center justify-center rounded-full border-2",
                           approval.status === "approved" && "border-green-500 bg-green-500 text-white",
                           approval.status === "rejected" && "border-red-500 bg-red-500 text-white",
-                          approval.status === "pending" && "border-zinc-300 bg-zinc-100 text-zinc-400"
+                          approval.status === "pending" && "border-zinc-300 bg-zinc-100 text-zinc-400",
+                          approval.status === "blocked" && "border-zinc-300 bg-zinc-100 text-zinc-300"
                         )}
                       >
                         {approval.status === "approved" && <CheckCircle2 className="h-5 w-5" />}
                         {approval.status === "rejected" && <XCircle className="h-5 w-5" />}
                         {approval.status === "pending" && <Clock className="h-4 w-4" />}
+                        {approval.status === "blocked" && <Lock className="h-4 w-4" />}
                       </div>
                       {!isLast && <div className={cn("w-0.5 flex-1 min-h-[32px]", connectorColor)} />}
                     </div>
                     <div className={cn("pb-8 flex-1", isLast && "pb-0")}>
                       <div className="flex items-start justify-between gap-2">
                         <div>
-                          <p className="text-sm font-medium text-zinc-900">
+                          <p className={cn("text-sm font-medium", approval.status === "blocked" ? "text-zinc-400" : "text-zinc-900")}>
                             {DEPARTMENT_NAMES[approval.department] ?? approval.department}
                           </p>
                           {approval.comment && (
@@ -344,7 +356,7 @@ export default function PermitDetailPage() {
                         <div className="flex shrink-0 items-center gap-3 text-sm text-zinc-500">
                           <span>Срок: {formatDate(approval.deadline)}</span>
                           {getApprovalBadge(approval.status)}
-                          {approval.status === "pending" && (
+                          {approval.status === "pending" && (userRole === "admin" || userRole === "department_approver") && (
                             <div className="flex gap-1 ml-2">
                               <Button
                                 variant="outline"

@@ -102,6 +102,10 @@ export default function ChecklistsPage() {
 
   useEffect(() => {
     fetchChecklists();
+  }, [fetchChecklists]);
+
+  // Auth fetch once on mount
+  useEffect(() => {
     fetch("/api/auth/me", { credentials: "include" })
       .then((r) => (r.ok ? r.json() : null))
       .then((data) => {
@@ -109,7 +113,7 @@ export default function ChecklistsPage() {
         if (data?.user?.organizationId) setUserOrgId(data.user.organizationId);
       })
       .catch(() => {});
-  }, [fetchChecklists]);
+  }, []);
 
   async function fetchStats() {
     if (!userOrgId) return;

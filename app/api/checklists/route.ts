@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { authMiddleware } from "@/lib/api-middleware";
 import { createChecklistSchema, paginationSchema } from "@/lib/validations";
+import { notifyOrganizationContractors } from "@/lib/notifications";
 
 export async function GET(req: NextRequest) {
   const authResult = await authMiddleware(req);
@@ -23,8 +24,10 @@ export async function GET(req: NextRequest) {
     if (dateTo) where.date.lte = new Date(dateTo);
   }
 
-  // Contractor employees only see their own org's checklists
-  if (authResult.user.role === "contractor_employee" && authResult.user.organizationId) {
+  // Contractor roles only see their own org's checklists
+  if (
+    (authResult.user.role === "contractor_employee" || authResult.user.role === "contractor_admin") && authResult.user.organizationId
+  ) {
     where.contractorId = authResult.user.organizationId;
   }
 
@@ -98,6 +101,16 @@ export async function POST(req: NextRequest) {
         items: true,
       },
     });
+
+    // Send notification to contractor organization users (if contractorId is set)
+    if (checklist.contractorId) {
+      await notifyOrganizationContractors(checklist.contractorId, {
+        type: "checklist_assigned",
+        title: "Назначен чек-лист",
+        message: `Создан новый чек-лист проверки для вашей организации`,
+        link: `/checklists/${checklist.id}`,
+      });
+    }
 
     return NextResponse.json(checklist, { status: 201 });
   } catch (err) {

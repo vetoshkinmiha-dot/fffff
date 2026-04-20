@@ -159,6 +159,11 @@ export default function DocumentsPage() {
     fetchDocuments();
   }, [page, search, selectedSection]);
 
+  // Reset page when search or section filter changes
+  useEffect(() => {
+    setPage(1);
+  }, [search, selectedSection]);
+
   const refreshDocuments = async () => {
     await fetchDocuments();
   };
@@ -618,7 +623,7 @@ export default function DocumentsPage() {
               <Label>Раздел *</Label>
               <Select value={uploadSection} onValueChange={(v) => { if (v !== null) setUploadSection(v); }} itemToStringLabel={(v) => sections.find((s) => s.id === v)?.name ?? v}>
                 <SelectTrigger>
-                  <SelectValue placeholder="Выберите раздел">{(v: string) => sections.find((s) => s.id === v)?.name ?? v ?? "Выберите раздел"}</SelectValue>
+                  <SelectValue placeholder="Выберите раздел">{(v: string) => v ? (sections.find((s) => s.id === v)?.name ?? v) : "Выберите раздел"}</SelectValue>
                 </SelectTrigger>
                 <SelectContent>
                   {sections.filter((s) => s.parentId === null).map((s) => (
@@ -705,7 +710,7 @@ export default function DocumentsPage() {
               <Label>Раздел *</Label>
               <Select value={editSection} onValueChange={(v) => { if (v !== null) setEditSection(v); }} itemToStringLabel={(v) => sections.find((s) => s.id === v)?.name ?? v}>
                 <SelectTrigger>
-                  <SelectValue placeholder="Выберите раздел">{(v: string) => sections.find((s) => s.id === v)?.name ?? v ?? "Выберите раздел"}</SelectValue>
+                  <SelectValue placeholder="Выберите раздел">{(v: string) => v ? (sections.find((s) => s.id === v)?.name ?? v) : "Выберите раздел"}</SelectValue>
                 </SelectTrigger>
                 <SelectContent>
                   {sections.filter((s) => s.parentId === null).map((s) => (

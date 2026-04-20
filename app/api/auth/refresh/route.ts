@@ -29,13 +29,14 @@ export async function POST(req: NextRequest) {
   await revokeRefreshToken(refreshToken);
   const { token: newRefresh, expiresAt } = await generateRefreshToken(user.id);
 
-  const payload = {
+  const payload: Parameters<typeof generateAccessToken>[0] = {
     userId: user.id,
     email: user.email,
     fullName: user.fullName,
     role: user.role,
     organizationId: user.organizationId,
     department: user.department,
+    employeeId: null,
   };
   const newAccess = generateAccessToken(payload);
 

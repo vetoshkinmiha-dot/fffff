@@ -9,6 +9,7 @@ export interface AuthenticatedUser {
   role: string;
   organizationId: string | null;
   department: string | null;
+  employeeId: string | null;
 }
 
 export interface AuthResult {
@@ -75,6 +76,7 @@ export async function authMiddleware(req: NextRequest): Promise<AuthResult | Nex
       role: user.role,
       organizationId: user.organizationId,
       department: user.department,
+      employeeId: payload.employeeId ?? null,
     },
   };
 }

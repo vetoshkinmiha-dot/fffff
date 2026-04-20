@@ -1,23 +1,19 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { authMiddleware } from "@/lib/api-middleware";
-import { writeFile, mkdir } from "fs/promises";
-import { existsSync } from "fs";
-import path from "path";
-import { readFileSync } from "fs";
-
-const UPLOAD_DIR = path.join(process.cwd(), "data", "uploads", "employees");
+import { uploadFile, deleteFile, getFile } from "@/lib/file-storage";
 
 function isAdminRole(role: string): boolean {
   return role === "admin";
 }
 
 async function checkEmployeeAccess(authResult: any, employee: { organizationId: string }) {
-  if (authResult.user.role === "contractor_employee") {
+  const role = authResult.user.role;
+  if (role === "contractor_admin" || role === "contractor_employee") {
     if (employee.organizationId !== authResult.user.organizationId) {
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }
-  } else if (!isAdminRole(authResult.user.role)) {
+  } else if (!isAdminRole(role)) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
   return null;
@@ -62,27 +58,12 @@ export async function POST(
       return NextResponse.json({ error: "File too large (max 2MB)" }, { status: 400 });
     }
 
-    const ext = file.type === "image/png" ? "png" : "jpg";
-    const photoDir = path.join(UPLOAD_DIR, id);
-    await mkdir(photoDir, { recursive: true });
-
     // Remove old photo if exists
     if (employee.photoUrl) {
-      const oldPath = path.join(process.cwd(), employee.photoUrl);
-      try {
-        const { unlink } = await import("fs/promises");
-        await unlink(oldPath);
-      } catch {
-        // Ignore
-      }
+      await deleteFile(employee.photoUrl);
     }
 
-    const fileName = `photo.${ext}`;
-    const filePath = path.join(photoDir, fileName);
-    const buffer = Buffer.from(await file.arrayBuffer());
-    await writeFile(filePath, buffer);
-
-    const photoUrl = `/data/uploads/employees/${id}/${fileName}`;
+    const photoUrl = await uploadFile(file, `employees/${id}`);
 
     await prisma.employee.update({
       where: { id },
@@ -116,19 +97,18 @@ export async function GET(
   const accessError = await checkEmployeeAccess(authResult, employee);
   if (accessError) return accessError;
 
-  const filePath = path.join(process.cwd(), employee.photoUrl);
-  if (!existsSync(filePath)) {
+  try {
+    const buffer = await getFile(employee.photoUrl);
+    const ext = employee.photoUrl.split(".").pop() || "jpeg";
+    const contentType = ext === "png" ? "image/png" : "image/jpeg";
+
+    return new NextResponse(new Uint8Array(buffer), {
+      headers: {
+        "Content-Type": contentType,
+        "Cache-Control": "public, max-age=3600",
+      },
+    });
+  } catch {
     return NextResponse.json({ error: "Photo file not found" }, { status: 404 });
   }
-
-  const ext = path.extname(filePath).toLowerCase();
-  const contentType = ext === ".png" ? "image/png" : "image/jpeg";
-  const buffer = readFileSync(filePath);
-
-  return new NextResponse(buffer, {
-    headers: {
-      "Content-Type": contentType,
-      "Cache-Control": "public, max-age=3600",
-    },
-  });
 }

@@ -75,14 +75,16 @@ export async function notifyOrganizationContractors(
     select: { id: true },
   });
 
-  for (const u of users) {
-    await createNotification({
+  if (users.length === 0) return 0;
+
+  await prisma.notification.createMany({
+    data: users.map((u) => ({
       userId: u.id,
       type: options.type,
       title: options.title,
       message: options.message,
       link: options.link,
-    });
-  }
+    })),
+  });
   return users.length;
 }

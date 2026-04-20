@@ -83,13 +83,12 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: validation.error.issues[0].message }, { status: 400 });
     }
 
-    let violationNumber: string;
     const violation = await prisma.$transaction(async (tx) => {
       const maxSeq = await tx.violation.aggregate({
         _max: { sequentialNumber: true },
       });
       const nextSeq = (maxSeq._max.sequentialNumber ?? 0) + 1;
-      violationNumber = `VIO-${String(nextSeq).padStart(5, "0")}`;
+      const violationNumber = `VIO-${String(nextSeq).padStart(5, "0")}`;
 
       return tx.violation.create({
         data: {
@@ -108,9 +107,9 @@ export async function POST(req: NextRequest) {
 
     // Notify admin users about the new violation
     await createNotificationsForRole("admin", {
-      type: "complaint_submitted",
+      type: "violation_created",
       title: "Новое нарушение",
-      message: `Создан акт ${violationNumber}`,
+      message: `Создан акт ${violation.violationNumber}`,
       link: `/violations/${violation.id}`,
     });
 
@@ -118,7 +117,7 @@ export async function POST(req: NextRequest) {
     await notifyOrganizationContractors(violation.contractorId, {
       type: "violation_created",
       title: "Создан акт о нарушении",
-      message: `На вашу организацию создан акт ${violationNumber}`,
+      message: `На вашу организацию создан акт ${violation.violationNumber}`,
       link: `/violations/${violation.id}`,
     });
 

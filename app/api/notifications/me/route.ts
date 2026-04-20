@@ -39,7 +39,7 @@ export async function GET(req: NextRequest) {
         type: "approval_pending",
         title: "Новое согласование",
         message: `${approval.employee.fullName} — ${departmentLabel(approval.department)}`,
-        link: `/employees/${approval.employee.id}`,
+        link: `/approvals`,
         createdAt: approval.createdAt.toISOString(),
         read: false,
       });
@@ -47,7 +47,7 @@ export async function GET(req: NextRequest) {
   }
 
   // Contractor employee: expiring documents in their organization
-  if (user.role === "contractor_employee" && user.organizationId && user.organizationId) {
+  if (user.role === "contractor_employee" && user.organizationId) {
     const now = new Date();
     const threshold = new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000);
 
@@ -80,7 +80,38 @@ export async function GET(req: NextRequest) {
     }
   }
 
+  // Stored notifications from the database (checklist_assigned, approval_result, etc.)
+  const storedNotifications = await prisma.notification.findMany({
+    where: { userId: user.userId },
+    orderBy: { createdAt: "desc" },
+    take: 50,
+  });
+
+  for (const n of storedNotifications) {
+    notifications.push({
+      id: n.id,
+      type: n.type,
+      title: n.title,
+      message: n.message,
+      link: n.link ?? "",
+      createdAt: n.createdAt.toISOString(),
+      read: n.isRead,
+    });
+  }
+
   return NextResponse.json(notifications);
+}
+
+export async function POST(req: NextRequest) {
+  const authResult = await authMiddleware(req);
+  if (authResult instanceof NextResponse) return authResult;
+
+  await prisma.notification.updateMany({
+    where: { userId: authResult.user.userId, isRead: false },
+    data: { isRead: true },
+  });
+
+  return NextResponse.json({ success: true });
 }
 
 function departmentLabel(dept: string): string {

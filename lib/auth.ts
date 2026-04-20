@@ -15,6 +15,7 @@ export interface JWTPayload {
   role: string;
   organizationId: string | null;
   department: string | null;
+  employeeId: string | null;
 }
 
 export async function hashPassword(password: string): Promise<string> {
@@ -112,15 +113,12 @@ export function clearRefreshTokenCookie(res: Response) {
 }
 
 export function setAuthAndRefreshCookies(res: Response, authToken: string, refreshToken: string) {
-  res.headers.set(
-    "Set-Cookie",
-    [
-      `auth_token=${authToken}; HttpOnly; Path=/; Max-Age=900; SameSite=Strict; ${
-        process.env.NODE_ENV === "production" ? "Secure;" : ""
-      }`,
-      `refresh_token=${refreshToken}; HttpOnly; Path=/; Max-Age=604800; SameSite=Strict; ${
-        process.env.NODE_ENV === "production" ? "Secure;" : ""
-      }`,
-    ].join(", "),
-  );
+  const accessCookie = `auth_token=${authToken}; HttpOnly; Path=/; Max-Age=900; SameSite=Strict; ${
+    process.env.NODE_ENV === "production" ? "Secure;" : ""
+  }`;
+  const refreshCookie = `refresh_token=${refreshToken}; HttpOnly; Path=/; Max-Age=604800; SameSite=Strict; ${
+    process.env.NODE_ENV === "production" ? "Secure;" : ""
+  }`;
+  res.headers.append("Set-Cookie", accessCookie);
+  res.headers.append("Set-Cookie", refreshCookie);
 }

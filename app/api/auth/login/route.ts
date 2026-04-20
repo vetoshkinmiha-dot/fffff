@@ -73,6 +73,16 @@ export async function POST(req: NextRequest) {
     // Reset attempts on successful login
     loginAttempts.delete(key);
 
+    // Resolve employeeId for contractor_employee users
+    let employeeId: string | null = null;
+    if (user.role === "contractor_employee" && user.organizationId) {
+      const employee = await prisma.employee.findFirst({
+        where: { organizationId: user.organizationId },
+        select: { id: true },
+      });
+      employeeId = employee?.id ?? null;
+    }
+
     const payload: JWTPayload = {
       userId: user.id,
       email: user.email,
@@ -80,6 +90,7 @@ export async function POST(req: NextRequest) {
       role: user.role,
       organizationId: user.organizationId,
       department: user.department,
+      employeeId,
     };
 
     const token = generateAccessToken(payload);

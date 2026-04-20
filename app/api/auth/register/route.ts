@@ -54,6 +54,7 @@ export async function POST(req: NextRequest) {
       role: user.role,
       organizationId: user.organizationId,
       department: user.department,
+      employeeId: null,
     };
 
     const token = generateAccessToken(payload);

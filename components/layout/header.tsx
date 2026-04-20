@@ -1,13 +1,21 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Bell, LogOut, Search } from "lucide-react";
+import {
+  AlertTriangle,
+  Bell,
+  BookOpen,
+  CheckSquare,
+  ClipboardCheck,
+  FileText,
+  LogOut,
+  Search,
+} from "lucide-react";
 import { sanitize } from "@/lib/utils";
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
-  DropdownMenuLabel,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
@@ -25,6 +33,40 @@ interface Notification {
   message: string;
   link?: string;
   read: boolean;
+  type?: string;
+  created_at?: string;
+}
+
+function timeAgo(date: Date | string): string {
+  const now = new Date();
+  const then = typeof date === "string" ? new Date(date) : date;
+  const seconds = Math.floor((now.getTime() - then.getTime()) / 1000);
+
+  if (seconds < 60) return "только что";
+  const minutes = Math.floor(seconds / 60);
+  if (minutes < 60) return `${minutes} мин назад`;
+  const hours = Math.floor(minutes / 60);
+  if (hours < 24) {
+    const h = hours % 24;
+    return h === 1 ? "1 ч назад" : h < 5 ? `${h} ч назад` : `${h} ч назад`;
+  }
+  const days = Math.floor(hours / 24);
+  if (days === 1) return "вчера";
+  if (days < 5) return `${days} дн назад`;
+  return then.toLocaleDateString("ru-RU", { day: "numeric", month: "short" });
+}
+
+const typeIconMap: Record<string, React.ElementType> = {
+  approval_decision: ClipboardCheck,
+  new_document: BookOpen,
+  checklist_assigned: CheckSquare,
+  document_expiry: AlertTriangle,
+  permit_expiry: FileText,
+};
+
+function getTypeIcon(type?: string) {
+  const Icon = typeIconMap[type ?? ""] ?? Bell;
+  return <Icon className="h-4 w-4 shrink-0" />;
 }
 
 export default function Header() {
@@ -68,6 +110,7 @@ export default function Header() {
   const roleLabels: Record<string, string> = {
     admin: "Администратор",
     employee: "Сотрудник",
+    contractor_admin: "Ответственный подрядчика",
     contractor_employee: "Сотрудник подрядчика",
     department_approver: "Согласующий",
   };
@@ -93,30 +136,91 @@ export default function Header() {
               )}
             </span>
           </DropdownMenuTrigger>
-          <DropdownMenuContent align="end" className="w-72">
-            <div className="px-3 py-2 border-b border-zinc-100">
-              <p className="text-sm font-medium">Уведомления</p>
+          <DropdownMenuContent align="end" className="w-80 max-h-[28rem] overflow-y-auto">
+            <div className="sticky top-0 z-10 flex items-center justify-between bg-white px-3 py-2 border-b border-zinc-100">
+              <p className="text-sm font-semibold">Уведомления</p>
+              {unreadCount > 0 && (
+                <button
+                  type="button"
+                  className="text-xs text-blue-600 hover:text-blue-800 transition-colors cursor-pointer"
+                  onClick={async () => {
+                    await fetch("/api/notifications/me", {
+                      method: "POST",
+                      credentials: "include",
+                    });
+                    const r = await fetch("/api/notifications/me", { credentials: "include" });
+                    const data: Notification[] = r.ok ? await r.json() : [];
+                    setNotifications(data);
+                    setUnreadCount(data.filter((n) => !n.read).length);
+                  }}
+                >
+                  Прочитать все
+                </button>
+              )}
             </div>
             {notifications.length === 0 ? (
-              <div className="px-3 py-6 text-center text-sm text-zinc-400">
+              <div className="px-3 py-8 text-center text-sm text-zinc-400">
                 Нет уведомлений
               </div>
-            ) : (
-              notifications.map((n) => (
-                <DropdownMenuItem
-                  key={n.id}
-                  className={`cursor-pointer ${!n.read ? "bg-blue-50/50" : ""}`}
-                  onClick={() => { if (n.link) window.location.href = n.link; }}
-                >
-                  <div className="flex flex-col">
-                    <span className="text-sm font-medium">{n.title}</span>
-                    <span className="text-xs text-zinc-500 truncate">{n.message}</span>
+            ) : (() => {
+              const sorted = [...notifications].sort(
+                (a, b) => Number(a.read) - Number(b.read)
+              );
+              const read = sorted.filter((n) => n.read);
+              const items = sorted.slice(0, 10);
+              const lastUnreadIdx = items.reduce(
+                (max, n, i) => (!n.read ? i : max), -1
+              );
+
+              return items.map((n, idx) => {
+                const isLastUnread = idx === lastUnreadIdx;
+                const time = n.created_at ? timeAgo(n.created_at) : "";
+                return (
+                  <div key={n.id}>
+                    <DropdownMenuItem
+                      className="cursor-pointer flex items-start gap-3 px-3 py-2.5"
+                      onClick={() => { if (n.link) window.location.href = n.link; }}
+                    >
+                      <div className="mt-0.5 text-zinc-400">
+                        {getTypeIcon(n.type)}
+                      </div>
+                      <div className="min-w-0 flex-1">
+                        <div className="flex items-start gap-1.5">
+                          {!n.read && (
+                            <span className="mt-1.5 h-2 w-2 rounded-full bg-blue-500 shrink-0" />
+                          )}
+                          <span className={`text-sm leading-snug ${!n.read ? "font-semibold" : "font-normal"}`}>
+                            {sanitize(n.title)}
+                          </span>
+                        </div>
+                        <p className="text-xs text-zinc-500 mt-0.5 leading-snug line-clamp-2">
+                          {sanitize(n.message)}
+                        </p>
+                        {time && (
+                          <p className="text-[11px] text-zinc-400 mt-1">
+                            {time}
+                          </p>
+                        )}
+                      </div>
+                    </DropdownMenuItem>
+                    {isLastUnread && read.length > 0 && (
+                      <div className="px-3 py-1 border-t border-zinc-100">
+                        <span className="text-[11px] text-zinc-400 font-medium">Прочитанные</span>
+                      </div>
+                    )}
                   </div>
-                  {!n.read && (
-                    <span className="ml-auto h-2 w-2 rounded-full bg-blue-500 shrink-0" />
-                  )}
-                </DropdownMenuItem>
-              ))
+                );
+              });
+            })()}
+            {notifications.length > 10 && (
+              <div className="px-3 py-2 border-t border-zinc-100">
+                <a
+                  href="/notifications"
+                  className="text-xs text-blue-600 hover:text-blue-800 cursor-pointer"
+                >
+                  Посмотреть все
+                </a>
+              </div>
             )}
           </DropdownMenuContent>
         </DropdownMenu>
