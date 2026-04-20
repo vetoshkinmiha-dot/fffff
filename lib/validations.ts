@@ -7,7 +7,7 @@ function stripHtmlTags(value: string): string {
 // ─── Auth ──────────────────────────────────────────────────────
 export const loginSchema = z.object({
   email: z.string().email(),
-  password: z.string().min(6),
+  password: z.string().min(8),
 });
 
 export const registerSchema = z.object({
@@ -15,13 +15,13 @@ export const registerSchema = z.object({
   password: z.string().min(8).regex(/[A-Z]/, "Must contain uppercase letter").regex(/[0-9]/, "Must contain a number"),
   fullName: z.string().min(2).transform(stripHtmlTags),
   role: z.enum([
-    "admin", "employee", "contractor_employee", "department_approver",
+    "admin", "employee", "contractor_admin", "contractor_employee", "department_approver",
   ]),
-  organizationId: z.string().uuid().nullable().optional(),
+  organizationId: z.string().min(1).nullable().optional(),
   department: z.string().nullable().optional(),
+  employeeId: z.string().min(1).nullable().optional(),
 });
 
-// ─── Organization ──────────────────────────────────────────────
 export const createOrgSchema = z.object({
   name: z.string().min(1).transform(stripHtmlTags),
   inn: z.string().length(10).or(z.string().length(12)),
@@ -80,7 +80,7 @@ export const paginationSchema = z.object({
 // ─── Permit ────────────────────────────────────────────────────
 export const createPermitSchema = z.object({
   category: z.enum(["hot_work", "height_work", "confined_space", "electrical", "excavation", "other"]),
-  contractorId: z.string().uuid(),
+  contractorId: z.string().min(1),
   workSite: z.string().min(1).transform(stripHtmlTags),
   responsiblePerson: z.string().min(1).transform(stripHtmlTags),
   openDate: z.string().datetime(),
@@ -95,7 +95,7 @@ export const closePermitSchema = z.object({
 
 // ─── Violation ───────────────────────────────────────────────────
 export const createViolationSchema = z.object({
-  contractorId: z.string().uuid(),
+  contractorId: z.string().min(1),
   date: z.string().datetime(),
   description: z.string().min(1).transform(stripHtmlTags),
   severity: z.enum(["low", "medium", "high", "critical"]),
@@ -118,7 +118,8 @@ export const createViolationTemplateSchema = z.object({
 
 // ─── Checklist ───────────────────────────────────────────────────
 export const createChecklistSchema = z.object({
-  contractorId: z.string().uuid(),
+  contractorId: z.string().min(1),
+  inspectorId: z.string().min(1).optional(),
   inspectorName: z.string().min(1).transform(stripHtmlTags),
   date: z.string().datetime(),
   comments: z.string().optional(),
@@ -145,27 +146,34 @@ export const createSectionSchema = z.object({
   order: z.coerce.number().int().min(0).default(0),
 });
 
+export const updateSectionSchema = z.object({
+  name: z.string().min(1).transform(stripHtmlTags).optional(),
+  parentId: z.string().uuid().nullable().optional(),
+  order: z.coerce.number().int().min(0).optional(),
+});
+
 // ─── Admin Users ─────────────────────────────────────────────────
 export const createUserSchema = z.object({
   email: z.string().email(),
   password: z.string().min(8),
   fullName: z.string().min(1).transform(stripHtmlTags),
   role: z.enum([
-    "admin", "employee", "contractor_employee", "department_approver",
+    "admin", "employee", "contractor_admin", "contractor_employee", "department_approver",
   ]),
-  organizationId: z.string().uuid().nullable().optional(),
+  organizationId: z.string().min(1).nullable().optional(),
   department: z.string().nullable().optional(),
+  employeeId: z.string().min(1).nullable().optional(),
 });
 
 export const updateUserSchema = z.object({
   role: z.enum([
-    "admin", "employee", "contractor_employee", "department_approver",
+    "admin", "employee", "contractor_admin", "contractor_employee", "department_approver",
   ]).optional(),
   department: z.string().nullable().optional(),
-  organizationId: z.string().uuid().nullable().optional(),
+  organizationId: z.string().min(1).nullable().optional(),
   isActive: z.boolean().optional(),
 });
 
 export const resetPasswordSchema = z.object({
-  newPassword: z.string().min(8),
+  newPassword: z.string().min(8).regex(/[A-Z]/, "Must contain uppercase letter").regex(/[0-9]/, "Must contain a number"),
 });

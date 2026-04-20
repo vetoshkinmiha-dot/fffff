@@ -4,7 +4,7 @@ import { authMiddleware } from "@/lib/api-middleware";
 import { updateViolationSchema } from "@/lib/validations";
 
 function isAuthorizedForViolations(role: string): boolean {
-  return role === "admin";
+  return role === "admin" || role === "department_approver";
 }
 
 export async function GET(
@@ -20,7 +20,7 @@ export async function GET(
     where: { id },
     include: {
       contractor: { select: { name: true, sequentialNumber: true } },
-      createdBy: { select: { fullName: true } },
+      createdBy: { select: { fullName: true, id: true } },
     },
   });
 
@@ -29,7 +29,9 @@ export async function GET(
   }
 
   // Contractor scoping
-  if (authResult.user.role === "contractor_employee" && authResult.user.organizationId) {
+  if (
+    (authResult.user.role === "contractor_employee" || authResult.user.role === "contractor_admin") && authResult.user.organizationId
+  ) {
     if (violation.contractorId !== authResult.user.organizationId) {
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }

@@ -1,7 +1,10 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
-import { Plus, Search, Download, FileText, FileSpreadsheet, File, ChevronRight, ChevronDown, Upload, FolderPlus } from "lucide-react";
+import { useState, useEffect } from "react";
+import {
+  Plus, Search, Download, FileText, FileSpreadsheet, File, ChevronRight,
+  ChevronDown, Upload, FolderPlus, Pencil, Trash2, Loader2, Edit3
+} from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -21,7 +24,6 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { Loader2 } from "lucide-react";
 
 const typeConfig: Record<string, { variant: "destructive" | "default" | "outline"; icon: typeof FileText; label: string }> = {
   pdf: { variant: "destructive", icon: FileText, label: "PDF" },
@@ -58,7 +60,6 @@ function formatDate(dateStr: string) {
   });
 }
 
-// Build tree from flat sections
 function buildTree(sections: Section[]): Map<string, Section[]> {
   const tree = new Map<string, Section[]>();
   sections.forEach((s) => {
@@ -79,6 +80,11 @@ export default function DocumentsPage() {
   const [expandedSections, setExpandedSections] = useState<Set<string>>(new Set());
   const [userRole, setUserRole] = useState<string>("");
 
+  // Can this user add documents?
+  const canAdd = ["admin", "employee", "department_approver"].includes(userRole);
+  // Can this user edit/delete documents?
+  const canManage = userRole === "admin";
+
   // Upload dialog
   const [uploadOpen, setUploadOpen] = useState(false);
   const [uploading, setUploading] = useState(false);
@@ -93,6 +99,23 @@ export default function DocumentsPage() {
   const [newSectionName, setNewSectionName] = useState("");
   const [newSectionParent, setNewSectionParent] = useState<string | null>(null);
   const [sectionError, setSectionError] = useState("");
+
+  // Edit document dialog
+  const [editDoc, setEditDoc] = useState<RegDoc | null>(null);
+  const [editTitle, setEditTitle] = useState("");
+  const [editSection, setEditSection] = useState("");
+  const [savingDoc, setSavingDoc] = useState(false);
+  const [editError, setEditError] = useState("");
+
+  // Edit section dialog
+  const [editSectionData, setEditSectionData] = useState<Section | null>(null);
+  const [editSectionName, setEditSectionName] = useState("");
+  const [savingSection, setSavingSection] = useState(false);
+  const [editSectionErr, setEditSectionErr] = useState("");
+
+  // Delete confirmation
+  const [deleteTarget, setDeleteTarget] = useState<{ type: "doc" | "section"; id: string; name: string } | null>(null);
+  const [deleting, setDeleting] = useState(false);
 
   useEffect(() => {
     Promise.all([
@@ -109,6 +132,20 @@ export default function DocumentsPage() {
     });
   }, []);
 
+  const refreshDocuments = async () => {
+    const res = await fetch("/api/documents/regulatory", { credentials: "include" });
+    if (res.ok) setDocuments((await res.json()).data || []);
+  };
+
+  const refreshSections = async () => {
+    const res = await fetch("/api/documents/sections", { credentials: "include" });
+    if (res.ok) {
+      const secsData = (await res.json()).data || [];
+      setSections(secsData);
+      setTree(buildTree(secsData));
+    }
+  };
+
   const handleToggleSection = (id: string) => {
     setExpandedSections((prev) => {
       const next = new Set(prev);
@@ -118,17 +155,33 @@ export default function DocumentsPage() {
     });
   };
 
+  async function handleDownloadDoc(docId: string, title: string) {
+    try {
+      const res = await fetch(`/api/documents/regulatory/${docId}`, { credentials: "include" });
+      if (!res.ok) throw new Error("Download failed");
+      const blob = await res.blob();
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = title;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+    } catch {
+      alert("Ошибка при скачивании файла");
+    }
+  }
+
   const filteredDocs = documents.filter((d) => {
     const matchesSearch = search === "" || d.title.toLowerCase().includes(search.toLowerCase());
     const matchesSection = selectedSection === null || d.sectionId === selectedSection;
     return matchesSearch && matchesSection;
   });
 
-  const isHSE = userRole === "admin";
-
   async function handleUpload() {
     if (!uploadFile || !uploadTitle.trim() || !uploadSection) {
-      setUploadError("Заполните все поля");
+      setUploadError("Файл, наименование и раздел обязательны");
       return;
     }
     setUploading(true);
@@ -150,9 +203,7 @@ export default function DocumentsPage() {
         setUploadError(data.error || "Ошибка при загрузке");
         return;
       }
-      // Refresh
-      const docsRes = await fetch("/api/documents/regulatory", { credentials: "include" });
-      if (docsRes.ok) setDocuments((await docsRes.json()).data || []);
+      await refreshDocuments();
       setUploadOpen(false);
       setUploadTitle("");
       setUploadSection("");
@@ -185,13 +236,7 @@ export default function DocumentsPage() {
         setSectionError(data.error || "Ошибка при создании раздела");
         return;
       }
-      // Refresh sections
-      const secsRes = await fetch("/api/documents/sections", { credentials: "include" });
-      if (secsRes.ok) {
-        const secsData = (await secsRes.json()).data || [];
-        setSections(secsData);
-        setTree(buildTree(secsData));
-      }
+      await refreshSections();
       setSectionOpen(false);
       setNewSectionName("");
       setNewSectionParent(null);
@@ -199,6 +244,92 @@ export default function DocumentsPage() {
       setSectionError("Произошла ошибка. Попробуйте ещё раз.");
     } finally {
       setCreatingSection(false);
+    }
+  }
+
+  async function handleEditDoc() {
+    if (!editDoc || !editTitle.trim() || !editSection) {
+      setEditError("Наименование и раздел обязательны");
+      return;
+    }
+    setSavingDoc(true);
+    setEditError("");
+    try {
+      const res = await fetch(`/api/documents/regulatory/${editDoc.id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({ title: editTitle.trim(), sectionId: editSection }),
+      });
+      if (!res.ok) {
+        const data = await res.json();
+        setEditError(data.error || "Ошибка при сохранении");
+        return;
+      }
+      await refreshDocuments();
+      setEditDoc(null);
+    } catch {
+      setEditError("Произошла ошибка. Попробуйте ещё раз.");
+    } finally {
+      setSavingDoc(false);
+    }
+  }
+
+  async function handleEditSection() {
+    if (!editSectionData || !editSectionName.trim()) {
+      setEditSectionErr("Введите название раздела");
+      return;
+    }
+    setSavingSection(true);
+    setEditSectionErr("");
+    try {
+      const res = await fetch(`/api/documents/sections/${editSectionData.id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({ name: editSectionName.trim() }),
+      });
+      if (!res.ok) {
+        const data = await res.json();
+        setEditSectionErr(data.error || "Ошибка при сохранении");
+        return;
+      }
+      await refreshSections();
+      setEditSectionData(null);
+    } catch {
+      setEditSectionErr("Произошла ошибка. Попробуйте ещё раз.");
+    } finally {
+      setSavingSection(false);
+    }
+  }
+
+  async function handleDelete() {
+    if (!deleteTarget) return;
+    setDeleting(true);
+    try {
+      const endpoint = deleteTarget.type === "doc"
+        ? `/api/documents/regulatory/${deleteTarget.id}`
+        : `/api/documents/sections/${deleteTarget.id}`;
+      const res = await fetch(endpoint, {
+        method: "DELETE",
+        credentials: "include",
+      });
+      if (!res.ok) {
+        const data = await res.json();
+        alert(data.error || "Ошибка при удалении");
+        return;
+      }
+      if (deleteTarget.type === "doc") {
+        await refreshDocuments();
+      } else {
+        await refreshSections();
+        if (selectedSection === deleteTarget.id) setSelectedSection(null);
+      }
+      setDeleteTarget(null);
+    } catch {
+      alert("Произошла ошибка. Попробуйте ещё раз.");
+    } finally {
+      setDeleting(false);
     }
   }
 
@@ -210,26 +341,53 @@ export default function DocumentsPage() {
     );
   }
 
-  // Recursive section tree
   function renderSectionTree(parentId: string, depth: number = 0) {
     const children = tree.get(parentId) || [];
     return children.map((section) => (
       <div key={section.id}>
-        <button
-          onClick={() => handleToggleSection(section.id)}
-          className={`flex items-center gap-2 w-full text-left px-2 py-1.5 rounded-md hover:bg-zinc-100 transition-colors ${
-            selectedSection === section.id ? "bg-blue-50 text-blue-700" : ""
-          }`}
-          style={{ paddingLeft: `${depth * 16 + 8}px` }}
-        >
-          {expandedSections.has(section.id) ? (
-            <ChevronDown className="h-4 w-4 text-zinc-400 shrink-0" />
-          ) : (
-            <ChevronRight className="h-4 w-4 text-zinc-400 shrink-0" />
+        <div className="group flex items-center gap-1">
+          <button
+            onClick={() => handleToggleSection(section.id)}
+            className="p-1 text-zinc-400 hover:text-zinc-600 transition-colors shrink-0"
+          >
+            {expandedSections.has(section.id) ? (
+              <ChevronDown className="h-4 w-4" />
+            ) : (
+              <ChevronRight className="h-4 w-4" />
+            )}
+          </button>
+          <button
+            onClick={() => setSelectedSection(section.id)}
+            className={`flex items-center gap-2 flex-1 text-left px-2 py-1.5 rounded-md hover:bg-zinc-100 transition-colors ${
+              selectedSection === section.id ? "bg-blue-50 text-blue-700" : ""
+            }`}
+            style={{ paddingLeft: `${depth * 16}px` }}
+          >
+            <span className="text-sm truncate">{section.name}</span>
+            <span className="text-xs text-zinc-400 ml-auto">{section._count.documents}</span>
+          </button>
+          {canManage && (
+            <div className="hidden group-hover:flex items-center gap-0.5 mr-1">
+              <button
+                onClick={() => {
+                  setEditSectionData(section);
+                  setEditSectionName(section.name);
+                }}
+                className="p-1 text-zinc-400 hover:text-blue-600 transition-colors"
+                title="Редактировать раздел"
+              >
+                <Edit3 className="h-3 w-3" />
+              </button>
+              <button
+                onClick={() => setDeleteTarget({ type: "section", id: section.id, name: section.name })}
+                className="p-1 text-zinc-400 hover:text-red-600 transition-colors"
+                title="Удалить раздел"
+              >
+                <Trash2 className="h-3 w-3" />
+              </button>
+            </div>
           )}
-          <span className="text-sm truncate">{section.name}</span>
-          <span className="text-xs text-zinc-400 ml-auto">{section._count.documents}</span>
-        </button>
+        </div>
         {expandedSections.has(section.id) && renderSectionTree(section.id, depth + 1)}
       </div>
     ));
@@ -241,7 +399,7 @@ export default function DocumentsPage() {
       <aside className="w-64 border-r border-zinc-200 bg-zinc-50 flex flex-col">
         <div className="flex items-center justify-between p-4 border-b border-zinc-200">
           <h3 className="text-sm font-medium text-zinc-900">Разделы</h3>
-          {isHSE && (
+          {canManage && (
             <button
               onClick={() => setSectionOpen(true)}
               className="text-zinc-400 hover:text-zinc-600 transition-colors"
@@ -276,7 +434,7 @@ export default function DocumentsPage() {
               База нормативных документов завода
             </p>
           </div>
-          {isHSE && (
+          {canAdd && (
             <Button variant="default" size="lg" onClick={() => setUploadOpen(true)}>
               <Plus />
               Добавить документ
@@ -311,8 +469,16 @@ export default function DocumentsPage() {
             <tbody>
               {filteredDocs.length === 0 ? (
                 <tr>
-                  <td colSpan={6} className="py-8 text-center text-sm text-zinc-500">
-                    Документы не найдены
+                  <td colSpan={6} className="py-8">
+                    <div className="flex flex-col items-center gap-3">
+                      <p className="text-sm text-zinc-500">Документы не найдены</p>
+                      {canAdd && (
+                        <Button variant="outline" size="sm" className="gap-1.5" onClick={() => setUploadOpen(true)}>
+                          <Upload className="h-4 w-4" />
+                          Загрузить документ
+                        </Button>
+                      )}
+                    </div>
                   </td>
                 </tr>
               ) : (
@@ -332,14 +498,37 @@ export default function DocumentsPage() {
                       <td className="px-4 py-3 text-zinc-600">{doc.section?.name ?? "—"}</td>
                       <td className="px-4 py-3 text-zinc-600 font-mono text-xs">{formatDate(doc.updatedAt)}</td>
                       <td className="px-4 py-3 text-right">
-                        <a
-                          href={`/api/documents/regulatory/${doc.id}`}
-                          download
-                          className="inline-flex items-center gap-1 text-sm text-blue-600 hover:underline"
-                        >
-                          <Download className="h-4 w-4" />
-                          Скачать
-                        </a>
+                        <div className="flex items-center justify-end gap-2">
+                          <button
+                            onClick={() => handleDownloadDoc(doc.id, doc.title)}
+                            className="inline-flex items-center gap-1 text-sm text-blue-600 hover:underline"
+                          >
+                            <Download className="h-4 w-4" />
+                            Скачать
+                          </button>
+                          {canManage && (
+                            <>
+                              <button
+                                onClick={() => {
+                                  setEditDoc(doc);
+                                  setEditTitle(doc.title);
+                                  setEditSection(doc.sectionId);
+                                }}
+                                className="inline-flex items-center gap-1 text-sm text-zinc-500 hover:text-blue-600"
+                                title="Редактировать"
+                              >
+                                <Pencil className="h-4 w-4" />
+                              </button>
+                              <button
+                                onClick={() => setDeleteTarget({ type: "doc", id: doc.id, name: doc.title })}
+                                className="inline-flex items-center gap-1 text-sm text-zinc-500 hover:text-red-600"
+                                title="Удалить"
+                              >
+                                <Trash2 className="h-4 w-4" />
+                              </button>
+                            </>
+                          )}
+                        </div>
                       </td>
                     </tr>
                   );
@@ -385,9 +574,9 @@ export default function DocumentsPage() {
             </div>
             <div className="space-y-1.5">
               <Label>Раздел *</Label>
-              <Select value={uploadSection} onValueChange={(v) => setUploadSection(v ?? "")}>
+              <Select value={uploadSection} onValueChange={(v) => { if (v !== null) setUploadSection(v); }} itemToStringLabel={(v) => sections.find((s) => s.id === v)?.name ?? v}>
                 <SelectTrigger>
-                  <SelectValue placeholder="Выберите раздел" />
+                  <SelectValue placeholder="Выберите раздел">{(v: string) => sections.find((s) => s.id === v)?.name ?? v ?? "Выберите раздел"}</SelectValue>
                 </SelectTrigger>
                 <SelectContent>
                   {sections.filter((s) => s.parentId === null).map((s) => (
@@ -430,9 +619,9 @@ export default function DocumentsPage() {
             </div>
             <div className="space-y-1.5">
               <Label>Родительский раздел</Label>
-              <Select value={newSectionParent ?? ""} onValueChange={(v) => setNewSectionParent(v === "" ? null : v)}>
+              <Select value={newSectionParent ?? ""} onValueChange={(v) => setNewSectionParent(v === "" ? null : v)} itemToStringLabel={(v) => (v ? sections.find((s) => s.id === v)?.name ?? v : "")}>
                 <SelectTrigger>
-                  <SelectValue placeholder="Без родителя (корневой)" />
+                  <SelectValue placeholder="Без родителя (корневой)">{(v: string) => v ? sections.find((s) => s.id === v)?.name ?? "" : "Без родителя (корневой)"}</SelectValue>
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="">— Без родителя —</SelectItem>
@@ -451,6 +640,100 @@ export default function DocumentsPage() {
             <Button onClick={handleCreateSection} disabled={creatingSection}>
               {creatingSection && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
               Создать
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Edit document dialog */}
+      <Dialog open={!!editDoc} onOpenChange={(open) => { if (!open) setEditDoc(null); }}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Редактировать документ</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div className="space-y-1.5">
+              <Label>Наименование *</Label>
+              <Input
+                value={editTitle}
+                onChange={(e) => setEditTitle(e.target.value)}
+              />
+            </div>
+            <div className="space-y-1.5">
+              <Label>Раздел *</Label>
+              <Select value={editSection} onValueChange={(v) => { if (v !== null) setEditSection(v); }} itemToStringLabel={(v) => sections.find((s) => s.id === v)?.name ?? v}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Выберите раздел">{(v: string) => sections.find((s) => s.id === v)?.name ?? v ?? "Выберите раздел"}</SelectValue>
+                </SelectTrigger>
+                <SelectContent>
+                  {sections.filter((s) => s.parentId === null).map((s) => (
+                    <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            {editError && <p className="text-sm text-red-600">{editError}</p>}
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setEditDoc(null)} disabled={savingDoc}>
+              Отмена
+            </Button>
+            <Button onClick={handleEditDoc} disabled={savingDoc}>
+              {savingDoc && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+              Сохранить
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Edit section dialog */}
+      <Dialog open={!!editSectionData} onOpenChange={(open) => { if (!open) setEditSectionData(null); }}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Редактировать раздел</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div className="space-y-1.5">
+              <Label>Название раздела *</Label>
+              <Input
+                value={editSectionName}
+                onChange={(e) => setEditSectionName(e.target.value)}
+              />
+            </div>
+            {editSectionErr && <p className="text-sm text-red-600">{editSectionErr}</p>}
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setEditSectionData(null)} disabled={savingSection}>
+              Отмена
+            </Button>
+            <Button onClick={handleEditSection} disabled={savingSection}>
+              {savingSection && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+              Сохранить
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Delete confirmation dialog */}
+      <Dialog open={!!deleteTarget} onOpenChange={(open) => { if (!open) setDeleteTarget(null); }}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Подтверждение удаления</DialogTitle>
+            <DialogDescription>
+              {deleteTarget
+                ? deleteTarget.type === "doc"
+                  ? `Удалить документ «${deleteTarget.name}»? Это действие нельзя отменить.`
+                  : `Удалить раздел «${deleteTarget.name}»? Раздел не должен содержать документы или подразделы.`
+                : null}
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setDeleteTarget(null)} disabled={deleting}>
+              Отмена
+            </Button>
+            <Button variant="destructive" onClick={handleDelete} disabled={deleting}>
+              {deleting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+              Удалить
             </Button>
           </DialogFooter>
         </DialogContent>

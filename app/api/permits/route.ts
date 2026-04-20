@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { authMiddleware, requireAdmin } from "@/lib/api-middleware";
+import { authMiddleware } from "@/lib/api-middleware";
 import { createPermitSchema, paginationSchema } from "@/lib/validations";
 
 const CATEGORY_CODES: Record<string, string> = {
@@ -30,9 +30,9 @@ export async function GET(req: NextRequest) {
     where.contractorId = contractorFilter;
   }
 
-  // Contractor employees only see their own org's permits
+  // Contractor roles only see their own org's permits
   if (
-    authResult.user.role === "contractor_employee" && authResult.user.organizationId
+    (authResult.user.role === "contractor_employee" || authResult.user.role === "contractor_admin") && authResult.user.organizationId
   ) {
     where.contractorId = authResult.user.organizationId;
   }
@@ -65,8 +65,11 @@ export async function POST(req: NextRequest) {
   const authResult = await authMiddleware(req);
   if (authResult instanceof NextResponse) return authResult;
 
-  const adminResult = requireAdmin(authResult.user);
-  if (adminResult instanceof NextResponse) return adminResult;
+  // Only admin and contractor_admin can create permits
+  const { role, organizationId } = authResult.user;
+  if (role !== "admin" && role !== "contractor_admin") {
+    return NextResponse.json({ error: "Forbidden: admin or contractor_admin access required" }, { status: 403 });
+  }
 
   try {
     const body = await req.json();
@@ -76,6 +79,11 @@ export async function POST(req: NextRequest) {
     }
 
     const { category, contractorId, workSite, responsiblePerson, openDate, expiryDate } = validation.data;
+
+    // contractor_admin can only create permits for their own organization
+    if (role === "contractor_admin" && contractorId !== organizationId) {
+      return NextResponse.json({ error: "Forbidden: can only create permits for your own organization" }, { status: 403 });
+    }
 
     // Generate permitNumber: {CATEGORY_CODE}-{contractorSeq}-{curatorSeq}-{permitSeqNumber}
     const categoryCode = CATEGORY_CODES[category] || "OT";
@@ -94,33 +102,36 @@ export async function POST(req: NextRequest) {
         admin: 1,
         employee: 2,
         department_approver: 3,
+        contractor_admin: 4,
+        contractor_employee: 4,
       };
       const seq = roleSeqMap[curator.role] ?? 99;
       curatorSeq = String(seq).padStart(3, "0");
     }
 
-    // Per-contractor sequential number using MAX for safety
-    const maxPermit = await prisma.permit.aggregate({
-      _max: { sequentialNumber: true },
-      where: { contractorId },
-    });
-    const permitSeq = (maxPermit._max.sequentialNumber ?? 0) + 1;
-    const permitSeqNumber = String(permitSeq).padStart(4, "0");
+    const permit = await prisma.$transaction(async (tx) => {
+      const maxPermit = await tx.permit.aggregate({
+        _max: { sequentialNumber: true },
+        where: { contractorId },
+      });
+      const permitSeq = (maxPermit._max.sequentialNumber ?? 0) + 1;
+      const permitSeqNumber = String(permitSeq).padStart(4, "0");
 
-    const permitNumber = `${categoryCode}-${contractorSeq}-${curatorSeq}-${permitSeqNumber}`;
+      const permitNumber = `${categoryCode}-${contractorSeq}-${curatorSeq}-${permitSeqNumber}`;
 
-    const permit = await prisma.permit.create({
-      data: {
-        permitNumber,
-        category,
-        contractorId,
-        workSite,
-        responsiblePerson,
-        openDate: new Date(openDate),
-        expiryDate: new Date(expiryDate),
-        sequentialNumber: permitSeq,
-      },
-    });
+      return tx.permit.create({
+        data: {
+          permitNumber,
+          category,
+          contractorId,
+          workSite,
+          responsiblePerson,
+          openDate: new Date(openDate),
+          expiryDate: new Date(expiryDate),
+          sequentialNumber: permitSeq,
+        },
+      });
+    }, { isolationLevel: "Serializable" });
 
     return NextResponse.json(permit, { status: 201 });
   } catch (err) {

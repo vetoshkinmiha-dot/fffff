@@ -15,16 +15,16 @@ import {
 describe('Validation Schemas', () => {
   describe('loginSchema', () => {
     it('should accept valid email and password', () => {
-      const result = loginSchema.safeParse({ email: 'test@example.com', password: 'abc123' })
+      const result = loginSchema.safeParse({ email: 'test@example.com', password: 'Password1' })
       expect(result.success).toBe(true)
     })
 
     it('should reject invalid email', () => {
-      const result = loginSchema.safeParse({ email: 'not-an-email', password: 'abc123' })
+      const result = loginSchema.safeParse({ email: 'not-an-email', password: 'Password1' })
       expect(result.success).toBe(false)
     })
 
-    it('should reject short password (< 6 chars)', () => {
+    it('should reject short password (< 8 chars)', () => {
       const result = loginSchema.safeParse({ email: 'test@example.com', password: 'abc' })
       expect(result.success).toBe(false)
     })

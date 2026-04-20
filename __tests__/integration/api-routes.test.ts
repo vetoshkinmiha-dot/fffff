@@ -45,9 +45,28 @@ const mockPrisma = vi.hoisted(() => ({
     updateMany: vi.fn().mockResolvedValue({ count: 0 }),
     delete: vi.fn(),
   },
+  permit: {
+    create: vi.fn(),
+    findUnique: vi.fn(),
+    findMany: vi.fn().mockResolvedValue([]),
+    count: vi.fn().mockResolvedValue(0),
+    update: vi.fn(),
+    delete: vi.fn(),
+    aggregate: vi.fn(),
+  },
+  violation: {
+    create: vi.fn(),
+    findUnique: vi.fn(),
+    findMany: vi.fn().mockResolvedValue([]),
+    count: vi.fn().mockResolvedValue(0),
+    update: vi.fn(),
+    delete: vi.fn(),
+    aggregate: vi.fn(),
+  },
+  $transaction: vi.fn().mockImplementation(async (cb) => cb(mockPrisma)),
 }))
 
-vi.mock('@/lib/prisma', () => ({ prisma: mockPrisma }))
+vi.mock('@/lib/prisma', () => ({ prisma: mockPrisma, $Enums: { ApprovalStatus: { pending: 'pending', approved: 'approved', rejected: 'rejected' }, Department: { security: 'security', hr: 'hr', safety: 'safety', safety_training: 'safety_training', permit_bureau: 'permit_bureau' } } }))
 
 vi.mock('@/lib/email', () => ({
   sendApprovalNotification: vi.fn().mockResolvedValue(undefined),
@@ -94,7 +113,7 @@ async function callRoute(
   cookies: Record<string, string> = {},
   params?: Record<string, string>,
 ) {
-  const init: RequestInit = { method }
+  const init: any = { method }
   const headers: Record<string, string> = {}
   if (body) {
     headers['Content-Type'] = 'application/json'
@@ -447,21 +466,8 @@ describe('Employees API Routes', () => {
   })
 
   describe('POST /api/organizations/:orgId/employees', () => {
-    it('should create employee for own org (contractor_employee)', async () => {
+    it('should reject contractor_employee from creating employees (requires contractor_admin)', async () => {
       mockPrisma.user.findUnique.mockResolvedValueOnce(CONTRACTOR_MOCK_USER)
-      mockPrisma.employee.create.mockResolvedValueOnce({
-        id: 'emp-1',
-        organizationId: 'org-1',
-        fullName: 'Новиков Н.Н.',
-        position: 'Монтажник',
-        passportSeries: '4510',
-        passportNumber: '654321',
-        workClasses: [],
-        previouslyAtPirelli: false,
-        createdAt: new Date(),
-        updatedAt: new Date(),
-      } as any)
-
       const { POST } = await import('@/app/api/employees/[id]/route')
       const res = await callRoute(
         POST,
@@ -471,9 +477,7 @@ describe('Employees API Routes', () => {
         { auth_token: 'contractor-token' },
         { id: 'org-1' },
       )
-      expect(res.status).toBe(201)
-      const body = await res.json()
-      expect(body.fullName).toBe('Новиков Н.Н.')
+      expect(res.status).toBe(403)
     })
 
     it('should reject passport series not 4 digits', async () => {

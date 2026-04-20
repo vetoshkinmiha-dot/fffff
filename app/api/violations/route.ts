@@ -2,9 +2,11 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { authMiddleware } from "@/lib/api-middleware";
 import { createViolationSchema, paginationSchema } from "@/lib/validations";
+import { createNotificationsForRole, notifyOrganizationContractors } from "@/lib/notifications";
 
+// Admin, employee, department_approver can create violations; contractor roles cannot
 function isAuthorizedForViolations(role: string): boolean {
-  return role === "admin";
+  return role === "admin" || role === "employee" || role === "department_approver";
 }
 
 export async function GET(req: NextRequest) {
@@ -24,9 +26,21 @@ export async function GET(req: NextRequest) {
   if (contractorId) where.contractorId = contractorId;
   if (department) where.department = department;
 
-  // Contractor employees only see their own org's violations
-  if (authResult.user.role === "contractor_employee" && authResult.user.organizationId) {
+  // Contractor roles only see their own org's violations
+  if (
+    (authResult.user.role === "contractor_employee" || authResult.user.role === "contractor_admin") && authResult.user.organizationId
+  ) {
     where.contractorId = authResult.user.organizationId;
+  }
+
+  // Employee (ВШЗ) only sees violations they created
+  if (authResult.user.role === "employee") {
+    where.createdById = authResult.user.userId;
+  }
+
+  // department_approver only sees violations they created
+  if (authResult.user.role === "department_approver") {
+    where.createdById = authResult.user.userId;
   }
 
   const [total, violations] = await Promise.all([
@@ -69,26 +83,43 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: validation.error.issues[0].message }, { status: 400 });
     }
 
-    // Generate violationNumber: VIO-{sequentialNumber}
-    // Use aggregate MAX for atomic safety against race conditions
-    const maxSeq = await prisma.violation.aggregate({
-      _max: { sequentialNumber: true },
-    });
-    const nextSeq = (maxSeq._max.sequentialNumber ?? 0) + 1;
-    const violationNumber = `VIO-${String(nextSeq).padStart(5, "0")}`;
+    let violationNumber: string;
+    const violation = await prisma.$transaction(async (tx) => {
+      const maxSeq = await tx.violation.aggregate({
+        _max: { sequentialNumber: true },
+      });
+      const nextSeq = (maxSeq._max.sequentialNumber ?? 0) + 1;
+      violationNumber = `VIO-${String(nextSeq).padStart(5, "0")}`;
 
-    const violation = await prisma.violation.create({
-      data: {
-        ...validation.data,
-        violationNumber,
-        date: new Date(validation.data.date),
-        sequentialNumber: nextSeq,
-        createdById: authResult.user.userId,
-      },
-      include: {
-        contractor: { select: { name: true } },
-        createdBy: { select: { fullName: true } },
-      },
+      return tx.violation.create({
+        data: {
+          ...validation.data,
+          violationNumber,
+          date: new Date(validation.data.date),
+          sequentialNumber: nextSeq,
+          createdById: authResult.user.userId,
+        },
+        include: {
+          contractor: { select: { name: true } },
+          createdBy: { select: { fullName: true } },
+        },
+      });
+    }, { isolationLevel: "Serializable" });
+
+    // Notify admin users about the new violation
+    await createNotificationsForRole("admin", {
+      type: "complaint_submitted",
+      title: "Новое нарушение",
+      message: `Создан акт ${violationNumber}`,
+      link: `/violations/${violation.id}`,
+    });
+
+    // Notify all contractor employees and admins of the affected organization
+    await notifyOrganizationContractors(violation.contractorId, {
+      type: "violation_created",
+      title: "Создан акт о нарушении",
+      message: `На вашу организацию создан акт ${violationNumber}`,
+      link: `/violations/${violation.id}`,
     });
 
     return NextResponse.json(violation, { status: 201 });

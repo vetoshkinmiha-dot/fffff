@@ -54,7 +54,7 @@ interface Violation {
   status: string;
   department: string | null;
   contractor: { name: string; sequentialNumber: number };
-  createdBy: { fullName: string } | null;
+  createdBy: { fullName: string; id: string } | null;
   photoUrl: string | null;
   resolutionNotes: string | null;
   resolvedAt: string | null;
@@ -69,6 +69,8 @@ export default function ViolationDetailPage() {
   const [resolving, setResolving] = useState(false);
   const [resolutionNotes, setResolutionNotes] = useState("");
   const [resolvingStatus, setResolvingStatus] = useState<"resolved" | "escalated">("resolved");
+  const [userRole, setUserRole] = useState<string>("");
+  const [currentUserId, setCurrentUserId] = useState<string>("");
 
   // Complaint state
   const [complaintOpen, setComplaintOpen] = useState(false);
@@ -76,6 +78,16 @@ export default function ViolationDetailPage() {
   const [complaintDept, setComplaintDept] = useState("curator");
   const [submittingComplaint, setSubmittingComplaint] = useState(false);
   const [complaintError, setComplaintError] = useState("");
+
+  useEffect(() => {
+    fetch("/api/auth/me", { credentials: "include" })
+      .then((r) => (r.ok ? r.json() : null))
+      .then((data) => {
+        if (data?.user?.role) setUserRole(data.user.role);
+        if (data?.user?.userId) setCurrentUserId(data.user.userId);
+      })
+      .catch(() => {});
+  }, []);
 
   useEffect(() => {
     async function fetchViolation() {
@@ -231,7 +243,7 @@ export default function ViolationDetailPage() {
       </Card>
 
       {/* Resolution section */}
-      {violation.status === "pending" && (
+      {violation.status === "pending" && (userRole === "admin" || (userRole === "department_approver" && violation.createdBy?.id === currentUserId)) && (
         <Card>
           <CardHeader>
             <CardTitle className="text-base">Решение</CardTitle>
@@ -293,59 +305,61 @@ export default function ViolationDetailPage() {
         </Card>
       )}
 
-      {/* Complaint section (for contractor users) */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="text-base">Жалоба подрядчика</CardTitle>
-          <CardDescription>
-            Если вы не согласны с актом нарушения, подайте жалобу
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          {!complaintOpen ? (
-            <Button variant="outline" onClick={() => setComplaintOpen(true)}>
-              Отправить жалобу
-            </Button>
-          ) : (
-            <div className="space-y-4">
-              <div className="space-y-1.5">
-                <Label>Департамент</Label>
-                <Select value={complaintDept} onValueChange={(v) => setComplaintDept(v ?? "")}>
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {Object.entries(departmentLabels).map(([key, label]) => (
-                      <SelectItem key={key} value={key}>{label}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+      {/* Complaint section (for contractor roles) */}
+      {(userRole === "contractor_employee" || userRole === "contractor_admin") && (
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-base">Жалоба подрядчика</CardTitle>
+            <CardDescription>
+              Если вы не согласны с актом нарушения, подайте жалобу
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            {!complaintOpen ? (
+              <Button variant="outline" onClick={() => setComplaintOpen(true)}>
+                Отправить жалобу
+              </Button>
+            ) : (
+              <div className="space-y-4">
+                <div className="space-y-1.5">
+                  <Label>Департамент</Label>
+                  <Select value={complaintDept} onValueChange={(v) => setComplaintDept(v ?? "")}>
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {Object.entries(departmentLabels).map(([key, label]) => (
+                        <SelectItem key={key} value={key}>{label}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-1.5">
+                  <Label>Текст жалобы</Label>
+                  <Textarea
+                    value={complaintText}
+                    onChange={(e) => setComplaintText(e.target.value)}
+                    placeholder="Опишите причину жалобы..."
+                    rows={3}
+                  />
+                </div>
+                {complaintError && (
+                  <p className="text-sm text-red-600">{complaintError}</p>
+                )}
+                <div className="flex gap-2">
+                  <Button onClick={handleComplaint} disabled={submittingComplaint}>
+                    {submittingComplaint && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                    Отправить жалобу
+                  </Button>
+                  <Button variant="ghost" onClick={() => { setComplaintOpen(false); setComplaintError(""); }}>
+                    Отмена
+                  </Button>
+                </div>
               </div>
-              <div className="space-y-1.5">
-                <Label>Текст жалобы</Label>
-                <Textarea
-                  value={complaintText}
-                  onChange={(e) => setComplaintText(e.target.value)}
-                  placeholder="Опишите причину жалобы..."
-                  rows={3}
-                />
-              </div>
-              {complaintError && (
-                <p className="text-sm text-red-600">{complaintError}</p>
-              )}
-              <div className="flex gap-2">
-                <Button onClick={handleComplaint} disabled={submittingComplaint}>
-                  {submittingComplaint && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                  Отправить жалобу
-                </Button>
-                <Button variant="ghost" onClick={() => { setComplaintOpen(false); setComplaintError(""); }}>
-                  Отмена
-                </Button>
-              </div>
-            </div>
-          )}
-        </CardContent>
-      </Card>
+            )}
+          </CardContent>
+        </Card>
+      )}
     </div>
   );
 }

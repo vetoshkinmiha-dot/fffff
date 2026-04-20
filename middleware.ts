@@ -7,14 +7,22 @@ const PUBLIC_ROUTES = ["/login", "/register", "/auth/unauthorized"];
 // Routes that bypass auth (static files, API health, etc.)
 const PUBLIC_PREFIXES = ["/_next", "/favicon.ico", "/api/health", "/api/auth/"];
 
-// Role → allowed route patterns
-// All roles get /api/* — API routes handle their own role-based access
-// employee: view-only access (no approvals, no checklists, no admin pages)
+// Role → allowed route patterns (based on ролевая модель.docx)
 const ROLE_ROUTES: Record<string, string[]> = {
+  // Администратор — полный доступ, стартовая = дашборд
   admin: ["/*"],
-  employee: ["/api/*", "/", "/contractors", "/contractors/*", "/employees", "/employees/*", "/permits", "/permits/*", "/permits/*/print", "/violations", "/violations/*", "/violations/*/print", "/documents", "/documents/*"],
-  contractor_employee: ["/api/*", "/contractors", "/contractors/*", "/employees", "/employees/*", "/permits", "/permits/*", "/permits/*/print", "/violations", "/violations/*", "/violations/*/print", "/checklists", "/checklists/*", "/approvals", "/approvals/*", "/"],
-  department_approver: ["/api/*", "/contractors", "/contractors/*", "/employees", "/employees/*", "/approvals", "/approvals/*", "/permits", "/permits/*", "/permits/*/print", "/violations", "/violations/*", "/violations/*/print", "/"],
+
+  // Сотрудник завода обычный — нет дашборда, нет нарядов, нет моя организация, чек-листы только где инспектор, нарушения только свои, нормативные — все
+  employee: ["/api/*", "/contractors", "/contractors/*", "/employees", "/employees/*", "/violations", "/violations/*", "/violations/*/print", "/documents", "/documents/*", "/checklists", "/checklists/*", "/change-password"],
+
+  // Сотрудник завода с правом согласования — дашборд стартовая, чек-листы только где инспектор, нарушения свои+создание, согласования
+  department_approver: ["/api/*", "/", "/contractors", "/contractors/*", "/employees", "/employees/*", "/permits", "/permits/*", "/permits/*/print", "/violations", "/violations/*", "/violations/*/print", "/documents", "/documents/*", "/checklists", "/checklists/*", "/approvals", "/approvals/*", "/change-password"],
+
+  // Ответственный подрядной организацией — стартовая = Моя организация, нет подрядчики, нет чек-листы, нет согласования, нормативные только скачивание
+  contractor_admin: ["/api/*", "/my-organization", "/my-organization/*", "/employees", "/employees/*", "/permits", "/permits/*", "/permits/*/print", "/permits/*/edit", "/violations", "/violations/*", "/violations/*/print", "/documents", "/documents/*", "/change-password"],
+
+  // Сотрудник подрядной организации — стартовая = Моя организация, нет подрядчики, нет чек-листы, нет согласования, нормативные только скачивание, сотрудники — только своя карточка
+  contractor_employee: ["/api/*", "/my-organization", "/my-organization/*", "/employees", "/employees/*", "/permits", "/permits/*", "/permits/*/print", "/violations", "/violations/*", "/violations/*/print", "/documents", "/documents/*", "/change-password"],
 };
 
 export async function middleware(request: NextRequest) {
@@ -50,7 +58,6 @@ export async function middleware(request: NextRequest) {
 
   // admin gets wildcard
   if (allowedPatterns.includes("/*")) {
-    // Check exclusions
     const denied = allowedPatterns.filter((p) => p.startsWith("!")).map((p) => p.slice(1));
     if (denied.some((d) => pathname.startsWith(d.replace("*", "")))) {
       return NextResponse.redirect(new URL("/auth/unauthorized", request.url));
@@ -58,7 +65,7 @@ export async function middleware(request: NextRequest) {
     return NextResponse.next();
   }
 
-  // employee, contractor_employee, department_approver: check allowed patterns
+  // Other roles: check allowed patterns
   if (allowedPatterns.length > 0) {
     const isAllowed = allowedPatterns.some(
       (pattern) => pattern.endsWith("/*")

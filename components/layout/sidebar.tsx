@@ -3,7 +3,6 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import {
-  LayoutDashboard,
   Building2,
   Users,
   FileText,
@@ -11,18 +10,20 @@ import {
   CheckSquare,
   BookOpen,
   ClipboardCheck,
+  LayoutDashboard,
+  Home,
 } from "lucide-react";
 import { usePathname } from "next/navigation";
 
 interface NavItem {
   label: string;
   href: string;
-  icon: typeof LayoutDashboard;
-  roles?: string[];
+  icon: typeof Building2;
 }
 
 const allNavItems: NavItem[] = [
   { label: "Дашборд", href: "/", icon: LayoutDashboard },
+  { label: "Моя организация", href: "/my-organization", icon: Home },
   { label: "Подрядчики", href: "/contractors", icon: Building2 },
   { label: "Сотрудники", href: "/employees", icon: Users },
   { label: "Наряды-допуски", href: "/permits", icon: FileText },
@@ -32,11 +33,22 @@ const allNavItems: NavItem[] = [
   { label: "Согласования", href: "/approvals", icon: ClipboardCheck },
 ];
 
+// Role model per ролевая модель.docx
 const ROLE_VISIBLE_NAV: Record<string, string[]> = {
-  admin: allNavItems.map((n) => n.href),
-  employee: ["/", "/contractors", "/employees", "/permits", "/violations", "/documents"],
-  contractor_employee: ["/", "/contractors", "/employees", "/permits", "/violations", "/checklists", "/approvals"],
-  department_approver: ["/", "/contractors", "/employees", "/permits", "/violations", "/approvals"],
+  // Администратор — всё кроме "Моя организация"
+  admin: allNavItems.filter((n) => n.label !== "Моя организация").map((n) => n.href),
+
+  // Сотрудник завода обычный — нет дашборда, нет нарядов
+  employee: ["/contractors", "/employees", "/violations", "/violations/*", "/documents", "/documents/*", "/checklists", "/checklists/*"],
+
+  // Сотрудник завода с правом согласования — дашборд + подрядчики/сотрудники/наряды(просмотр)/нарушения/документы/чек-листы (только свои как инспектор) + согласования
+  department_approver: ["/", "/contractors", "/contractors/*", "/employees", "/employees/*", "/permits", "/permits/*", "/permits/*/print", "/violations", "/violations/*", "/violations/*/print", "/documents", "/documents/*", "/checklists", "/checklists/*", "/approvals", "/approvals/*"],
+
+  // Ответственный подрядной организацией — нет дашборда, нет подрядчики, нет чек-листы, нет согласования
+  contractor_admin: ["/my-organization", "/employees", "/employees/*", "/permits", "/permits/*", "/permits/*/print", "/permits/*/edit", "/violations", "/violations/*", "/violations/*/print", "/documents", "/documents/*"],
+
+  // Сотрудник подрядной организации — нет дашборда, нет подрядчики, нет чек-листы, нет согласования
+  contractor_employee: ["/my-organization", "/employees", "/employees/*", "/permits", "/permits/*", "/permits/*/print", "/violations", "/violations/*", "/violations/*/print", "/documents", "/documents/*"],
 };
 
 export default function Sidebar() {
