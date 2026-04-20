@@ -9,7 +9,6 @@ function Table({ className, ...props }: React.ComponentProps<"table">) {
     <table
       data-slot="table"
       className={cn("caption-bottom text-sm w-full", className)}
-      style={{ tableLayout: "fixed", minWidth: "fit-content" }}
       {...props}
     />
   )
