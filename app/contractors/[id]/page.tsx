@@ -281,12 +281,12 @@ export default function ContractorDetailPage() {
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead className="font-medium min-w-[180px]">ФИО</TableHead>
-                  <TableHead className="font-medium min-w-[160px]">Должность</TableHead>
+                  <TableHead className="font-medium">ФИО</TableHead>
+                  <TableHead className="font-medium">Должность</TableHead>
                   <TableHead className="font-medium">Классы допуска</TableHead>
-                  <TableHead className="font-medium min-w-[180px]">Согласования</TableHead>
-                  <TableHead className="font-medium min-w-[140px]">Документы</TableHead>
-                  <TableHead className="font-medium w-24">Действия</TableHead>
+                  <TableHead className="font-medium">Согласования</TableHead>
+                  <TableHead className="font-medium">Документы</TableHead>
+                  <TableHead className="font-medium">Действия</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
