@@ -319,13 +319,13 @@ export default function EmployeesPage() {
                         className="h-4 w-4 rounded border-zinc-300"
                       />
                     </td>
-                    <td className="px-4 py-3 font-medium align-top max-w-[180px] truncate" title={emp.fullName}>
+                    <td className="px-4 py-3 font-medium align-top whitespace-nowrap">
                       {sanitize(emp.fullName)}
                     </td>
-                    <td className="px-4 py-3 text-sm text-zinc-600 align-top max-w-[180px] truncate" title={emp.organization.name}>
-                      {sanitize(emp.organization.name)}
+                    <td className="px-4 py-3 text-sm text-zinc-600 align-top max-w-[200px]">
+                      <span className="truncate block" title={sanitize(emp.organization.name)}>{sanitize(emp.organization.name)}</span>
                     </td>
-                    <td className="px-4 py-3 text-sm text-zinc-500 align-top max-w-[160px] truncate" title={emp.position}>
+                    <td className="px-4 py-3 text-sm text-zinc-500 align-top whitespace-nowrap">
                       {sanitize(emp.position)}
                     </td>
                     <td className="px-4 py-3 align-top">

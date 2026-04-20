@@ -375,7 +375,7 @@ export default function DocumentsPage() {
         <div className="group flex items-center gap-1">
           <button
             onClick={() => handleToggleSection(section.id)}
-            className="p-1 text-zinc-400 hover:text-zinc-600 transition-colors shrink-0"
+            className="p-1.5 text-zinc-400 hover:text-zinc-600 transition-colors shrink-0"
           >
             {expandedSections.has(section.id) ? (
               <ChevronDown className="h-4 w-4" />
@@ -385,16 +385,16 @@ export default function DocumentsPage() {
           </button>
           <button
             onClick={() => setSelectedSection(section.id)}
-            className={`flex items-center gap-2 flex-1 text-left px-2 py-1.5 rounded-md hover:bg-zinc-100 transition-colors ${
-              selectedSection === section.id ? "bg-blue-50 text-blue-700" : ""
+            className={`flex items-center min-h-[32px] gap-2 flex-1 text-left px-2 py-1.5 rounded-md transition-colors ${
+              selectedSection === section.id ? "bg-blue-50 text-blue-700 font-medium" : "hover:bg-zinc-100"
             }`}
-            style={{ paddingLeft: `${depth * 16}px` }}
+            style={{ paddingLeft: `${depth * 16 + 8}px` }}
           >
             <span className="text-sm truncate">{section.name}</span>
-            <span className="text-xs text-zinc-400 ml-auto">{section._count.documents}</span>
+            <span className="text-xs text-zinc-400 ml-auto shrink-0">{section._count.documents}</span>
           </button>
           {canManage && (
-            <div className="hidden group-hover:flex items-center gap-0.5 mr-1">
+            <div className="hidden group-hover:flex items-center gap-0.5 mr-1 shrink-0">
               <button
                 onClick={() => {
                   setEditSectionData(section);
@@ -421,9 +421,9 @@ export default function DocumentsPage() {
   }
 
   return (
-    <div className="flex h-[calc(100vh-56px)]">
+    <div className="flex -m-6 h-[calc(100vh-56px)]">
       {/* Sidebar — sections tree */}
-      <aside className="w-64 border-r border-zinc-200 bg-zinc-50 flex flex-col">
+      <aside className="w-64 border-r border-zinc-200 bg-zinc-50 flex flex-col shrink-0">
         <div className="flex items-center justify-between p-4 border-b border-zinc-200">
           <h3 className="text-sm font-medium text-zinc-900">Разделы</h3>
           {canManage && (
@@ -439,8 +439,8 @@ export default function DocumentsPage() {
         <div className="flex-1 overflow-y-auto p-2">
           <button
             onClick={() => setSelectedSection(null)}
-            className={`flex items-center gap-2 w-full text-left px-2 py-1.5 rounded-md hover:bg-zinc-100 transition-colors ${
-              selectedSection === null ? "bg-blue-50 text-blue-700" : ""
+            className={`flex items-center min-h-[32px] gap-2 w-full text-left px-2 py-1.5 rounded-md transition-colors ${
+              selectedSection === null ? "bg-blue-50 text-blue-700 font-medium" : "hover:bg-zinc-100"
             }`}
           >
             <span className="text-sm">Все документы</span>
@@ -451,7 +451,7 @@ export default function DocumentsPage() {
       </aside>
 
       {/* Main content */}
-      <div className="flex-1 overflow-y-auto p-6 space-y-6">
+      <div className="flex-1 overflow-y-auto p-6 space-y-6 min-w-0">
         <div className="flex items-center justify-between">
           <div>
             <h1 className="text-2xl font-semibold tracking-tight text-zinc-900">

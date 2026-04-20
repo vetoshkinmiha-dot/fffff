@@ -389,7 +389,7 @@ export default function ApprovalsPage() {
 
       {/* ── Permits table (admin, mainTab=permits) ── */}
       {isAdmin && mainTab === "permits" && (
-        <div className="overflow-hidden rounded-xl border border-zinc-200 bg-white">
+        <div className="overflow-x-auto rounded-xl border border-zinc-200 bg-white">
           <Table>
             <TableHeader>
               <TableRow>
@@ -445,22 +445,24 @@ export default function ApprovalsPage() {
                     </TableCell>
                     {canDecide && (
                       <TableCell className="text-right">
-                        <div className="flex items-center justify-end gap-1">
+                        <div className="flex items-center justify-end gap-2">
                           <Button
-                            variant="ghost"
-                            size="icon-xs"
-                            className="text-emerald-600 hover:text-emerald-700 hover:bg-emerald-50"
+                            variant="outline"
+                            size="sm"
+                            className="text-emerald-700 border-emerald-200 hover:bg-emerald-50"
                             onClick={() => openPermitDialog(permit.id, "approve")}
                           >
-                            <CheckCircle2 className="h-4 w-4" />
+                            <CheckCircle2 className="h-4 w-4 mr-1" />
+                            Согласовать
                           </Button>
                           <Button
-                            variant="ghost"
-                            size="icon-xs"
-                            className="text-red-600 hover:text-red-700 hover:bg-red-50"
+                            variant="outline"
+                            size="sm"
+                            className="text-red-700 border-red-200 hover:bg-red-50"
                             onClick={() => openPermitDialog(permit.id, "reject")}
                           >
-                            <XCircle className="h-4 w-4" />
+                            <XCircle className="h-4 w-4 mr-1" />
+                            Отклонить
                           </Button>
                         </div>
                       </TableCell>
@@ -475,7 +477,7 @@ export default function ApprovalsPage() {
 
       {/* ── Employee approvals table ── */}
       {(mainTab === "employees" || isDeptApprover) && (
-        <div className="overflow-hidden rounded-xl border border-zinc-200 bg-white">
+        <div className="overflow-x-auto rounded-xl border border-zinc-200 bg-white">
           <Table>
             <TableHeader>
               <TableRow>
@@ -530,26 +532,28 @@ export default function ApprovalsPage() {
                     {canDecide && (
                       <TableCell className="text-right">
                         {approval.status === "pending" ? (
-                          <div className="flex items-center justify-end gap-1">
+                          <div className="flex items-center justify-end gap-2">
                             <Button
-                              variant="ghost"
-                              size="icon-xs"
-                              className="text-emerald-600 hover:text-emerald-700 hover:bg-emerald-50"
+                              variant="outline"
+                              size="sm"
+                              className="text-emerald-700 border-emerald-200 hover:bg-emerald-50"
                               onClick={() =>
                                 openEmployeeDialog(approval.id, "approve")
                               }
                             >
-                              <CheckCircle2 className="h-4 w-4" />
+                              <CheckCircle2 className="h-4 w-4 mr-1" />
+                              Согласовать
                             </Button>
                             <Button
-                              variant="ghost"
-                              size="icon-xs"
-                              className="text-red-600 hover:text-red-700 hover:bg-red-50"
+                              variant="outline"
+                              size="sm"
+                              className="text-red-700 border-red-200 hover:bg-red-50"
                               onClick={() =>
                                 openEmployeeDialog(approval.id, "reject")
                               }
                             >
-                              <XCircle className="h-4 w-4" />
+                              <XCircle className="h-4 w-4 mr-1" />
+                              Отклонить
                             </Button>
                           </div>
                         ) : (

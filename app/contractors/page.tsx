@@ -138,9 +138,9 @@ export default function ContractorsPage() {
             className="pl-9"
           />
         </div>
-        <Select value={statusFilter} onValueChange={handleStatusChange}>
+        <Select value={statusFilter} onValueChange={handleStatusChange} itemToStringLabel={(v) => ({ all: "Все статусы", active: "Активные", pending: "Ожидающие", blocked: "Заблокированные" }[v] ?? v)}>
           <SelectTrigger className="w-[180px]">
-            <SelectValue placeholder="Все статусы" />
+            <SelectValue>{(v: string) => ({ all: "Все статусы", active: "Активные", pending: "Ожидающие", blocked: "Заблокированные" }[v] ?? v ?? "Все статусы")}</SelectValue>
           </SelectTrigger>
           <SelectContent>
             <SelectItem value="all">Все статусы</SelectItem>
@@ -217,16 +217,18 @@ export default function ContractorsPage() {
                     {c._count?.employees ?? 0}
                   </TableCell>
                   <TableCell className="text-right">
-                    <div className="flex items-center justify-end gap-1">
+                    <div className="flex items-center justify-end gap-2">
                       <Link href={`/contractors/${c.id}`}>
-                        <Button variant="ghost" size="icon-xs">
-                          <Eye />
+                        <Button variant="ghost" size="sm">
+                          <Eye className="h-4 w-4 mr-1" />
+                          Подробнее
                         </Button>
                       </Link>
                       {userRole === "admin" && (
                       <Link href={`/contractors/${c.id}/edit`}>
-                        <Button variant="ghost" size="icon-xs">
-                          <Pencil />
+                        <Button variant="ghost" size="sm">
+                          <Pencil className="h-4 w-4 mr-1" />
+                          Редактировать
                         </Button>
                       </Link>
                       )}

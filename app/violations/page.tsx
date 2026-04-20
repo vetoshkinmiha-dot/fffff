@@ -248,23 +248,23 @@ export default function ViolationsPage() {
             </h1>
             {/* Tab switcher — only visible to admin */}
             {isAdminRole && (
-              <div className="flex rounded-md border border-zinc-200 bg-white p-0.5">
+              <div className="flex items-center gap-1 rounded-lg border border-zinc-200 bg-zinc-100 p-1">
                 <button
                   onClick={() => setActiveTab("violations")}
-                  className={`px-3 py-1.5 text-sm font-medium rounded ${
+                  className={`px-4 py-1.5 text-sm font-medium rounded-md transition-colors ${
                     activeTab === "violations"
-                      ? "bg-zinc-900 text-white"
-                      : "text-zinc-500 hover:text-zinc-900"
+                      ? "bg-white text-zinc-900 shadow-sm"
+                      : "text-zinc-500 hover:text-zinc-700"
                   }`}
                 >
                   Акты нарушений
                 </button>
                 <button
                   onClick={() => setActiveTab("complaints")}
-                  className={`px-3 py-1.5 text-sm font-medium rounded ${
+                  className={`px-4 py-1.5 text-sm font-medium rounded-md transition-colors ${
                     activeTab === "complaints"
-                      ? "bg-zinc-900 text-white"
-                      : "text-zinc-500 hover:text-zinc-900"
+                      ? "bg-white text-zinc-900 shadow-sm"
+                      : "text-zinc-500 hover:text-zinc-700"
                   }`}
                 >
                   Жалобы
@@ -547,7 +547,7 @@ export default function ViolationsPage() {
           <div className="space-y-4 py-2">
             <div className="space-y-1.5">
               <Label>Департамент</Label>
-              <Select value={complaintDept} onValueChange={setComplaintDept}>
+              <Select value={complaintDept} onValueChange={(v) => setComplaintDept(v ?? "")}>
                 <SelectTrigger>
                   <SelectValue />
                 </SelectTrigger>
@@ -569,7 +569,7 @@ export default function ViolationsPage() {
             </div>
             <div className="space-y-1.5">
               <Label>Связанный акт нарушения (опционально)</Label>
-              <Select value={complaintViolationId} onValueChange={setComplaintViolationId}>
+              <Select value={complaintViolationId} onValueChange={(v) => setComplaintViolationId(v ?? "")}>
                 <SelectTrigger>
                   <SelectValue placeholder="Без привязки к акту" />
                 </SelectTrigger>
