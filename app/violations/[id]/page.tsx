@@ -34,6 +34,10 @@ const departmentLabels: Record<string, string> = {
   hse: "ОТ и ПБ (HSE)",
   curator: "Куратор договора",
   procurement: "Закупки",
+  quality: "Качество",
+  legal: "Юридический отдел",
+  finance: "Финансовый отдел",
+  hr_department: "Отдел кадров",
 };
 
 function formatDate(dateStr: string | null): string {

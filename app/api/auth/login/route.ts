@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { verifyPassword, generateAccessToken, JWTPayload, setAuthCookie } from "@/lib/auth";
+import { verifyPassword, generateAccessToken, JWTPayload, generateRefreshToken, setAuthAndRefreshCookies } from "@/lib/auth";
 import { loginSchema } from "@/lib/validations";
 
 // Simple in-memory rate limiter for login attempts
@@ -83,6 +83,7 @@ export async function POST(req: NextRequest) {
     };
 
     const token = generateAccessToken(payload);
+    const { token: refreshToken, expiresAt } = await generateRefreshToken(user.id);
     const response = NextResponse.json({
       user: {
         id: user.id,
@@ -92,7 +93,7 @@ export async function POST(req: NextRequest) {
         mustChangePwd: user.mustChangePwd,
       },
     });
-    setAuthCookie(response, token);
+    setAuthAndRefreshCookies(response, token, refreshToken);
     return response;
   } catch (err) {
     console.error("Login error:", err);

@@ -161,10 +161,11 @@ model User {
   notificationSubscriptions NotificationSubscription[] @relation("NotificationSubscriber")
   notifications             Notification[]      @relation("UserNotifications")
 
-  @@index([role])
   @@index([organizationId])
   @@index([department])
   @@map("user")
+
+  refreshTokens RefreshToken[]
 }
 
 // ════════════════════════════════════════════════════════════════
@@ -503,4 +504,23 @@ model NotificationSubscription {
 
   @@unique([userId])
   @@map("notification_subscription")
+}
+
+// ════════════════════════════════════════════════════════════════
+// REFRESH TOKENS — Токены обновления доступа
+// ════════════════════════════════════════════════════════════════
+
+model RefreshToken {
+  id        String   @id @default(uuid())
+  userId    String   @map("user_id")
+  token     String   @unique
+  expiresAt DateTime @map("expires_at")
+  revoked   Boolean  @default(false)
+  createdAt DateTime @default(now()) @map("created_at")
+
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([token])
+  @@map("refresh_token")
 }

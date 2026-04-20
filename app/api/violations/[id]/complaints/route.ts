@@ -27,12 +27,18 @@ export async function POST(
     return NextResponse.json({ error: "Forbidden: not your organization's violation" }, { status: 403 });
   }
 
+  const VALID_DEPARTMENTS = ["hse", "curator", "procurement", "quality", "legal", "finance", "hr_department"];
+
   try {
     const body = await req.json();
     const { text, department } = body;
 
     if (!text || !text.trim()) {
       return NextResponse.json({ error: "Text is required" }, { status: 400 });
+    }
+
+    if (!VALID_DEPARTMENTS.includes(department)) {
+      return NextResponse.json({ error: "Invalid department" }, { status: 400 });
     }
 
     // Create a proper violation complaint record

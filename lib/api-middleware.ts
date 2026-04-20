@@ -15,7 +15,42 @@ export interface AuthResult {
   user: AuthenticatedUser;
 }
 
+// ── In-memory rate limiter ──────────────────────────────────────────────
+const rateLimitMap = new Map<string, { count: number; resetAt: number }>();
+const RATE_LIMIT_MAX = 100;
+const RATE_LIMIT_WINDOW_MS = 15 * 60 * 1000; // 15 minutes
+
+setInterval(() => {
+  const now = Date.now();
+  for (const [key, entry] of rateLimitMap) {
+    if (now > entry.resetAt) rateLimitMap.delete(key);
+  }
+}, 60 * 60 * 1000);
+
+function getRateLimitKey(req: NextRequest): string {
+  return req.headers.get("x-forwarded-for") || req.headers.get("x-real-ip") || "unknown";
+}
+
+function checkRateLimit(key: string): { allowed: boolean } {
+  const now = Date.now();
+  const entry = rateLimitMap.get(key);
+
+  if (!entry || now > entry.resetAt) {
+    rateLimitMap.set(key, { count: 1, resetAt: now + RATE_LIMIT_WINDOW_MS });
+    return { allowed: true };
+  }
+
+  if (entry.count >= RATE_LIMIT_MAX) return { allowed: false };
+
+  entry.count++;
+  return { allowed: true };
+}
+
 export async function authMiddleware(req: NextRequest): Promise<AuthResult | NextResponse> {
+  // Apply mutation guards (CSRF + rate limiting) for POST/PATCH/DELETE
+  const guardResult = applyMutationGuards(req);
+  if (guardResult) return guardResult;
+
   const token = req.cookies.get("auth_token")?.value;
   if (!token) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
@@ -42,6 +77,29 @@ export async function authMiddleware(req: NextRequest): Promise<AuthResult | Nex
       department: user.department,
     },
   };
+}
+
+/** Apply rate limiting + basic CSRF to mutation requests (POST/PATCH/DELETE). */
+export function applyMutationGuards(req: NextRequest): NextResponse | null {
+  const { method } = req;
+  if (method !== "POST" && method !== "PATCH" && method !== "DELETE") return null;
+
+  // Content-Type guard: mutations must declare a Content-Type
+  const contentType = req.headers.get("content-type");
+  if (!contentType) {
+    return NextResponse.json({ error: "Forbidden: Content-Type header required" }, { status: 403 });
+  }
+
+  // Rate limit per IP per endpoint
+  const ip = getRateLimitKey(req);
+  const url = new URL(req.url);
+  const rateKey = `${ip}:${method}:${url.pathname}`;
+  const { allowed } = checkRateLimit(rateKey);
+  if (!allowed) {
+    return NextResponse.json({ error: "Too many requests" }, { status: 429 });
+  }
+
+  return null;
 }
 
 export function requireRole(

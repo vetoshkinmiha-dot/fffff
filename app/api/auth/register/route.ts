@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { hashPassword } from "@/lib/auth";
+import { hashPassword, generateAccessToken, JWTPayload, generateRefreshToken, setAuthAndRefreshCookies } from "@/lib/auth";
 import { registerSchema } from "@/lib/validations";
 import { authMiddleware, requireRole } from "@/lib/api-middleware";
 
@@ -47,7 +47,21 @@ export async function POST(req: NextRequest) {
       },
     });
 
-    return NextResponse.json({ user }, { status: 201 });
+    const payload: JWTPayload = {
+      userId: user.id,
+      email: user.email,
+      fullName: user.fullName,
+      role: user.role,
+      organizationId: user.organizationId,
+      department: user.department,
+    };
+
+    const token = generateAccessToken(payload);
+    const { token: refreshToken, expiresAt } = await generateRefreshToken(user.id);
+
+    const response = NextResponse.json({ user }, { status: 201 });
+    setAuthAndRefreshCookies(response, token, refreshToken);
+    return response;
   } catch (err) {
     console.error("Register error:", err);
     return NextResponse.json({ error: "Internal server error" }, { status: 500 });

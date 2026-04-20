@@ -4,6 +4,11 @@ import { prisma } from "@/lib/prisma";
 const CRON_SECRET = process.env.CRON_SECRET;
 
 export async function POST(req: NextRequest) {
+  if (!CRON_SECRET || CRON_SECRET.length < 16) {
+    console.error('CRON_SECRET is not configured or too short');
+    return NextResponse.json({ error: 'Cron endpoints unavailable' }, { status: 503 });
+  }
+
   const authHeader = req.headers.get("authorization");
   if (authHeader !== `Bearer ${CRON_SECRET}`) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });

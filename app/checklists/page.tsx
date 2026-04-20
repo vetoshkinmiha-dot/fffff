@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback } from "react";
 import Link from "next/link";
-import { Plus, Search } from "lucide-react";
+import { Plus, Search, BarChart3, Loader2, X } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -21,6 +21,13 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 
 const statusConfig: Record<string, { variant: "outline" | "destructive" | "secondary"; label: string }> = {
   passed: { variant: "outline", label: "Пройден" },
@@ -55,7 +62,21 @@ export default function ChecklistsPage() {
   const [totalPages, setTotalPages] = useState(1);
   const [statusFilter, setStatusFilter] = useState("all");
   const [userRole, setUserRole] = useState<string>("");
+  const [userOrgId, setUserOrgId] = useState<string>("");
   const limit = 20;
+
+  // Stats modal
+  const [statsOpen, setStatsOpen] = useState(false);
+  const [statsLoading, setStatsLoading] = useState(false);
+  const [stats, setStats] = useState<{
+    total: number;
+    passed: number;
+    failed: number;
+    inProgress: number;
+    avgScore: number;
+    monthlyTrend: { month: string; total: number; avgScore: number; passRate: number }[];
+    topFailed: { question: string; failCount: number; totalCount: number; failRate: number }[];
+  } | null>(null);
 
   const fetchChecklists = useCallback(async () => {
     setLoading(true);
@@ -85,9 +106,27 @@ export default function ChecklistsPage() {
       .then((r) => (r.ok ? r.json() : null))
       .then((data) => {
         if (data?.user?.role) setUserRole(data.user.role);
+        if (data?.user?.organizationId) setUserOrgId(data.user.organizationId);
       })
       .catch(() => {});
   }, [fetchChecklists]);
+
+  async function fetchStats() {
+    if (!userOrgId) return;
+    setStatsLoading(true);
+    setStatsOpen(true);
+    try {
+      const res = await fetch(`/api/checklists/stats?contractorId=${userOrgId}`, { credentials: "include" });
+      if (res.ok) {
+        const data = await res.json();
+        setStats(data);
+      }
+    } catch {
+      // ignore
+    } finally {
+      setStatsLoading(false);
+    }
+  }
 
   return (
     <div className="space-y-6">
@@ -101,13 +140,17 @@ export default function ChecklistsPage() {
           </p>
         </div>
         {userRole === "admin" && (
-        <Link href="/checklists/new">
-          <Button variant="default" size="lg">
-            <Plus />
-            Создать чек-лист
-          </Button>
-        </Link>
+          <Link href="/checklists/new">
+            <Button variant="default" size="lg">
+              <Plus />
+              Создать чек-лист
+            </Button>
+          </Link>
         )}
+        <Button variant="outline" size="lg" onClick={fetchStats}>
+          <BarChart3 />
+          Статистика
+        </Button>
       </div>
 
       <div className="flex items-center gap-3">
@@ -249,6 +292,85 @@ export default function ChecklistsPage() {
           </div>
         </div>
       )}
+
+      {/* Stats dialog */}
+      <Dialog open={statsOpen} onOpenChange={(open) => { if (!open) { setStatsOpen(false); setStats(null); } }}>
+        <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Статистика чек-листов</DialogTitle>
+            <DialogDescription>
+              Общая статистика проверок подрядчика
+            </DialogDescription>
+          </DialogHeader>
+          {statsLoading ? (
+            <div className="flex items-center justify-center py-12">
+              <Loader2 className="h-6 w-6 animate-spin text-zinc-400" />
+            </div>
+          ) : stats ? (
+            <div className="space-y-6">
+              {/* Summary cards */}
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                <div className="rounded-lg border p-3 text-center">
+                  <div className="text-2xl font-bold text-zinc-900">{stats.total}</div>
+                  <div className="text-xs text-zinc-500">Всего</div>
+                </div>
+                <div className="rounded-lg border p-3 text-center">
+                  <div className="text-2xl font-bold text-emerald-600">{stats.passed}</div>
+                  <div className="text-xs text-zinc-500">Пройдено</div>
+                </div>
+                <div className="rounded-lg border p-3 text-center">
+                  <div className="text-2xl font-bold text-red-600">{stats.failed}</div>
+                  <div className="text-xs text-zinc-500">Не пройдено</div>
+                </div>
+                <div className="rounded-lg border p-3 text-center">
+                  <div className="text-2xl font-bold text-zinc-900">{stats.avgScore}%</div>
+                  <div className="text-xs text-zinc-500">Ср. балл</div>
+                </div>
+              </div>
+
+              {/* Monthly trend */}
+              {stats.monthlyTrend.length > 0 && (
+                <div>
+                  <h3 className="text-sm font-medium text-zinc-900 mb-2">Месячная динамика</h3>
+                  <div className="space-y-2">
+                    {stats.monthlyTrend.map((m) => (
+                      <div key={m.month} className="flex items-center gap-3 text-sm">
+                        <span className="w-16 text-xs text-zinc-500 font-mono">{m.month}</span>
+                        <span className="text-zinc-600">{m.total} пров.</span>
+                        <span className="text-zinc-600">{m.avgScore}%</span>
+                        <div className="flex-1 h-2 rounded-full bg-zinc-100 overflow-hidden">
+                          <div
+                            className="h-full rounded-full"
+                            style={{ width: `${m.passRate}%`, backgroundColor: "#10b981" }}
+                          />
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Top failed items */}
+              {stats.topFailed.length > 0 && (
+                <div>
+                  <h3 className="text-sm font-medium text-zinc-900 mb-2">Топ-5 частых нарушений</h3>
+                  <div className="space-y-1.5">
+                    {stats.topFailed.map((item, i) => (
+                      <div key={i} className="flex items-center justify-between text-sm py-1.5 border-b border-zinc-100 last:border-0">
+                        <span className="text-zinc-700 flex-1">{item.question}</span>
+                        <span className="text-zinc-400 text-xs ml-2">{item.failCount}/{item.totalCount}</span>
+                        <Badge variant="destructive" className="ml-2">{item.failRate}%</Badge>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+          ) : (
+            <p className="text-sm text-zinc-500 text-center py-8">Не удалось загрузить статистику</p>
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

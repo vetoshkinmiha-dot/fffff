@@ -1,4 +1,4 @@
-import { mkdir, writeFile, unlink } from "fs/promises";
+import { mkdir, writeFile, unlink, readFile } from "fs/promises";
 import path from "path";
 import { randomUUID } from "crypto";
 
@@ -12,7 +12,15 @@ async function ensureUploadDir() {
   }
 }
 
+// Note: s3Client is imported from S3 config when available.
+// For now, we check env vars to determine if S3 is configured.
+const s3Client = process.env.S3_ENDPOINT ? true : false;
+
 export async function uploadFile(file: File, subDir: string): Promise<string> {
+  if (!s3Client && process.env.NODE_ENV === "production") {
+    throw new Error("S3 storage is required in production but is not configured");
+  }
+
   await ensureUploadDir();
 
   const targetDir = path.join(UPLOAD_DIR, subDir);
@@ -29,10 +37,23 @@ export async function uploadFile(file: File, subDir: string): Promise<string> {
 }
 
 export async function deleteFile(url: string): Promise<void> {
+  if (process.env.NODE_ENV === "production" && !s3Client) {
+    throw new Error("S3 storage is required in production but is not configured");
+  }
+
   try {
     const fullPath = path.join(process.cwd(), url);
     await unlink(fullPath);
   } catch {
-    // File may not exist, ignore
+    // File may not exist, ignoring
   }
+}
+
+export async function getFile(url: string): Promise<Buffer> {
+  if (process.env.NODE_ENV === "production" && !s3Client) {
+    throw new Error("S3 storage is required in production but is not configured");
+  }
+
+  const fullPath = path.join(process.cwd(), url);
+  return readFile(fullPath);
 }
