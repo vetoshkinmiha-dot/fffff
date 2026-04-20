@@ -8,7 +8,8 @@ function Table({ className, ...props }: React.ComponentProps<"table">) {
   return (
     <table
       data-slot="table"
-      className={cn("caption-bottom text-sm", className)}
+      className={cn("caption-bottom text-sm w-full", className)}
+      style={{ minWidth: "fit-content" }}
       {...props}
     />
   )
