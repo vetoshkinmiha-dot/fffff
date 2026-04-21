@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react";
 import { notFound, useParams } from "next/navigation";
 import Link from "next/link";
-import { ArrowLeft, CheckCircle2, Clock, Lock, XCircle, Printer, Archive, Loader2, Pencil } from "lucide-react";
+import { ArrowLeft, CheckCircle2, Clock, Lock, XCircle, Printer, Archive, Loader2, Pencil, Send } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
@@ -78,6 +78,12 @@ export default function PermitDetailPage() {
   const [closeReason, setCloseReason] = useState("");
   const [closing, setClosing] = useState(false);
   const [closeError, setCloseError] = useState("");
+
+  // Resubmit state
+  const [resubmitOpen, setResubmitOpen] = useState(false);
+  const [resubmitComment, setResubmitComment] = useState("");
+  const [resubmitting, setResubmitting] = useState(false);
+  const [resubmitError, setResubmitError] = useState("");
 
   // Approval decision state
   const [decisionApprovalId, setDecisionApprovalId] = useState<string | null>(null);
@@ -213,6 +219,40 @@ export default function PermitDetailPage() {
     }
   }
 
+  const approvals = permit?.approvals ?? [];
+  const hasRejected = approvals.some((a) => a.status === "rejected");
+
+  async function handleResubmit() {
+    if (!resubmitComment.trim()) {
+      setResubmitError("Комментарий обязателен");
+      return;
+    }
+    setResubmitting(true);
+    setResubmitError("");
+    try {
+      const res = await fetch(`/api/permits/${id}/resubmit`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({ comment: resubmitComment.trim() }),
+      });
+      if (!res.ok) {
+        const data = await res.json();
+        setResubmitError(data.error || "Ошибка при отправке");
+        return;
+      }
+      setResubmitOpen(false);
+      setResubmitComment("");
+      // Reload permit
+      const res2 = await fetch(`/api/permits/${id}`, { credentials: "include" });
+      if (res2.ok) setPermit(await res2.json());
+    } catch {
+      setResubmitError("Произошла ошибка. Попробуйте ещё раз.");
+    } finally {
+      setResubmitting(false);
+    }
+  }
+
   return (
     <div className="space-y-6">
       {/* Top bar */}
@@ -240,6 +280,16 @@ export default function PermitDetailPage() {
           >
             <Archive className="h-4 w-4" />
             Закрыть
+          </Button>
+        )}
+        {hasRejected && userRole === "admin" && (
+          <Button
+            variant="outline"
+            className="gap-2 text-blue-700 border-blue-200 hover:bg-blue-50"
+            onClick={() => { setResubmitComment(""); setResubmitError(""); setResubmitOpen(true); }}
+          >
+            <Send className="h-4 w-4" />
+            Отправить на согласование
           </Button>
         )}
         <Button
@@ -315,8 +365,10 @@ export default function PermitDetailPage() {
             <div className="space-y-0">
               {permit.approvals.map((approval, index) => {
                 const isLast = index === permit.approvals.length - 1;
-                const connectorColor =
-                  approval.status === "approved"
+                const displayStatus = hasRejected ? "rejected" : approval.status;
+                const connectorColor = hasRejected
+                  ? "bg-red-400"
+                  : approval.status === "approved"
                     ? "bg-green-400"
                     : approval.status === "rejected"
                       ? "bg-red-400"
@@ -328,23 +380,24 @@ export default function PermitDetailPage() {
                       <div
                         className={cn(
                           "flex h-8 w-8 shrink-0 items-center justify-center rounded-full border-2",
-                          approval.status === "approved" && "border-green-500 bg-green-500 text-white",
-                          approval.status === "rejected" && "border-red-500 bg-red-500 text-white",
-                          approval.status === "pending" && "border-zinc-300 bg-zinc-100 text-zinc-400",
-                          approval.status === "blocked" && "border-zinc-300 bg-zinc-100 text-zinc-300"
+                          hasRejected && "border-red-500 bg-red-500 text-white",
+                          !hasRejected && approval.status === "approved" && "border-green-500 bg-green-500 text-white",
+                          !hasRejected && approval.status === "rejected" && "border-red-500 bg-red-500 text-white",
+                          !hasRejected && approval.status === "pending" && "border-zinc-300 bg-zinc-100 text-zinc-400",
+                          !hasRejected && approval.status === "blocked" && "border-zinc-300 bg-zinc-100 text-zinc-300"
                         )}
                       >
-                        {approval.status === "approved" && <CheckCircle2 className="h-5 w-5" />}
-                        {approval.status === "rejected" && <XCircle className="h-5 w-5" />}
-                        {approval.status === "pending" && <Clock className="h-4 w-4" />}
-                        {approval.status === "blocked" && <Lock className="h-4 w-4" />}
+                        {displayStatus === "approved" && <CheckCircle2 className="h-5 w-5" />}
+                        {displayStatus === "rejected" && <XCircle className="h-5 w-5" />}
+                        {displayStatus === "pending" && <Clock className="h-4 w-4" />}
+                        {displayStatus === "blocked" && <Lock className="h-4 w-4" />}
                       </div>
                       {!isLast && <div className={cn("w-0.5 flex-1 min-h-[32px]", connectorColor)} />}
                     </div>
                     <div className={cn("pb-8 flex-1", isLast && "pb-0")}>
                       <div className="flex items-start justify-between gap-2">
                         <div>
-                          <p className={cn("text-sm font-medium", approval.status === "blocked" ? "text-zinc-400" : "text-zinc-900")}>
+                          <p className={cn("text-sm font-medium", displayStatus === "blocked" ? "text-zinc-400" : displayStatus === "rejected" ? "text-red-600" : "text-zinc-900")}>
                             {DEPARTMENT_NAMES[approval.department] ?? approval.department}
                           </p>
                           {approval.comment && (
@@ -353,7 +406,7 @@ export default function PermitDetailPage() {
                         </div>
                         <div className="flex shrink-0 items-center gap-3 text-sm text-zinc-500">
                           <span>Срок: {formatDate(approval.deadline)}</span>
-                          {getApprovalBadge(approval.status)}
+                          {getApprovalBadge(displayStatus)}
                           {approval.status === "pending" && (userRole === "admin" || userRole === "department_approver") && (
                             <div className="flex gap-1 ml-2">
                               <Button
@@ -496,6 +549,41 @@ export default function PermitDetailPage() {
             <Button variant="destructive" onClick={handleClosePermit} disabled={closing}>
               {closing && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
               Закрыть
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Resubmit dialog */}
+      <Dialog open={resubmitOpen} onOpenChange={setResubmitOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Отправить на повторное согласование</DialogTitle>
+            <DialogDescription>
+              {permit && `Наряд: ${permit.permitNumber}`}
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-3">
+            <div className="space-y-1.5">
+              <Label>Причина отправки на доработку *</Label>
+              <Textarea
+                placeholder="Укажите причину повторной отправки на согласование..."
+                value={resubmitComment}
+                onChange={(e) => setResubmitComment(e.target.value)}
+                rows={3}
+              />
+            </div>
+            {resubmitError && (
+              <p className="text-sm text-red-600">{resubmitError}</p>
+            )}
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => { setResubmitOpen(false); setResubmitError(""); }} disabled={resubmitting}>
+              Отмена
+            </Button>
+            <Button onClick={handleResubmit} disabled={resubmitting || !resubmitComment.trim()}>
+              {resubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+              Отправить
             </Button>
           </DialogFooter>
         </DialogContent>
