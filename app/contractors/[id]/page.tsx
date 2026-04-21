@@ -15,6 +15,16 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { Textarea } from "@/components/ui/textarea";
+import { Label } from "@/components/ui/label";
 
 const departmentLabels: Record<string, string> = {
   security: "Служба безопасности",
@@ -64,6 +74,13 @@ export default function ContractorDetailPage() {
   const [loading, setLoading] = useState(true);
   const [userRole, setUserRole] = useState<string>("");
   const [updatingStatus, setUpdatingStatus] = useState(false);
+
+  // Resubmit dialog
+  const [resubmitOpen, setResubmitOpen] = useState(false);
+  const [resubmitEmployee, setResubmitEmployee] = useState<{ id: string; fullName: string } | null>(null);
+  const [resubmitComment, setResubmitComment] = useState("");
+  const [resubmitting, setResubmitting] = useState(false);
+  const [resubmitError, setResubmitError] = useState("");
 
   useEffect(() => {
     let cancelled = false;
@@ -119,6 +136,41 @@ export default function ContractorDetailPage() {
       }
     } finally {
       setUpdatingStatus(false);
+    }
+  }
+
+  async function handleResubmit() {
+    if (!resubmitEmployee || !resubmitComment.trim()) {
+      setResubmitError("Комментарий обязателен");
+      return;
+    }
+    setResubmitting(true);
+    setResubmitError("");
+    try {
+      const res = await fetch(`/api/approvals/${resubmitEmployee.id}/resubmit`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({ comment: resubmitComment.trim() }),
+      });
+      if (!res.ok) {
+        const data = await res.json();
+        setResubmitError(data.error || "Ошибка при отправке");
+        return;
+      }
+      setResubmitOpen(false);
+      setResubmitEmployee(null);
+      setResubmitComment("");
+      // Reload employees to reflect updated approvals
+      const empRes = await fetch(`/api/employees?organizationId=${contractor?.id}`, { credentials: "include" });
+      if (empRes.ok) {
+        const json = await empRes.json();
+        setEmployees(json.data || []);
+      }
+    } catch {
+      setResubmitError("Произошла ошибка. Попробуйте ещё раз.");
+    } finally {
+      setResubmitting(false);
     }
   }
 
@@ -294,12 +346,19 @@ export default function ContractorDetailPage() {
                   const pendingApprovals = emp.approvals.filter(
                     (a) => a.status === "pending"
                   ).length;
-                  const rejectedApprovals = emp.approvals.filter(
+                  const hasRejected = emp.approvals.some(
                     (a) => a.status === "rejected"
-                  ).length;
+                  );
                   const expiredDocs = emp.documents.filter(
                     (d) => d.status === "expired"
                   ).length;
+
+                  // If any stage is rejected — the whole route is red
+                  const routeStatus = hasRejected
+                    ? { label: "Отклонён", color: "text-red-600" as const }
+                    : emp.approvals.some((a) => a.status === "approved")
+                      ? { label: "Частично", color: "text-zinc-500" as const }
+                      : { label: "В процессе", color: "text-zinc-500" as const };
 
                   return (
                     <TableRow key={emp.id}>
@@ -334,33 +393,34 @@ export default function ContractorDetailPage() {
                       </TableCell>
                       <TableCell className="whitespace-nowrap">
                         <div className="flex items-center gap-2 text-xs">
-                          <span className="text-zinc-500">
-                            {emp.approvals.length} всего
+                          <span className={routeStatus.color}>
+                            {routeStatus.label}
                           </span>
                           {pendingApprovals > 0 && (
                             <span className="text-amber-600 font-medium">
                               {pendingApprovals} ожидает
                             </span>
                           )}
-                          {rejectedApprovals > 0 && (
+                          {hasRejected && (
                             <span className="text-red-600 font-medium">
-                              {rejectedApprovals} отклонено
+                              Маршрут отклонён
                             </span>
                           )}
                         </div>
                         <div className="mt-1 space-y-0.5">
                           {emp.approvals.slice(0, 2).map((a) => {
                             const info = approvalStatusMap[a.status];
+                            const isRejectedAny = hasRejected && a.status !== "rejected";
                             return (
                               <div
                                 key={a.id}
                                 className="flex items-center justify-between text-xs"
                               >
-                                <span className="text-zinc-500">
+                                <span className={isRejectedAny ? "text-zinc-400" : "text-zinc-500"}>
                                   {departmentLabels[a.department] ?? a.department}
                                 </span>
-                                <span className={`font-medium ${info.color}`}>
-                                  {info.label}
+                                <span className={`font-medium ${hasRejected ? "text-red-600" : info.color}`}>
+                                  {hasRejected ? "Отклонён" : info.label}
                                 </span>
                               </div>
                             );
@@ -406,11 +466,29 @@ export default function ContractorDetailPage() {
                         )}
                       </TableCell>
                       <TableCell className="text-right whitespace-nowrap">
-                        <Link href={`/employees/${emp.id}`}>
-                          <Button variant="ghost" size="sm">
-                            Подробнее
-                          </Button>
-                        </Link>
+                        {(userRole === "admin" || userRole === "contractor_admin") && hasRejected ? (
+                          <div className="flex items-center justify-end gap-2">
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              className="text-blue-700 border-blue-200 hover:bg-blue-50"
+                              onClick={() => {
+                                setResubmitEmployee({ id: emp.id, fullName: emp.fullName });
+                                setResubmitComment("");
+                                setResubmitError("");
+                                setResubmitOpen(true);
+                              }}
+                            >
+                              Отправить на согласование
+                            </Button>
+                          </div>
+                        ) : (
+                          <Link href={`/employees/${emp.id}`}>
+                            <Button variant="ghost" size="sm">
+                              Подробнее
+                            </Button>
+                          </Link>
+                        )}
                       </TableCell>
                     </TableRow>
                   );
@@ -421,6 +499,41 @@ export default function ContractorDetailPage() {
           )}
         </CardContent>
       </Card>
+
+      {/* Resubmit dialog */}
+      <Dialog open={resubmitOpen} onOpenChange={setResubmitOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Отправить на согласование</DialogTitle>
+            <DialogDescription>
+              {resubmitEmployee && `Сотрудник: ${resubmitEmployee.fullName}`}
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-3">
+            <div className="space-y-1.5">
+              <Label>Причина отправки на доработку *</Label>
+              <Textarea
+                placeholder="Укажите причину повторной отправки на согласование..."
+                value={resubmitComment}
+                onChange={(e) => setResubmitComment(e.target.value)}
+                rows={3}
+              />
+            </div>
+            {resubmitError && (
+              <p className="text-sm text-red-600">{resubmitError}</p>
+            )}
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => { setResubmitOpen(false); setResubmitError(""); }} disabled={resubmitting}>
+              Отмена
+            </Button>
+            <Button onClick={handleResubmit} disabled={resubmitting || !resubmitComment.trim()}>
+              {resubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+              Отправить
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

@@ -27,6 +27,7 @@ import {
 import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
 import Link from "next/link";
 import { cn, sanitize } from "@/lib/utils";
 
@@ -234,26 +235,45 @@ export default function EmployeeDetailPage({
 
   async function submitApproval() {
     if (!id) return;
-    if (selectedDepts.length === 0) {
-      setApprovalError("Выберите хотя бы один департамент");
-      return;
-    }
-    if (!deadline) {
-      setApprovalError("Укажите срок");
-      return;
-    }
     setSubmittingApproval(true);
     setApprovalError("");
     try {
-      const res = await fetch(`/api/employees/${id}/approvals`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        credentials: "include",
-        body: JSON.stringify({
-          departments: selectedDepts,
-          deadline: new Date(deadline).toISOString(),
-        }),
-      });
+      let res;
+      if (hasRejected) {
+        // Resubmit: reset all stages with the comment
+        if (!deadline.trim()) {
+          setApprovalError("Комментарий обязателен");
+          setSubmittingApproval(false);
+          return;
+        }
+        res = await fetch(`/api/approvals/${id}/resubmit`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          credentials: "include",
+          body: JSON.stringify({ comment: deadline.trim() }),
+        });
+      } else {
+        // Initial submission
+        if (selectedDepts.length === 0) {
+          setApprovalError("Выберите хотя бы один департамент");
+          setSubmittingApproval(false);
+          return;
+        }
+        if (!deadline) {
+          setApprovalError("Укажите срок");
+          setSubmittingApproval(false);
+          return;
+        }
+        res = await fetch(`/api/employees/${id}/approvals`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          credentials: "include",
+          body: JSON.stringify({
+            departments: selectedDepts,
+            deadline: new Date(deadline).toISOString(),
+          }),
+        });
+      }
       if (!res.ok) {
         const data = await res.json();
         setApprovalError(data.error || "Ошибка при отправке на согласование");
@@ -487,11 +507,15 @@ export default function EmployeeDetailPage({
     (a) => a.status === "approved"
   ).length;
   const totalStages = approvals.length;
+  const hasRejected = approvals.some((a) => a.status === "rejected");
 
   // Departments that already have an approval request (any status)
   const requestedDeptKeys = new Set(approvals.map((a) => a.department));
   const remainingDepts = DEPARTMENTS.filter((d) => !requestedDeptKeys.has(d.key));
   const allRequested = remainingDepts.length === 0;
+
+  // Show resubmit button if route is fully rejected
+  const showResubmit = (userRole === "admin" || userRole === "contractor_admin") && hasRejected;
 
   return (
     <div className="space-y-6">
@@ -504,7 +528,13 @@ export default function EmployeeDetailPage({
           </Button>
         </Link>
         <div className="flex-1" />
-        {(userRole === "admin" || userRole === "contractor_admin") && !allRequested && (
+        {!showResubmit && !allRequested && (userRole === "admin" || userRole === "contractor_admin") && (
+          <Button className="gap-2" onClick={() => setApprovalDialogOpen(true)}>
+            <Send className="h-4 w-4" />
+            Отправить на согласование
+          </Button>
+        )}
+        {showResubmit && (
           <Button className="gap-2" onClick={() => setApprovalDialogOpen(true)}>
             <Send className="h-4 w-4" />
             Отправить на согласование
@@ -866,40 +896,57 @@ export default function EmployeeDetailPage({
       <Dialog open={approvalDialogOpen} onOpenChange={setApprovalDialogOpen}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Отправить на согласование</DialogTitle>
+            <DialogTitle>{hasRejected ? "Отправить на повторное согласование" : "Отправить на согласование"}</DialogTitle>
             <DialogDescription>
-              {remainingDepts.length < DEPARTMENTS.length
-                ? `Осталось согласовать ${remainingDepts.length} из ${DEPARTMENTS.length} департаментов`
-                : "Выберите департаменты и укажите срок"}
+              {hasRejected
+                ? "Укажите причину отправки на доработку"
+                : remainingDepts.length < DEPARTMENTS.length
+                  ? `Осталось согласовать ${remainingDepts.length} из ${DEPARTMENTS.length} департаментов`
+                  : "Выберите департаменты и укажите срок"}
             </DialogDescription>
           </DialogHeader>
 
           <div className="space-y-4">
-            <div className="space-y-2">
-              <Label>Департаменты</Label>
-              {remainingDepts.map((dept) => (
-                <div key={dept.key} className="flex items-center gap-2">
-                  <Checkbox
-                    id={dept.key}
-                    checked={selectedDepts.includes(dept.key)}
-                    onCheckedChange={() => toggleDept(dept.key)}
-                  />
-                  <Label htmlFor={dept.key} className="text-sm cursor-pointer">
-                    {dept.label}
-                  </Label>
+            {hasRejected ? (
+              <div className="space-y-1.5">
+                <Label htmlFor="resubmitComment">Причина отправки на доработку *</Label>
+                <Textarea
+                  id="resubmitComment"
+                  placeholder="Укажите причину повторной отправки на согласование..."
+                  value={deadline}
+                  onChange={(e) => setDeadline(e.target.value)}
+                  rows={3}
+                />
+              </div>
+            ) : (
+              <>
+                <div className="space-y-2">
+                  <Label>Департаменты</Label>
+                  {remainingDepts.map((dept) => (
+                    <div key={dept.key} className="flex items-center gap-2">
+                      <Checkbox
+                        id={dept.key}
+                        checked={selectedDepts.includes(dept.key)}
+                        onCheckedChange={() => toggleDept(dept.key)}
+                      />
+                      <Label htmlFor={dept.key} className="text-sm cursor-pointer">
+                        {dept.label}
+                      </Label>
+                    </div>
+                  ))}
                 </div>
-              ))}
-            </div>
 
-            <div className="space-y-1.5">
-              <Label htmlFor="approvalDeadline">Срок</Label>
-              <Input
-                id="approvalDeadline"
-                type="date"
-                value={deadline}
-                onChange={(e) => setDeadline(e.target.value)}
-              />
-            </div>
+                <div className="space-y-1.5">
+                  <Label htmlFor="approvalDeadline">Срок</Label>
+                  <Input
+                    id="approvalDeadline"
+                    type="date"
+                    value={deadline}
+                    onChange={(e) => setDeadline(e.target.value)}
+                  />
+                </div>
+              </>
+            )}
 
             {approvalError && (
               <p className="text-sm text-red-600">{approvalError}</p>
