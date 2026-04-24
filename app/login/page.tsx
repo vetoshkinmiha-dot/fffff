@@ -43,7 +43,6 @@ const DEMO_ACCOUNTS: {
     group: 'ООО «СтройЭнергоМонтаж»',
     items: [
       { label: "Ответственный", sub: "contractor_admin", email: "resp_1@stroymont.ru", password: "Org1Admin1!", highlight: true },
-      { label: "Сидоров П.И.", sub: "contractor_employee", email: "podradchik@pirelli.ru", password: "Contractor1!" },
     ],
   },
   {
