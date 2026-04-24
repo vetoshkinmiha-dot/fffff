@@ -86,9 +86,8 @@ export function applyMutationGuards(req: NextRequest): NextResponse | null {
   const { method } = req;
   if (method !== "POST" && method !== "PATCH" && method !== "DELETE") return null;
 
-  // Content-Type guard: mutations must declare a Content-Type
-  const contentType = req.headers.get("content-type");
-  if (!contentType) {
+  // Content-Type guard for requests with a body (POST/PATCH)
+  if ((method === "POST" || method === "PATCH") && !req.headers.get("content-type")) {
     return NextResponse.json({ error: "Forbidden: Content-Type header required" }, { status: 403 });
   }
 

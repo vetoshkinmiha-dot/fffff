@@ -307,9 +307,9 @@ export default function ViolationsPage() {
       {/* Violations tab content */}
       {activeTab === "violations" && (
         <>
-          <div className="flex items-center gap-3 flex-wrap">
+          <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
             <Select value={severityFilter} onValueChange={(v) => { setSeverityFilter(v ?? "all"); setPage(1); }}>
-              <SelectTrigger className="w-[180px]">
+              <SelectTrigger className="w-full sm:w-[180px]">
                 <SelectValue placeholder="Все тяжести" />
               </SelectTrigger>
               <SelectContent>
@@ -321,7 +321,7 @@ export default function ViolationsPage() {
               </SelectContent>
             </Select>
             <Select value={statusFilter} onValueChange={(v) => { setStatusFilter(v ?? "all"); setPage(1); }} itemToStringLabel={(v) => ({ all: "Все статусы", pending: "Ожидает", resolved: "Устранено", escalated: "Эскалировано" }[v] ?? v)}>
-              <SelectTrigger className="w-[180px]">
+              <SelectTrigger className="w-full sm:w-[180px]">
                 <SelectValue>{(v: string) => ({ all: "Все статусы", pending: "Ожидает", resolved: "Устранено", escalated: "Эскалировано" }[v] ?? v ?? "Все статусы")}</SelectValue>
               </SelectTrigger>
               <SelectContent>
@@ -333,7 +333,7 @@ export default function ViolationsPage() {
             </Select>
           </div>
 
-          <div className="rounded-xl border border-zinc-200 bg-white overflow-x-auto">
+          <div className="hidden md:block rounded-xl border border-zinc-200 bg-white overflow-x-auto">
             <Table>
               <TableHeader>
                 <TableRow>
@@ -410,8 +410,31 @@ export default function ViolationsPage() {
             </Table>
           </div>
 
+          {/* Mobile cards — violations */}
+          <div className="md:hidden space-y-3">
+            {violations.map((v) => {
+              const sev = severityConfig[v.severity] ?? severityConfig.low;
+              return (
+                <div key={v.id} className="rounded-xl border border-zinc-200 bg-white p-4 space-y-2">
+                  <div className="flex items-center justify-between">
+                    <span className="font-mono text-xs text-zinc-700">{v.violationNumber}</span>
+                    <Badge variant="outline" className={sev.className}>{sev.label}</Badge>
+                  </div>
+                  <div className="text-xs text-zinc-500">{v.contractor?.name ?? "—"} &bull; {formatDate(v.date)}</div>
+                  <div className="text-sm text-zinc-600 line-clamp-2">{v.description}</div>
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs text-zinc-500">{statusLabels[v.status] ?? v.status}</span>
+                    <Link href={`/violations/${v.id}`}>
+                      <Button variant="outline" size="sm"><Eye className="size-4 mr-1" />Подробнее</Button>
+                    </Link>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+
           {totalPages > 1 && (
-            <div className="flex items-center justify-between">
+            <div className="flex flex-col sm:flex-row items-center justify-between gap-3">
               <div className="text-xs text-zinc-400">
                 Показано {violations.length} из {total} нарушений
               </div>
@@ -431,9 +454,9 @@ export default function ViolationsPage() {
       {/* Complaints tab content */}
       {activeTab === "complaints" && (
         <>
-          <div className="flex items-center gap-3 flex-wrap">
+          <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
             <Select value={complaintStatusFilter} onValueChange={(v) => { setComplaintStatusFilter(v ?? "all"); setComplaintPage(1); }}>
-              <SelectTrigger className="w-[180px]">
+              <SelectTrigger className="w-full sm:w-[180px]">
                 <SelectValue placeholder="Все статусы" />
               </SelectTrigger>
               <SelectContent>
@@ -445,7 +468,8 @@ export default function ViolationsPage() {
             </Select>
           </div>
 
-          <div className="rounded-xl border border-zinc-200 bg-white overflow-x-auto">
+          {/* Desktop table */}
+          <div className="hidden md:block rounded-xl border border-zinc-200 bg-white overflow-x-auto">
             <Table>
               <TableHeader>
                 <TableRow>
@@ -516,8 +540,35 @@ export default function ViolationsPage() {
             </Table>
           </div>
 
+          {/* Mobile cards — complaints */}
+          <div className="md:hidden space-y-3">
+            {complaints.map((c) => {
+              const statusColor = c.status === "pending"
+                ? "bg-yellow-50 text-yellow-700 border-yellow-200"
+                : c.status === "resolved"
+                  ? "bg-green-50 text-green-700 border-green-200"
+                  : "bg-red-50 text-red-700 border-red-200";
+              return (
+                <div key={c.id} className="rounded-xl border border-zinc-200 bg-white p-4 space-y-2">
+                  <div className="flex items-center justify-between">
+                    <span className="text-sm font-medium text-zinc-900">{c.contractor?.name ?? "—"}</span>
+                    <Badge variant="outline" className={statusColor}>{complaintStatusLabels[c.status] ?? c.status}</Badge>
+                  </div>
+                  <div className="text-xs text-zinc-500">{departmentLabels[c.department] ?? c.department} &bull; {formatDate(c.createdAt)}</div>
+                  <div className="text-sm text-zinc-600 line-clamp-2">{c.complaintText}</div>
+                  {c.violation?.violationNumber && (
+                    <div className="text-xs text-zinc-400 font-mono">Акт: {c.violation.violationNumber}</div>
+                  )}
+                  <Link href={`/complaints/${c.id}`} className="block">
+                    <Button variant="outline" size="sm" className="w-full"><Eye className="size-4 mr-1" />Подробнее</Button>
+                  </Link>
+                </div>
+              );
+            })}
+          </div>
+
           {complaintTotalPages > 1 && (
-            <div className="flex items-center justify-between">
+            <div className="flex flex-col sm:flex-row items-center justify-between gap-3">
               <div className="text-xs text-zinc-400">
                 Показано {complaints.length} из {complaintTotal} жалоб
               </div>

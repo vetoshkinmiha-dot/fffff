@@ -10,7 +10,9 @@ const MAX_ATTEMPTS = 5;
 const WINDOW_MS = 15 * 60 * 1000; // 15 minutes
 
 function getRateLimitKey(req: NextRequest): string {
-  return req.headers.get("x-forwarded-for") || req.headers.get("x-real-ip") || "unknown";
+  const forwarded = req.headers.get("x-forwarded-for");
+  const ip = forwarded?.split(",")[0]?.trim() || req.headers.get("x-real-ip") || "127.0.0.1";
+  return ip;
 }
 
 function checkRateLimit(key: string): { allowed: boolean; retryAfter?: number } {
@@ -73,15 +75,9 @@ export async function POST(req: NextRequest) {
     // Reset attempts on successful login
     loginAttempts.delete(key);
 
-    // Resolve employeeId for contractor_employee users
-    let employeeId: string | null = null;
-    if (user.role === "contractor_employee" && user.organizationId) {
-      const employee = await prisma.employee.findFirst({
-        where: { organizationId: user.organizationId },
-        select: { id: true },
-      });
-      employeeId = employee?.id ?? null;
-    }
+    // Use the employeeId linked to the user account for contractor_employee users
+    const employeeId: string | null =
+      user.role === "contractor_employee" ? user.employeeId ?? null : null;
 
     const payload: JWTPayload = {
       userId: user.id,

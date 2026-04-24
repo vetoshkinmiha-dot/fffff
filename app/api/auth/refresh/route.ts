@@ -29,15 +29,9 @@ export async function POST(req: NextRequest) {
   await revokeRefreshToken(refreshToken);
   const { token: newRefresh } = await generateRefreshToken(user.id);
 
-  // Resolve employeeId for contractor_employee users
-  let employeeId: string | null = null;
-  if (user.role === "contractor_employee" && user.organizationId) {
-    const employee = await prisma.employee.findFirst({
-      where: { organizationId: user.organizationId },
-      select: { id: true },
-    });
-    employeeId = employee?.id ?? null;
-  }
+  // Use the employeeId linked to the user account for contractor_employee users
+  const employeeId: string | null =
+    user.role === "contractor_employee" ? user.employeeId ?? null : null;
 
   const payload: Parameters<typeof generateAccessToken>[0] = {
     userId: user.id,

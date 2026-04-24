@@ -93,17 +93,21 @@ export async function POST(req: NextRequest) {
       },
     });
 
-    // Notify all users with active subscriptions
-    const subscribers = await prisma.user.findMany({
-      where: {
-        isActive: true,
-        notificationSubscriptions: { some: { emailOnUpdate: true } },
-      },
-      select: { email: true, fullName: true },
-    });
+    // Notify all users with active subscriptions (email may fail if SMTP not configured)
+    try {
+      const subscribers = await prisma.user.findMany({
+        where: {
+          isActive: true,
+          notificationSubscriptions: { some: { emailOnUpdate: true } },
+        },
+        select: { email: true, fullName: true },
+      });
 
-    if (subscribers.length > 0) {
-      await sendRegDocUpdated(subscribers, doc.title, `/documents/regulatory/${doc.id}`);
+      if (subscribers.length > 0) {
+        await sendRegDocUpdated(subscribers, doc.title, `/documents/regulatory/${doc.id}`);
+      }
+    } catch (emailErr) {
+      console.warn("Email notification failed for reg doc upload:", emailErr);
     }
 
     // Create in-app notification for all active users

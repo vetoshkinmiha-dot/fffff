@@ -186,7 +186,7 @@ export default function ComplaintsPage() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col sm:flex-row items-center justify-between gap-3">
         <div>
           <h1 className="text-2xl font-semibold tracking-tight text-zinc-900">
             Жалобы подрядчиков
@@ -199,7 +199,7 @@ export default function ComplaintsPage() {
 
       <div className="flex items-center gap-3 flex-wrap">
         <Select value={statusFilter} onValueChange={(v) => { setStatusFilter(v ?? "all"); setPage(1); }}>
-          <SelectTrigger className="w-[180px]">
+          <SelectTrigger className="w-full sm:w-[180px]">
             <SelectValue placeholder="Все статусы" />
           </SelectTrigger>
           <SelectContent>
@@ -211,7 +211,7 @@ export default function ComplaintsPage() {
         </Select>
       </div>
 
-      <div className="rounded-xl border border-zinc-200 bg-white overflow-x-auto">
+      <div className="hidden md:block rounded-xl border border-zinc-200 bg-white overflow-x-auto">
         <Table>
           <TableHeader>
             <TableRow>
@@ -281,8 +281,35 @@ export default function ComplaintsPage() {
         </Table>
       </div>
 
+      {/* Mobile cards — complaints */}
+      <div className="md:hidden space-y-3">
+        {complaints.map((c) => {
+          const statusColor = c.status === "pending"
+            ? "bg-yellow-50 text-yellow-700 border-yellow-200"
+            : c.status === "resolved"
+              ? "bg-green-50 text-green-700 border-green-200"
+              : "bg-red-50 text-red-700 border-red-200";
+          return (
+            <div key={c.id} className="rounded-xl border border-zinc-200 bg-white p-4 space-y-2">
+              <div className="flex items-center justify-between">
+                <span className="text-sm font-medium text-zinc-900">{c.contractor?.name ?? "—"}</span>
+                <Badge variant="outline" className={statusColor}>{complaintStatusLabels[c.status] ?? c.status}</Badge>
+              </div>
+              <div className="text-xs text-zinc-500">{departmentLabels[c.department] ?? c.department} &bull; {formatDate(c.createdAt)}</div>
+              <div className="text-sm text-zinc-600 line-clamp-2">{c.complaintText}</div>
+              {c.violation?.violationNumber && (
+                <div className="text-xs text-zinc-400 font-mono">Акт: {c.violation.violationNumber}</div>
+              )}
+              <Button variant="outline" size="sm" className="w-full" onClick={() => openDetail(c)}>
+                <Eye className="size-4 mr-1" />Подробнее
+              </Button>
+            </div>
+          );
+        })}
+      </div>
+
       {totalPages > 1 && (
-        <div className="flex items-center justify-between">
+        <div className="flex flex-col sm:flex-row items-center justify-between gap-3">
           <div className="text-xs text-zinc-400">
             Показано {complaints.length} из {total} жалоб
           </div>

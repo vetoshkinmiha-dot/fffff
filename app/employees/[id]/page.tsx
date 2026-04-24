@@ -569,7 +569,7 @@ export default function EmployeeDetailPage({
         </CardHeader>
         <CardContent className="pt-0">
           {!editingOwn ? (
-          <div className="flex items-start gap-5">
+          <div className="flex flex-col sm:flex-row items-start gap-5">
             {/* Photo placeholder */}
             {employee.photoUrl ? (
               <img

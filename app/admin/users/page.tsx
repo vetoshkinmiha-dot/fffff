@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback } from "react";
 import { notFound } from "next/navigation";
-import { Plus, Search, Eye, Loader2 } from "lucide-react";
+import { Plus, Search, Eye, Loader2, Pencil, Key } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -262,7 +262,7 @@ export default function AdminUsersPage() {
         </Button>
       </div>
 
-      <div className="flex items-center gap-3 flex-wrap">
+      <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
         <div className="relative flex-1 max-w-sm">
           <Search className="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-zinc-400" />
           <Input
@@ -273,7 +273,7 @@ export default function AdminUsersPage() {
           />
         </div>
         <Select value={roleFilter} onValueChange={(v) => { setRoleFilter(v ?? "all"); setPage(1); }}>
-          <SelectTrigger className="w-[180px]">
+          <SelectTrigger className="w-full sm:w-[180px]">
             <SelectValue placeholder="Все роли" />
           </SelectTrigger>
           <SelectContent>
@@ -284,7 +284,7 @@ export default function AdminUsersPage() {
           </SelectContent>
         </Select>
         <Select value={statusFilter} onValueChange={(v) => { setStatusFilter(v ?? "all"); setPage(1); }} itemToStringLabel={(v) => ({ all: "Все статусы", active: "Активные", blocked: "Заблокированные" }[v] ?? v)}>
-          <SelectTrigger className="w-[160px]">
+          <SelectTrigger className="w-full sm:w-[160px]">
             <SelectValue>{(v: string) => ({ all: "Все статусы", active: "Активные", blocked: "Заблокированные" }[v] ?? v ?? "Все статусы")}</SelectValue>
           </SelectTrigger>
           <SelectContent>
@@ -335,6 +335,7 @@ export default function AdminUsersPage() {
                   <TableCell className="text-right">
                     <div className="flex items-center justify-end gap-1">
                       <Button variant="ghost" size="sm" onClick={() => openEditDialog(user)}>
+                        <Pencil className="h-4 w-4 mr-1" />
                         Изменить
                       </Button>
                       <Button
@@ -361,8 +362,32 @@ export default function AdminUsersPage() {
         </Table>
       </div>
 
+      {/* Mobile cards — users */}
+      <div className="md:hidden space-y-3">
+        {filteredUsers.map((user) => (
+          <div key={user.id} className="rounded-xl border border-zinc-200 bg-white p-4 space-y-2">
+            <div className="flex items-center justify-between">
+              <span className="text-sm font-medium text-zinc-900">{user.fullName}</span>
+              <Badge variant={user.isActive ? "outline" : "destructive"}>
+                {user.isActive ? "Активен" : "Неактивен"}
+              </Badge>
+            </div>
+            <div className="text-xs text-zinc-500">{user.email}</div>
+            <div className="text-xs text-zinc-500">{roleLabels[user.role] ?? user.role}</div>
+            <div className="flex gap-2 pt-1">
+              <Button variant="outline" size="sm" className="flex-1" onClick={() => openEdit(user)}>
+                <Pencil className="size-4 mr-1" />Изменить
+              </Button>
+              <Button variant="outline" size="sm" className="flex-1" onClick={() => openResetPassword(user)}>
+                <Key className="size-4 mr-1" />Сброс
+              </Button>
+            </div>
+          </div>
+        ))}
+      </div>
+
       {totalPages > 1 && (
-        <div className="flex items-center justify-between">
+        <div className="flex flex-col sm:flex-row items-center justify-between gap-3">
           <div className="text-xs text-zinc-400">
             Показано {filteredUsers.length} из {total} пользователей
           </div>

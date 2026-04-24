@@ -20,6 +20,18 @@ export async function GET(
     return NextResponse.json({ error: "Violation not found" }, { status: 404 });
   }
 
+  // Only allow admin, violation creator, or members of the violation's organization
+  const isContractor = CONTRACTOR_COMPLAINT_ROLES.includes(authResult.user.role);
+  if (authResult.user.role !== "admin") {
+    if (isContractor) {
+      if (violation.contractorId !== authResult.user.organizationId) {
+        return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+      }
+    } else if (authResult.user.userId !== violation.createdById) {
+      return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+    }
+  }
+
   const complaints = await prisma.violationComplaint.findMany({
     where: { violationId: id },
     include: {

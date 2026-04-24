@@ -208,7 +208,7 @@ export default function EmployeesPage() {
         )}
       </div>
 
-      <div className="flex items-center gap-3 flex-wrap">
+      <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
         <div className="relative flex-1 max-w-sm">
           <Search className="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-zinc-400" />
           <Input
@@ -223,7 +223,7 @@ export default function EmployeesPage() {
           />
         </div>
         <Select value={orgFilter} onValueChange={handleOrgChange} itemToStringLabel={(v) => uniqueOrgs.find((o) => o.id === v)?.name ?? v}>
-          <SelectTrigger className="w-[220px]">
+          <SelectTrigger className="w-full sm:w-[220px]">
             <SelectValue placeholder="Все организации">{(v) => v && v !== "all" ? uniqueOrgs.find((o) => o.id === v)?.name ?? v : "Все организации"}</SelectValue>
           </SelectTrigger>
           <SelectContent>
@@ -236,7 +236,7 @@ export default function EmployeesPage() {
           </SelectContent>
         </Select>
         <Select value={statusFilter} onValueChange={handleStatusChange} itemToStringLabel={(v) => ({ all: "Все статусы", approved: "Согласованные", pending: "В процессе", rejected: "Отклонённые" }[v] ?? v)}>
-          <SelectTrigger className="w-[200px]">
+          <SelectTrigger className="w-full sm:w-[200px]">
             <SelectValue>{(v: string) => ({ all: "Все статусы", approved: "Согласованные", pending: "В процессе", rejected: "Отклонённые" }[v] ?? v ?? "Все статусы")}</SelectValue>
           </SelectTrigger>
           <SelectContent>
@@ -261,7 +261,8 @@ export default function EmployeesPage() {
         </div>
       )}
 
-      <div className="rounded-xl border border-zinc-200 bg-white overflow-x-auto">
+      {/* Desktop table */}
+      <div className="hidden md:block rounded-xl border border-zinc-200 bg-white overflow-x-auto">
         <table className="w-full caption-bottom text-sm" style={{ minWidth: "max-content" }}>
           <thead>
             <tr className="border-b">
@@ -385,8 +386,57 @@ export default function EmployeesPage() {
         </table>
       </div>
 
+      {/* Mobile cards */}
+      <div className="md:hidden space-y-3">
+        {employees.map((emp) => {
+          const ap = approvalStatus(emp.approvals);
+          const db = docBadge(emp.documentCounts);
+          return (
+            <div key={emp.id} className="rounded-xl border border-zinc-200 bg-white p-4 space-y-2">
+              <div className="flex items-start justify-between gap-2">
+                <div>
+                  <div className="text-sm font-medium text-zinc-900">{sanitize(emp.fullName)}</div>
+                  <div className="text-xs text-zinc-500">{sanitize(emp.position)}</div>
+                </div>
+                <Badge variant={db.variant}>{db.text}</Badge>
+              </div>
+              <div className="text-xs text-zinc-500">{emp.organization.name}</div>
+              {(emp.workClasses ?? []).length > 0 && (
+                <div className="flex flex-wrap gap-1">
+                  {(emp.workClasses ?? []).slice(0, 2).map((wc) => (
+                    <span key={wc} className="inline-block rounded-full bg-zinc-100 px-2.5 py-0.5 text-xs text-zinc-600">
+                      {wc}
+                    </span>
+                  ))}
+                  {(emp.workClasses ?? []).length > 2 && (
+                    <span className="inline-block rounded-full bg-zinc-100 px-2.5 py-0.5 text-xs text-zinc-400">
+                      +{(emp.workClasses ?? []).length - 2}
+                    </span>
+                  )}
+                </div>
+              )}
+              {ap.badge && (
+                <div className="text-xs text-zinc-500">
+                  Согласование: <Badge variant={ap.badge === "approved" ? "outline" : ap.badge === "rejected" ? "destructive" : "secondary"}>
+                    {ap.badge === "approved" ? "Согласован" : ap.badge === "rejected" ? "Отклонён" : "В процессе"}
+                  </Badge>
+                </div>
+              )}
+              {showActionColumn(emp) && (
+                <Link href={`/employees/${emp.id}`} className="block">
+                  <Button variant="outline" size="sm" className="w-full">
+                    <Eye className="size-4 mr-1" />
+                    Подробнее
+                  </Button>
+                </Link>
+              )}
+            </div>
+          );
+        })}
+      </div>
+
       {totalPages > 1 && (
-        <div className="flex items-center justify-between">
+        <div className="flex flex-col sm:flex-row items-center justify-between gap-3">
           <div className="text-xs text-zinc-400">
             Показано {employees.length} из {total} сотрудников
           </div>

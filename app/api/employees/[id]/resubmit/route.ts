@@ -26,7 +26,7 @@ const resubmitSchema = z.object({
 
 export async function POST(
   req: NextRequest,
-  { params }: { params: Promise<{ employeeId: string }> }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   const authResult = await authMiddleware(req);
   if (authResult instanceof NextResponse) return authResult;
@@ -38,7 +38,7 @@ export async function POST(
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
 
-  const { employeeId } = await params;
+  const { id: employeeId } = await params;
 
   const body = await req.json();
   const validation = resubmitSchema.safeParse(body);

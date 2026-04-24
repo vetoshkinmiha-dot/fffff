@@ -1,5 +1,8 @@
+-- CreateSchema
+CREATE SCHEMA IF NOT EXISTS "public";
+
 -- CreateEnum
-CREATE TYPE "UserRole" AS ENUM ('admin', 'employee', 'contractor_employee', 'department_approver');
+CREATE TYPE "UserRole" AS ENUM ('admin', 'employee', 'contractor_employee', 'contractor_admin', 'department_approver');
 
 -- CreateEnum
 CREATE TYPE "ApprovalDepartment" AS ENUM ('security', 'hr', 'safety', 'safety_training', 'permit_bureau');
@@ -11,19 +14,22 @@ CREATE TYPE "OrgStatus" AS ENUM ('pending', 'active', 'blocked');
 CREATE TYPE "DocStatus" AS ENUM ('valid', 'expiring', 'expired');
 
 -- CreateEnum
-CREATE TYPE "ApprovalStatus" AS ENUM ('pending', 'approved', 'rejected');
+CREATE TYPE "ApprovalStatus" AS ENUM ('pending', 'approved', 'rejected', 'blocked');
 
 -- CreateEnum
 CREATE TYPE "PermitWorkCategory" AS ENUM ('hot_work', 'height_work', 'confined_space', 'electrical', 'excavation', 'other');
 
 -- CreateEnum
-CREATE TYPE "PermitStatus" AS ENUM ('draft', 'pending_approval', 'approved', 'active', 'early_closed', 'closed', 'expired');
+CREATE TYPE "PermitStatus" AS ENUM ('pending_approval', 'active', 'early_closed', 'closed', 'expired');
 
 -- CreateEnum
 CREATE TYPE "ViolationSeverity" AS ENUM ('low', 'medium', 'high', 'critical');
 
 -- CreateEnum
 CREATE TYPE "ViolationStatus" AS ENUM ('pending', 'resolved', 'escalated');
+
+-- CreateEnum
+CREATE TYPE "ViolationComplaintStatus" AS ENUM ('pending', 'resolved', 'rejected');
 
 -- CreateEnum
 CREATE TYPE "ChecklistStatus" AS ENUM ('in_progress', 'passed', 'failed');
@@ -35,7 +41,7 @@ CREATE TYPE "FileType" AS ENUM ('pdf', 'docx', 'xlsx');
 CREATE TYPE "EmailLogStatus" AS ENUM ('SENT', 'FAILED', 'PENDING');
 
 -- CreateEnum
-CREATE TYPE "NotificationType" AS ENUM ('approval_requested', 'approval_result', 'document_added', 'document_expiring', 'document_expired', 'permit_expiring', 'permit_closed', 'complaint_submitted');
+CREATE TYPE "NotificationType" AS ENUM ('approval_requested', 'approval_result', 'document_added', 'document_expiring', 'document_expired', 'permit_expiring', 'permit_closed', 'complaint_submitted', 'violation_created', 'violation_resolved', 'checklist_assigned');
 
 -- CreateTable
 CREATE TABLE "notification" (
@@ -64,6 +70,8 @@ CREATE TABLE "user" (
     "must_change_pwd" BOOLEAN NOT NULL DEFAULT true,
     "created_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "updated_at" TIMESTAMP(3) NOT NULL,
+    "employee_id" TEXT,
+    "temporary_password" TEXT,
 
     CONSTRAINT "user_pkey" PRIMARY KEY ("id")
 );
@@ -71,7 +79,7 @@ CREATE TABLE "user" (
 -- CreateTable
 CREATE TABLE "organization" (
     "id" TEXT NOT NULL,
-    "sequential_number" INTEGER NOT NULL,
+    "sequential_number" INTEGER NOT NULL DEFAULT 0,
     "name" TEXT NOT NULL,
     "inn" TEXT NOT NULL,
     "kpp" TEXT,
@@ -167,7 +175,7 @@ CREATE TABLE "permit" (
     "responsible_person" TEXT NOT NULL,
     "open_date" TIMESTAMP(3) NOT NULL,
     "expiry_date" TIMESTAMP(3) NOT NULL,
-    "status" "PermitStatus" NOT NULL DEFAULT 'draft',
+    "status" "PermitStatus" NOT NULL DEFAULT 'active',
     "close_reason" TEXT,
     "closed_at" TIMESTAMP(3),
     "sequential_number" INTEGER NOT NULL DEFAULT 0,
@@ -203,6 +211,7 @@ CREATE TABLE "violation" (
     "department" TEXT NOT NULL,
     "created_by_id" TEXT NOT NULL,
     "photo_url" TEXT,
+    "contractor_comment" TEXT,
     "resolved_at" TIMESTAMP(3),
     "resolution_notes" TEXT,
     "sequential_number" INTEGER NOT NULL DEFAULT 0,
@@ -215,10 +224,17 @@ CREATE TABLE "violation" (
 -- CreateTable
 CREATE TABLE "violation_complaint" (
     "id" TEXT NOT NULL,
-    "violation_id" TEXT NOT NULL,
+    "contractor_id" TEXT NOT NULL,
     "complaint_text" TEXT NOT NULL,
     "department" TEXT NOT NULL,
+    "violation_id" TEXT,
+    "status" "ViolationComplaintStatus" NOT NULL DEFAULT 'pending',
+    "resolution_notes" TEXT,
+    "created_by_id" TEXT NOT NULL,
+    "resolved_by_id" TEXT,
     "created_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "resolved_at" TIMESTAMP(3),
+    "updated_at" TIMESTAMP(3) NOT NULL,
 
     CONSTRAINT "violation_complaint_pkey" PRIMARY KEY ("id")
 );
@@ -302,6 +318,18 @@ CREATE TABLE "notification_subscription" (
     CONSTRAINT "notification_subscription_pkey" PRIMARY KEY ("id")
 );
 
+-- CreateTable
+CREATE TABLE "refresh_token" (
+    "id" TEXT NOT NULL,
+    "user_id" TEXT NOT NULL,
+    "token" TEXT NOT NULL,
+    "expires_at" TIMESTAMP(3) NOT NULL,
+    "revoked" BOOLEAN NOT NULL DEFAULT false,
+    "created_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+
+    CONSTRAINT "refresh_token_pkey" PRIMARY KEY ("id")
+);
+
 -- CreateIndex
 CREATE INDEX "notification_user_id_idx" ON "notification"("user_id");
 
@@ -312,13 +340,16 @@ CREATE INDEX "notification_is_read_idx" ON "notification"("is_read");
 CREATE UNIQUE INDEX "user_email_key" ON "user"("email");
 
 -- CreateIndex
-CREATE INDEX "user_role_idx" ON "user"("role");
+CREATE UNIQUE INDEX "user_employee_id_key" ON "user"("employee_id");
 
 -- CreateIndex
 CREATE INDEX "user_organization_id_idx" ON "user"("organization_id");
 
 -- CreateIndex
 CREATE INDEX "user_department_idx" ON "user"("department");
+
+-- CreateIndex
+CREATE INDEX "user_employee_id_idx" ON "user"("employee_id");
 
 -- CreateIndex
 CREATE UNIQUE INDEX "organization_sequential_number_key" ON "organization"("sequential_number");
@@ -334,6 +365,9 @@ CREATE INDEX "organization_sequential_number_idx" ON "organization"("sequential_
 
 -- CreateIndex
 CREATE INDEX "employee_organization_id_idx" ON "employee"("organization_id");
+
+-- CreateIndex
+CREATE INDEX "employee_full_name_idx" ON "employee"("full_name");
 
 -- CreateIndex
 CREATE UNIQUE INDEX "employee_organization_id_passport_series_passport_number_key" ON "employee"("organization_id", "passport_series", "passport_number");
@@ -372,6 +406,12 @@ CREATE INDEX "permit_status_idx" ON "permit"("status");
 CREATE INDEX "permit_expiry_date_idx" ON "permit"("expiry_date");
 
 -- CreateIndex
+CREATE INDEX "permit_permit_number_idx" ON "permit"("permit_number");
+
+-- CreateIndex
+CREATE INDEX "permit_created_at_idx" ON "permit"("created_at");
+
+-- CreateIndex
 CREATE INDEX "permit_approval_permit_id_idx" ON "permit_approval"("permit_id");
 
 -- CreateIndex
@@ -393,7 +433,13 @@ CREATE INDEX "violation_severity_idx" ON "violation"("severity");
 CREATE INDEX "violation_date_idx" ON "violation"("date");
 
 -- CreateIndex
-CREATE INDEX "violation_complaint_violation_id_idx" ON "violation_complaint"("violation_id");
+CREATE INDEX "violation_complaint_contractor_id_idx" ON "violation_complaint"("contractor_id");
+
+-- CreateIndex
+CREATE INDEX "violation_complaint_department_idx" ON "violation_complaint"("department");
+
+-- CreateIndex
+CREATE INDEX "violation_complaint_status_idx" ON "violation_complaint"("status");
 
 -- CreateIndex
 CREATE INDEX "violation_template_is_active_idx" ON "violation_template"("is_active");
@@ -423,13 +469,31 @@ CREATE INDEX "reg_document_section_id_idx" ON "reg_document"("section_id");
 CREATE INDEX "reg_document_fileType_idx" ON "reg_document"("fileType");
 
 -- CreateIndex
+CREATE INDEX "reg_document_created_by_id_idx" ON "reg_document"("created_by_id");
+
+-- CreateIndex
+CREATE INDEX "reg_document_created_at_idx" ON "reg_document"("created_at");
+
+-- CreateIndex
 CREATE UNIQUE INDEX "notification_subscription_user_id_key" ON "notification_subscription"("user_id");
+
+-- CreateIndex
+CREATE UNIQUE INDEX "refresh_token_token_key" ON "refresh_token"("token");
+
+-- CreateIndex
+CREATE INDEX "refresh_token_user_id_idx" ON "refresh_token"("user_id");
+
+-- CreateIndex
+CREATE INDEX "refresh_token_token_idx" ON "refresh_token"("token");
 
 -- AddForeignKey
 ALTER TABLE "notification" ADD CONSTRAINT "notification_user_id_fkey" FOREIGN KEY ("user_id") REFERENCES "user"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
 ALTER TABLE "user" ADD CONSTRAINT "user_organization_id_fkey" FOREIGN KEY ("organization_id") REFERENCES "organization"("id") ON DELETE SET NULL ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "user" ADD CONSTRAINT "user_employee_id_fkey" FOREIGN KEY ("employee_id") REFERENCES "employee"("id") ON DELETE SET NULL ON UPDATE CASCADE;
 
 -- AddForeignKey
 ALTER TABLE "employee" ADD CONSTRAINT "employee_organization_id_fkey" FOREIGN KEY ("organization_id") REFERENCES "organization"("id") ON DELETE CASCADE ON UPDATE CASCADE;
@@ -456,7 +520,13 @@ ALTER TABLE "violation" ADD CONSTRAINT "violation_contractor_id_fkey" FOREIGN KE
 ALTER TABLE "violation" ADD CONSTRAINT "violation_created_by_id_fkey" FOREIGN KEY ("created_by_id") REFERENCES "user"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE "violation_complaint" ADD CONSTRAINT "violation_complaint_violation_id_fkey" FOREIGN KEY ("violation_id") REFERENCES "violation"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+ALTER TABLE "violation_complaint" ADD CONSTRAINT "violation_complaint_created_by_id_fkey" FOREIGN KEY ("created_by_id") REFERENCES "user"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "violation_complaint" ADD CONSTRAINT "violation_complaint_resolved_by_id_fkey" FOREIGN KEY ("resolved_by_id") REFERENCES "user"("id") ON DELETE SET NULL ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "violation_complaint" ADD CONSTRAINT "violation_complaint_violation_id_fkey" FOREIGN KEY ("violation_id") REFERENCES "violation"("id") ON DELETE SET NULL ON UPDATE CASCADE;
 
 -- AddForeignKey
 ALTER TABLE "violation_template" ADD CONSTRAINT "violation_template_created_by_id_fkey" FOREIGN KEY ("created_by_id") REFERENCES "user"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
@@ -481,3 +551,7 @@ ALTER TABLE "reg_document" ADD CONSTRAINT "reg_document_created_by_id_fkey" FORE
 
 -- AddForeignKey
 ALTER TABLE "notification_subscription" ADD CONSTRAINT "notification_subscription_user_id_fkey" FOREIGN KEY ("user_id") REFERENCES "user"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "refresh_token" ADD CONSTRAINT "refresh_token_user_id_fkey" FOREIGN KEY ("user_id") REFERENCES "user"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+

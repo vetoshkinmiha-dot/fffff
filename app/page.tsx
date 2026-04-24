@@ -2,6 +2,7 @@
 
 import { useEffect, useState, useCallback } from "react";
 import { Building2, Users, Clock, AlertTriangle, FileText, RefreshCw } from "lucide-react";
+import { Button } from "@/components/ui/button";
 
 interface DashboardData {
   totalContractors: number;
@@ -105,7 +106,7 @@ export default function HomePage() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
         <div>
           <h1 className="text-2xl font-semibold tracking-tight text-zinc-900">
             Панель управления
@@ -114,14 +115,16 @@ export default function HomePage() {
             Обзор текущей активности подрядчиков
           </p>
         </div>
-        <button
+        <Button
+          variant="outline"
+          size="sm"
           onClick={refresh}
           disabled={refreshing}
-          className="inline-flex items-center gap-1.5 rounded-md border border-zinc-200 bg-white px-3 py-1.5 text-sm text-zinc-600 hover:bg-zinc-50 disabled:opacity-50 transition-colors"
+          className="gap-1.5"
         >
           <RefreshCw className={`h-4 w-4 ${refreshing ? "animate-spin" : ""}`} />
           Обновить
-        </button>
+        </Button>
       </div>
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
         {kpis.map(({ label, value, icon: Icon, color, bg }) => (

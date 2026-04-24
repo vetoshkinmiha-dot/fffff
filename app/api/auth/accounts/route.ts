@@ -6,10 +6,10 @@ export async function GET(req: NextRequest) {
   const authResult = await authMiddleware(req);
   if (authResult instanceof NextResponse) return authResult;
 
-  // Only admin and contractor_admin can see accounts
+  // Only admin can see temporary passwords
   const role = authResult.user.role;
-  if (role !== "admin" && role !== "contractor_admin") {
-    return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+  if (role !== "admin") {
+    return NextResponse.json({ error: "Forbidden: admin access required" }, { status: 403 });
   }
 
   const users = await prisma.user.findMany({

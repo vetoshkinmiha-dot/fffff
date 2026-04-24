@@ -13,8 +13,13 @@ export async function GET(req: NextRequest) {
   const where: any = {};
   if (contractorId) {
     where.contractorId = contractorId;
-  } else if (authResult.user.role !== "admin" && authResult.user.organizationId) {
-    where.contractorId = authResult.user.organizationId;
+  } else if (authResult.user.role !== "admin") {
+    if (authResult.user.organizationId) {
+      where.contractorId = authResult.user.organizationId;
+    } else {
+      // Non-admin without organization — deny access
+      return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+    }
   }
 
   const [total, passed, failed, inProgress, allWithScore, checklists] = await Promise.all([
@@ -67,9 +72,10 @@ export async function GET(req: NextRequest) {
     }
   }
 
-  // Fetch items for top-failed analysis
+  // Fetch items for top-failed analysis — scope to same contractorId constraint
+  const checklistWhere = where.contractorId ? { contractorId: where.contractorId } : undefined;
   const allItems = await prisma.checklistItem.findMany({
-    where: { checklist: { contractorId: contractorId ?? undefined } },
+    where: checklistWhere ? { checklist: checklistWhere } : undefined,
     select: { question: true, answer: true },
   });
 

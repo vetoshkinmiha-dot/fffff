@@ -9,6 +9,7 @@ import {
   ClipboardCheck,
   FileText,
   LogOut,
+  Menu,
   Search,
 } from "lucide-react";
 import { sanitize } from "@/lib/utils";
@@ -69,7 +70,7 @@ function getTypeIcon(type?: string) {
   return <Icon className="h-4 w-4 shrink-0" />;
 }
 
-export default function Header() {
+export default function Header({ onMenuClick }: { onMenuClick?: () => void }) {
   const [user, setUser] = useState<User | null>(null);
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [unreadCount, setUnreadCount] = useState(0);
@@ -116,7 +117,14 @@ export default function Header() {
   };
 
   return (
-    <header className="sticky top-0 z-20 flex h-14 items-center gap-4 border-b border-zinc-200 bg-white px-6">
+    <header className="sticky top-0 z-20 flex h-14 items-center gap-3 border-b border-zinc-200 bg-white px-3 sm:px-6">
+      <button
+        type="button"
+        className="md:hidden inline-flex items-center justify-center h-9 w-9 rounded-md text-zinc-500 hover:bg-zinc-100 hover:text-zinc-700 transition-colors cursor-pointer"
+        onClick={onMenuClick}
+      >
+        <Menu className="h-5 w-5" />
+      </button>
       <div className="relative flex-1 max-w-md">
         <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-zinc-400" />
         <input
@@ -126,7 +134,7 @@ export default function Header() {
         />
       </div>
       <div className="flex-1" />
-      <div className="flex items-center gap-4">
+      <div className="flex items-center gap-2 sm:gap-4">
         <DropdownMenu>
           <DropdownMenuTrigger>
             <span className="relative inline-flex items-center justify-center h-9 w-9 rounded-md text-zinc-500 hover:bg-zinc-100 hover:text-zinc-700 transition-colors cursor-pointer">
@@ -136,7 +144,7 @@ export default function Header() {
               )}
             </span>
           </DropdownMenuTrigger>
-          <DropdownMenuContent align="end" className="w-80 max-h-[28rem] overflow-y-auto">
+          <DropdownMenuContent align="end" className="w-80 max-w-[calc(100vw-2rem)] max-h-[28rem] overflow-y-auto">
             <div className="sticky top-0 z-10 flex items-center justify-between bg-white px-3 py-2 border-b border-zinc-100">
               <p className="text-sm font-semibold">Уведомления</p>
               {unreadCount > 0 && (
@@ -226,11 +234,11 @@ export default function Header() {
         </DropdownMenu>
         <DropdownMenu>
           <DropdownMenuTrigger>
-            <span className="flex items-center gap-3 pl-4 border-l border-zinc-200 hover:opacity-80 transition-opacity cursor-pointer">
-              <div className="flex h-8 w-8 items-center justify-center rounded-full bg-blue-100 text-blue-700 text-xs font-semibold">
+            <span className="flex items-center gap-2 sm:gap-3 pl-2 sm:pl-4 border-l border-zinc-200 hover:opacity-80 transition-opacity cursor-pointer">
+              <div className="flex h-8 w-8 items-center justify-center rounded-full bg-blue-100 text-blue-700 text-xs font-semibold shrink-0">
                 {initials}
               </div>
-              <div className="text-sm text-left">
+              <div className="hidden sm:block text-sm text-left">
                 {user ? (
                   <>
                     <div className="font-medium text-zinc-900">{sanitize(user.fullName)}</div>

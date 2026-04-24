@@ -1,7 +1,21 @@
 import { z } from "zod";
 
 function stripHtmlTags(value: string): string {
-  return value.replace(/<[^>]*>/g, "").trim();
+  return value
+    .replace(/<script[^>]*>[\s\S]*?<\/script>/gi, "")
+    .replace(/<[^>]*>/g, "")
+    .replace(/javascript:/gi, "")
+    .trim();
+}
+
+function coercePositiveInt() {
+  return z.coerce
+    .number()
+    .refine((n) => Number.isFinite(n) && Number.isInteger(n) && n > 0, {
+      message: "Must be a positive integer",
+    })
+    .int()
+    .min(1);
 }
 
 // ─── Auth ──────────────────────────────────────────────────────
@@ -66,13 +80,13 @@ export const createApprovalSchema = z.object({
 
 export const decideApprovalSchema = z.object({
   status: z.enum(["approved", "rejected"]),
-  comment: z.string().optional(),
+  comment: z.string().optional().transform((v) => v ? stripHtmlTags(v) : v),
 });
 
 // ─── Pagination / Query ────────────────────────────────────────
 export const paginationSchema = z.object({
-  page: z.coerce.number().int().min(1).default(1),
-  limit: z.coerce.number().int().min(1).max(100).default(20),
+  page: coercePositiveInt().default(1),
+  limit: coercePositiveInt().max(100).default(20),
   search: z.string().optional(),
   status: z.string().optional(),
 });
@@ -122,11 +136,11 @@ export const createChecklistSchema = z.object({
   inspectorId: z.string().min(1).optional(),
   inspectorName: z.string().min(1).transform(stripHtmlTags),
   date: z.string().datetime(),
-  comments: z.string().optional(),
+  comments: z.string().optional().transform((v) => v ? stripHtmlTags(v) : v),
   items: z.array(z.object({
-    question: z.string().min(1),
+    question: z.string().min(1).transform(stripHtmlTags),
     answer: z.enum(["pass", "fail", "n/a"]),
-    comment: z.string().optional(),
+    comment: z.string().optional().transform((v) => v ? stripHtmlTags(v) : v),
     photoUrl: z.string().optional(),
   })).default([]),
 });
@@ -187,7 +201,7 @@ export const createComplaintSchema = z.object({
 
 export const resolveComplaintSchema = z.object({
   status: z.enum(["resolved", "rejected"]),
-  resolutionNotes: z.string().min(1),
+  resolutionNotes: z.string().min(1).transform(stripHtmlTags),
 });
 
 export const updateContractorCommentSchema = z.object({

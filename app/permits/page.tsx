@@ -137,7 +137,7 @@ export default function PermitsPage() {
         )}
       </div>
 
-      <div className="flex items-center gap-3 flex-wrap">
+      <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
         <div className="relative flex-1 max-w-sm">
           <Search className="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-zinc-400" />
           <Input
@@ -148,7 +148,7 @@ export default function PermitsPage() {
           />
         </div>
         <Select value={statusFilter} onValueChange={handleStatusChange} itemToStringLabel={(v) => ({ all: "Все статусы", active: "Открытые", closed: "Закрытые", early_closed: "Закрыты досрочно", pending_approval: "На согласовании" }[v] ?? v)}>
-          <SelectTrigger className="w-[180px]">
+          <SelectTrigger className="w-full sm:w-[180px]">
             <SelectValue>{(v: string) => ({ all: "Все статусы", active: "Открытые", closed: "Закрытые", early_closed: "Закрыты досрочно", pending_approval: "На согласовании" }[v] ?? v ?? "Все статусы")}</SelectValue>
           </SelectTrigger>
           <SelectContent>
@@ -252,7 +252,7 @@ export default function PermitsPage() {
       </div>
 
       {totalPages > 1 && (
-        <div className="flex items-center justify-between">
+        <div className="flex flex-col sm:flex-row items-center justify-between gap-3">
           <div className="text-xs text-zinc-400">
             Показано {filteredPermits.length} из {total} нарядов-допусков
           </div>

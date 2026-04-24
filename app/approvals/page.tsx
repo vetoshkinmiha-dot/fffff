@@ -389,7 +389,8 @@ export default function ApprovalsPage() {
 
       {/* ── Permits table (admin, mainTab=permits) ── */}
       {isAdmin && mainTab === "permits" && (
-        <div className="rounded-xl border border-zinc-200 bg-white overflow-x-auto">
+        <>
+        <div className="hidden md:block rounded-xl border border-zinc-200 bg-white overflow-x-auto">
           <Table>
             <TableHeader>
               <TableRow>
@@ -473,11 +474,41 @@ export default function ApprovalsPage() {
             </TableBody>
           </Table>
         </div>
+
+        {/* Mobile cards — permits */}
+        <div className="md:hidden space-y-3">
+          {permitApprovals.map((permit) => (
+            <div key={permit.id} className="rounded-xl border border-zinc-200 bg-white p-4 space-y-2">
+              <div className="flex items-center justify-between">
+                <Link href={`/permits/${permit.id}`} className="text-sm font-medium text-zinc-900 hover:text-blue-600">
+                  {sanitize(permit.permitNumber)}
+                </Link>
+                <Badge variant={statusConfig[permit.status]?.variant ?? "outline"}>
+                  {statusConfig[permit.status]?.label ?? permit.status}
+                </Badge>
+              </div>
+              <div className="text-xs text-zinc-500">{permit.contractor?.name ?? "—"} &bull; {permit.workSite}</div>
+              <div className="text-xs text-zinc-500">Открыт: {formatDate(permit.openDate)} &bull; Срок: {formatDate(permit.expiryDate)}</div>
+              {canDecide && permit.status === "pending_approval" && (
+                <div className="flex gap-2 pt-1">
+                  <Button variant="outline" size="sm" className="flex-1 text-emerald-700 border-emerald-200 hover:bg-emerald-50" onClick={() => openPermitDialog(permit.id, "approve")}>
+                    <CheckCircle2 className="size-4 mr-1" />Согласовать
+                  </Button>
+                  <Button variant="outline" size="sm" className="flex-1 text-red-700 border-red-200 hover:bg-red-50" onClick={() => openPermitDialog(permit.id, "reject")}>
+                    <XCircle className="size-4 mr-1" />Отклонить
+                  </Button>
+                </div>
+              )}
+            </div>
+          ))}
+        </div>
+        </>
       )}
 
       {/* ── Employee approvals table ── */}
       {(mainTab === "employees" || isDeptApprover) && (
-        <div className="rounded-xl border border-zinc-200 bg-white overflow-x-auto">
+        <>
+        <div className="hidden md:block rounded-xl border border-zinc-200 bg-white overflow-x-auto">
           <Table>
             <TableHeader>
               <TableRow>
@@ -569,6 +600,38 @@ export default function ApprovalsPage() {
             </TableBody>
           </Table>
         </div>
+
+        {/* Mobile cards — employee approvals */}
+        <div className="md:hidden space-y-3">
+          {filteredEmployeeApprovals.map((approval) => (
+            <div key={approval.id} className="rounded-xl border border-zinc-200 bg-white p-4 space-y-2">
+              <div className="flex items-center justify-between">
+                <Link href={`/employees/${approval.employeeId}`} className="text-sm font-medium text-zinc-900 hover:text-blue-600">
+                  {sanitize(approval.employeeName)}
+                </Link>
+                <Badge variant={statusConfig[approval.status]?.variant ?? "outline"}>
+                  {statusConfig[approval.status]?.label ?? approval.status}
+                </Badge>
+              </div>
+              <div className="text-xs text-zinc-500">{approval.contractorName ?? "—"}{approval.position ? ` &bull; ${approval.position}` : ""}</div>
+              {approval.workClasses && approval.workClasses.length > 0 && (
+                <div className="text-xs text-zinc-500">{approval.workClasses.map((wc: { workClass: string }) => wc.workClass).join(", ")}</div>
+              )}
+              <div className="text-xs text-zinc-500">Срок: {formatDate(approval.deadline)}</div>
+              {canDecide && approval.status === "pending" && (
+                <div className="flex gap-2 pt-1">
+                  <Button variant="outline" size="sm" className="flex-1 text-emerald-700 border-emerald-200 hover:bg-emerald-50" onClick={() => openEmployeeDialog(approval.id, "approve")}>
+                    <CheckCircle2 className="size-4 mr-1" />Согласовать
+                  </Button>
+                  <Button variant="outline" size="sm" className="flex-1 text-red-700 border-red-200 hover:bg-red-50" onClick={() => openEmployeeDialog(approval.id, "reject")}>
+                    <XCircle className="size-4 mr-1" />Отклонить
+                  </Button>
+                </div>
+              )}
+            </div>
+          ))}
+        </div>
+        </>
       )}
 
       {/* ── Decision Dialog ── */}

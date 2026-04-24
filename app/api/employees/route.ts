@@ -71,7 +71,11 @@ export async function GET(req: NextRequest) {
   if (authResult instanceof NextResponse) return authResult;
 
   const { searchParams } = new URL(req.url);
-  const query = paginationSchema.parse(Object.fromEntries(searchParams));
+  const q = paginationSchema.safeParse(Object.fromEntries(searchParams));
+  if (!q.success) {
+    return NextResponse.json({ error: "Invalid parameters: " + q.error.issues[0]?.message }, { status: 400 });
+  }
+  const query = q.data;
   const orgFilter = searchParams.get("organizationId");
 
   const where: any = {};
@@ -160,52 +164,60 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "organizationId is required" }, { status: 400 });
     }
 
-    const employee = await prisma.employee.create({
-      data: {
-        ...employeeData,
-        organizationId,
-        passportIssueDate: employeeData.passportIssueDate
-          ? new Date(employeeData.passportIssueDate)
-          : undefined,
-        workClasses: {
-          create: workClasses.map((wc) => ({ workClass: wc })),
+    // Use a transaction to ensure employee + user are created atomically
+    const employee = await prisma.$transaction(async (tx) => {
+      const emp = await tx.employee.create({
+        data: {
+          ...employeeData,
+          organizationId,
+          passportIssueDate: employeeData.passportIssueDate
+            ? new Date(employeeData.passportIssueDate)
+            : undefined,
+          workClasses: {
+            create: workClasses.map((wc) => ({ workClass: wc })),
+          },
         },
-      },
-    });
+      });
 
-    // Auto-create a contractor_employee User account
-    const emailLocalPart = transliterateName(employeeData.fullName);
-    const email = await findUniqueEmail(emailLocalPart);
-    const plainPassword = generateRandomPassword();
-    const passwordHash = await hashPassword(plainPassword);
+      // Auto-create a contractor_employee User account
+      const emailLocalPart = transliterateName(employeeData.fullName);
+      const email = await findUniqueEmail(emailLocalPart);
+      const plainPassword = generateRandomPassword();
+      const passwordHash = await hashPassword(plainPassword);
 
-    await prisma.user.create({
-      data: {
-        email,
-        passwordHash,
-        fullName: employeeData.fullName,
-        role: "contractor_employee",
-        organizationId,
-        employeeId: employee.id,
-        temporaryPassword: plainPassword,
-        mustChangePwd: true,
-        isActive: true,
-      },
+      await tx.user.create({
+        data: {
+          email,
+          passwordHash,
+          fullName: employeeData.fullName,
+          role: "contractor_employee",
+          organizationId,
+          employeeId: emp.id,
+          temporaryPassword: plainPassword,
+          mustChangePwd: true,
+          isActive: true,
+        },
+      });
+
+      return { emp, email, password: plainPassword };
     });
 
     return NextResponse.json(
       {
-        id: employee.id,
-        fullName: employee.fullName,
+        id: employee.emp.id,
+        fullName: employee.emp.fullName,
         loginCredentials: {
-          email,
-          password: plainPassword,
+          email: employee.email,
+          password: employee.password,
         },
       },
       { status: 201 }
     );
-  } catch (err) {
-    console.error("Create employee error:", err);
+  } catch (err: any) {
+    // Unique constraint violation (duplicate passport within org)
+    if (err.code === "P2002") {
+      return NextResponse.json({ error: "Сотрудник с такими паспортными данными уже существует в этой организации" }, { status: 409 });
+    }
     return NextResponse.json({ error: "Internal server error" }, { status: 500 });
   }
 }

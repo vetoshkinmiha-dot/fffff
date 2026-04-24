@@ -17,7 +17,11 @@ export async function GET(req: NextRequest) {
   if (authResult instanceof NextResponse) return authResult;
 
   const { searchParams } = new URL(req.url);
-  const query = paginationSchema.parse(Object.fromEntries(searchParams));
+  const q = paginationSchema.safeParse(Object.fromEntries(searchParams));
+  if (!q.success) {
+    return NextResponse.json({ error: "Invalid parameters: " + q.error.issues[0]?.message }, { status: 400 });
+  }
+  const query = q.data;
   const statusFilter = searchParams.get("status");
   const contractorFilter = searchParams.get("contractorId");
 

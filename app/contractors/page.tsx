@@ -125,7 +125,7 @@ export default function ContractorsPage() {
         )}
       </div>
 
-      <div className="flex items-center gap-3 flex-wrap">
+      <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
         <div className="relative flex-1 max-w-sm">
           <Search className="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-zinc-400" />
           <Input
@@ -139,7 +139,7 @@ export default function ContractorsPage() {
           />
         </div>
         <Select value={statusFilter} onValueChange={handleStatusChange} itemToStringLabel={(v) => ({ all: "Все статусы", active: "Активные", pending: "Ожидающие", blocked: "Заблокированные" }[v] ?? v)}>
-          <SelectTrigger className="w-[180px]">
+          <SelectTrigger className="w-full sm:w-[180px]">
             <SelectValue>{(v: string) => ({ all: "Все статусы", active: "Активные", pending: "Ожидающие", blocked: "Заблокированные" }[v] ?? v ?? "Все статусы")}</SelectValue>
           </SelectTrigger>
           <SelectContent>
@@ -151,7 +151,8 @@ export default function ContractorsPage() {
         </Select>
       </div>
 
-      <div className="rounded-xl border border-zinc-200 bg-white overflow-x-auto">
+      {/* Desktop table */}
+      <div className="hidden md:block rounded-xl border border-zinc-200 bg-white overflow-x-auto">
         <Table>
           <TableHeader>
             <TableRow>
@@ -241,8 +242,46 @@ export default function ContractorsPage() {
         </Table>
       </div>
 
+      {/* Mobile cards */}
+      <div className="md:hidden space-y-3">
+        {contractors.map((c) => (
+          <div key={c.id} className="rounded-xl border border-zinc-200 bg-white p-4 space-y-2">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <span className="text-xs font-medium text-zinc-400">#{c.sequentialNumber}</span>
+                <span className="text-sm font-medium text-zinc-900">{sanitize(c.name)}</span>
+              </div>
+              <span className="inline-flex items-center gap-1.5">
+                <span className={`size-2 rounded-full ${statusColors[c.status]}`} />
+                <Badge variant={statusConfig[c.status].variant}>
+                  {statusConfig[c.status].label}
+                </Badge>
+              </span>
+            </div>
+            <div className="text-xs text-zinc-500 font-mono">ИНН {c.inn}{c.kpp ? ` · КПП ${c.kpp}` : ""}</div>
+            <div className="text-xs text-zinc-500">{c._count?.employees ?? 0} сотрудников</div>
+            <div className="flex gap-2 pt-1">
+              <Link href={`/contractors/${c.id}`} className="flex-1">
+                <Button variant="outline" size="sm" className="w-full">
+                  <Eye className="size-4 mr-1" />
+                  Подробнее
+                </Button>
+              </Link>
+              {userRole === "admin" && (
+                <Link href={`/contractors/${c.id}/edit`} className="flex-1">
+                  <Button variant="ghost" size="sm" className="w-full">
+                    <Pencil className="size-4 mr-1" />
+                    Изменить
+                  </Button>
+                </Link>
+              )}
+            </div>
+          </div>
+        ))}
+      </div>
+
       {totalPages > 1 && (
-        <div className="flex items-center justify-between">
+        <div className="flex flex-col sm:flex-row items-center justify-between gap-3">
           <div className="text-xs text-zinc-400">
             Показано {contractors.length} из {total} подрядчиков
           </div>
