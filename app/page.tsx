@@ -127,10 +127,11 @@ export default function HomePage() {
         </Button>
       </div>
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        {kpis.map(({ label, value, icon: Icon, color, bg }) => (
+        {kpis.map(({ label, value, icon: Icon, color, bg }, i) => (
           <div
             key={label}
-            className="rounded-lg border border-zinc-200 bg-white p-5"
+            className="rounded-lg border border-zinc-200 bg-white p-5 animate-fade-in hover:shadow-lg hover:-translate-y-0.5 transition-all duration-200 cursor-default"
+            style={{ animationDelay: `${(i + 1) * 60}ms` }}
           >
             <div className="flex items-center justify-between">
               <div className={`rounded-md ${bg} p-2.5`}>

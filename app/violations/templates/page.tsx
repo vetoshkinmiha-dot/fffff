@@ -287,9 +287,9 @@ export default function ViolationTemplatesPage() {
         )}
       </div>
 
-      <div className="flex items-center gap-3 flex-wrap">
+      <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 flex-wrap">
         <Select value={filterDept} onValueChange={(v) => setFilterDept(v ?? "all")}>
-          <SelectTrigger className="w-[220px]">
+          <SelectTrigger className="w-full sm:w-[220px]">
             <SelectValue placeholder="Все департаменты" />
           </SelectTrigger>
           <SelectContent>
@@ -300,7 +300,7 @@ export default function ViolationTemplatesPage() {
           </SelectContent>
         </Select>
         <Select value={filterActive} onValueChange={(v) => setFilterActive(v ?? "all")} itemToStringLabel={(v) => ({ all: "Все", active: "Активные", inactive: "Неактивные" }[v] ?? v)}>
-          <SelectTrigger className="w-[200px]">
+          <SelectTrigger className="w-full sm:w-[200px]">
             <SelectValue>{(v: string) => ({ all: "Все", active: "Активные", inactive: "Неактивные" }[v] ?? v ?? "Все")}</SelectValue>
           </SelectTrigger>
           <SelectContent>
@@ -311,7 +311,8 @@ export default function ViolationTemplatesPage() {
         </Select>
       </div>
 
-      <div className="rounded-xl border border-zinc-200 bg-white overflow-x-auto">
+      {/* Desktop table */}
+      <div className="hidden md:block rounded-xl border border-zinc-200 bg-white overflow-x-auto">
         <Table>
           <TableHeader>
             <TableRow>
@@ -381,6 +382,49 @@ export default function ViolationTemplatesPage() {
             )}
           </TableBody>
         </Table>
+      </div>
+
+      {/* Mobile cards */}
+      <div className="md:hidden space-y-3">
+        {filtered.length === 0 ? (
+          <div className="py-8 text-center text-sm text-zinc-500">Шаблоны не найдены</div>
+        ) : (
+          filtered.map((t) => (
+            <div key={t.id} className="rounded-xl border border-zinc-200 bg-white p-4 space-y-2">
+              <div className="flex items-start justify-between gap-2">
+                <span className="text-sm font-medium text-zinc-900 flex-1">{t.title}</span>
+                <Badge variant={t.isActive ? "outline" : "secondary"}>
+                  {t.isActive ? "Активен" : "Неактивен"}
+                </Badge>
+              </div>
+              <div className="flex items-center gap-2">
+                <Badge variant="outline" className={severityColors[t.defaultSeverity]}>
+                  {severityLabels[t.defaultSeverity] ?? t.defaultSeverity}
+                </Badge>
+                <span className="text-xs text-zinc-500">{departmentLabels[t.department] ?? t.department}</span>
+              </div>
+              <div className="text-xs text-zinc-500">{t.createdBy?.fullName ?? "—"} &bull; {formatDate(t.createdAt)}</div>
+              <div className="flex gap-2 pt-1">
+                <Link href={`/violations/new?templateId=${t.id}`} className="flex-1">
+                  <Button variant="outline" size="sm" className="w-full">
+                    <Eye className="size-4 mr-1" />
+                    Применить
+                  </Button>
+                </Link>
+                {isHSE && (
+                  <Button variant="ghost" size="sm" className="shrink-0" onClick={() => openEdit(t)}>
+                    <Pencil className="size-4" />
+                  </Button>
+                )}
+                {isHSE && (
+                  <Button variant="ghost" size="sm" className="shrink-0 text-red-600 hover:text-red-700" onClick={() => { setDeleteTarget(t); setDeleteError(""); setDeleteDialogOpen(true); }}>
+                    <Trash2 className="size-4" />
+                  </Button>
+                )}
+              </div>
+            </div>
+          ))
+        )}
       </div>
 
       {/* Create template dialog */}

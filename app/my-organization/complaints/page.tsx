@@ -62,7 +62,8 @@ export default function MyComplaintsPage() {
         </p>
       </div>
 
-      <div className="rounded-xl border border-zinc-200 bg-white overflow-x-auto">
+      {/* Desktop table */}
+      <div className="hidden md:block rounded-xl border border-zinc-200 bg-white overflow-x-auto">
         <Table>
           <TableHeader>
             <TableRow>
@@ -103,6 +104,26 @@ export default function MyComplaintsPage() {
             )}
           </TableBody>
         </Table>
+      </div>
+
+      {/* Mobile cards */}
+      <div className="md:hidden space-y-3">
+        {loading ? (
+          <div className="py-8 text-center text-sm text-zinc-500">Загрузка...</div>
+        ) : complaints.length === 0 ? (
+          <div className="py-8 text-center text-sm text-zinc-500">Жалобы не найдены</div>
+        ) : (
+          complaints.map((c) => (
+            <div key={c.id} className="rounded-xl border border-zinc-200 bg-white p-4 space-y-2">
+              <div className="flex items-center gap-2">
+                <Badge variant="outline">{departmentLabels[c.department] ?? c.department}</Badge>
+                <span className="font-mono text-xs text-zinc-500">{c.violationNumber}</span>
+              </div>
+              <div className="text-sm text-zinc-900 line-clamp-2">{c.complaintText}</div>
+              <div className="text-xs text-zinc-500">{formatDate(c.createdAt)}</div>
+            </div>
+          ))
+        )}
       </div>
     </div>
   );

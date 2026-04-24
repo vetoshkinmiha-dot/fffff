@@ -295,7 +295,8 @@ export default function AdminUsersPage() {
         </Select>
       </div>
 
-      <div className="rounded-xl border border-zinc-200 bg-white overflow-x-auto">
+      {/* Desktop table */}
+      <div className="hidden md:block rounded-xl border border-zinc-200 bg-white overflow-x-auto">
         <Table>
           <TableHeader>
             <TableRow>
@@ -375,10 +376,10 @@ export default function AdminUsersPage() {
             <div className="text-xs text-zinc-500">{user.email}</div>
             <div className="text-xs text-zinc-500">{roleLabels[user.role] ?? user.role}</div>
             <div className="flex gap-2 pt-1">
-              <Button variant="outline" size="sm" className="flex-1" onClick={() => openEdit(user)}>
+              <Button variant="outline" size="sm" className="flex-1" onClick={() => openEditDialog(user)}>
                 <Pencil className="size-4 mr-1" />Изменить
               </Button>
-              <Button variant="outline" size="sm" className="flex-1" onClick={() => openResetPassword(user)}>
+              <Button variant="outline" size="sm" className="flex-1" onClick={() => { setResetUser(user); setResetPassword(""); }}>
                 <Key className="size-4 mr-1" />Сброс
               </Button>
             </div>

@@ -202,7 +202,7 @@ export default function PermitsPage() {
               </TableRow>
             ) : (
               filteredPermits.map((permit) => (
-                <TableRow key={permit.id}>
+                <TableRow key={permit.id} className="hover:bg-muted/50 transition-colors">
                   <TableCell className="font-mono text-xs text-zinc-700">{permit.permitNumber}</TableCell>
                   <TableCell className="text-sm text-zinc-900">{categoryLabels[permit.category] ?? permit.category}</TableCell>
                   <TableCell className="text-sm text-zinc-900 max-w-[200px] truncate">{permit.contractor?.name ?? "—"}</TableCell>
@@ -233,7 +233,7 @@ export default function PermitsPage() {
       {/* Mobile cards */}
       <div className="md:hidden space-y-3">
         {filteredPermits.map((permit) => (
-          <div key={permit.id} className="rounded-xl border border-zinc-200 bg-white p-4 space-y-2">
+          <div key={permit.id} className="rounded-xl border border-zinc-200 bg-white p-4 space-y-2 animate-fade-in hover:shadow-md hover:-translate-y-0.5 transition-all duration-200">
             <div className="flex items-center justify-between">
               <span className="font-mono text-xs text-zinc-700">{permit.permitNumber}</span>
               <Badge variant={statusConfig[permit.status]?.variant ?? "secondary"}>

@@ -185,15 +185,15 @@ export default function ContractorsPage() {
                 </TableCell>
               </TableRow>
             ) : (
-              contractors.map((c) => (
-                <TableRow key={c.id}>
+              contractors.map((c, i) => (
+                <TableRow key={c.id} className="animate-fade-in hover:bg-muted/50 transition-colors" style={{ animationDelay: `${(i + 1) * 40}ms` }}>
                   <TableCell className="text-sm text-zinc-500">
                     {c.sequentialNumber}
                   </TableCell>
                   <TableCell className="font-medium text-zinc-900">
                     <Link
                       href={`/contractors/${c.id}`}
-                      className="hover:text-zinc-700 transition-colors"
+                      className="hover:text-blue-600 transition-colors"
                     >
                       {sanitize(c.name)}
                     </Link>
@@ -244,8 +244,8 @@ export default function ContractorsPage() {
 
       {/* Mobile cards */}
       <div className="md:hidden space-y-3">
-        {contractors.map((c) => (
-          <div key={c.id} className="rounded-xl border border-zinc-200 bg-white p-4 space-y-2">
+        {contractors.map((c, i) => (
+          <div key={c.id} className="rounded-xl border border-zinc-200 bg-white p-4 space-y-2 animate-fade-in hover:shadow-md hover:-translate-y-0.5 transition-all duration-200" style={{ animationDelay: `${(i + 1) * 40}ms` }}>
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2">
                 <span className="text-xs font-medium text-zinc-400">#{c.sequentialNumber}</span>

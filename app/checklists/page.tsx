@@ -205,7 +205,7 @@ export default function ChecklistsPage() {
               checklists.map((c) => {
                 const pct = c.totalItems > 0 ? Math.round((c.passedItems / c.totalItems) * 100) : 0;
                 return (
-                  <TableRow key={c.id}>
+                  <TableRow key={c.id} className="hover:bg-muted/50 transition-colors">
                     <TableCell className="text-zinc-600 font-mono text-xs">
                       {formatDate(c.date)}
                     </TableCell>
@@ -254,7 +254,7 @@ export default function ChecklistsPage() {
         {checklists.map((c) => {
           const pct = Math.round((c.passedItems / c.totalItems) * 100);
           return (
-            <div key={c.id} className="rounded-xl border border-zinc-200 bg-white p-4 space-y-3">
+            <div key={c.id} className="rounded-xl border border-zinc-200 bg-white p-4 space-y-3 animate-fade-in hover:shadow-md hover:-translate-y-0.5 transition-all duration-200">
               <div className="flex items-center justify-between">
                 <span className="font-medium text-zinc-900">{c.contractor?.name ?? "—"}</span>
                 <Badge variant={statusConfig[c.status].variant}>

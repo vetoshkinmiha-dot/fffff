@@ -227,7 +227,7 @@ export default function ContractorDetailPage() {
               </div>
               {userRole === "admin" ? (
                 <Select value={contractor.status ?? "pending"} onValueChange={(v) => v && handleStatusChange(v)} disabled={updatingStatus}>
-                  <SelectTrigger className="w-[160px]">
+                  <SelectTrigger className="w-full sm:w-[160px]">
                     <div className="flex items-center gap-1.5">
                       <span className={`size-2 rounded-full ${
                         (contractor.status ?? "pending") === "active" ? "bg-emerald-500"
@@ -329,7 +329,9 @@ export default function ContractorDetailPage() {
               )}
             </div>
           ) : (
-            <div className="rounded-lg border border-zinc-200 overflow-x-auto">
+            <div className="space-y-4">
+            {/* Desktop table */}
+            <div className="hidden md:block rounded-lg border border-zinc-200 overflow-x-auto">
             <Table>
               <TableHeader>
                 <TableRow>
@@ -495,6 +497,66 @@ export default function ContractorDetailPage() {
                 })}
               </TableBody>
             </Table>
+            </div>
+
+            {/* Mobile cards */}
+            <div className="md:hidden space-y-3">
+              {employees.map((emp) => {
+                const pendingApprovals = emp.approvals.filter(
+                  (a) => a.status === "pending"
+                ).length;
+                const hasRejected = emp.approvals.some(
+                  (a) => a.status === "rejected"
+                );
+                const routeStatus = hasRejected
+                  ? { label: "Отклонён", color: "text-red-600" as const }
+                  : emp.approvals.some((a) => a.status === "approved")
+                    ? { label: "Частично", color: "text-zinc-500" as const }
+                    : { label: "В процессе", color: "text-zinc-500" as const };
+
+                return (
+                  <div key={emp.id} className="rounded-xl border border-zinc-200 bg-white p-4 space-y-2">
+                    <div className="flex items-start justify-between gap-2">
+                      <div className="min-w-0">
+                        <div className="text-sm font-medium text-zinc-900 truncate">
+                          {sanitize(emp.fullName)}
+                        </div>
+                        <div className="text-xs text-zinc-500">{emp.position}</div>
+                      </div>
+                      <div className="flex flex-col gap-1 shrink-0">
+                        {emp.documents.filter((d) => d.status === "expired").length > 0 && (
+                          <Badge variant="destructive" className="text-xs">
+                            {emp.documents.filter((d) => d.status === "expired").length} проср.
+                          </Badge>
+                        )}
+                      </div>
+                    </div>
+                    <div className="flex flex-wrap gap-1">
+                      {emp.workClasses.slice(0, 3).map((cls) => (
+                        <Badge key={cls} variant="outline" className="text-xs whitespace-nowrap">
+                          {cls}
+                        </Badge>
+                      ))}
+                      {emp.workClasses.length > 3 && (
+                        <span className="text-xs text-zinc-400">+{emp.workClasses.length - 3}</span>
+                      )}
+                    </div>
+                    <div className="text-xs text-zinc-500">
+                      Согласование: <span className={routeStatus.color}>{routeStatus.label}</span>
+                      {pendingApprovals > 0 && (
+                        <span className="ml-1 text-amber-600 font-medium">({pendingApprovals} ожидает)</span>
+                      )}
+                      {hasRejected && (
+                        <span className="ml-1 text-red-600 font-medium">(маршрут отклонён)</span>
+                      )}
+                    </div>
+                    <Link href={`/employees/${emp.id}`} className="block">
+                      <Button variant="outline" size="sm" className="w-full">Подробнее</Button>
+                    </Link>
+                  </div>
+                );
+              })}
+            </div>
             </div>
           )}
         </CardContent>

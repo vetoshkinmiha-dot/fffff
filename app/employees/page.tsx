@@ -315,7 +315,7 @@ export default function EmployeesPage() {
                 const ap = approvalStatus(emp.approvals);
                 const db = docBadge(emp.documentCounts);
                 return (
-                  <tr key={emp.id} className="border-b transition-colors hover:bg-muted/50">
+                  <tr key={emp.id} className="border-b transition-all duration-200 hover:bg-muted/50">
                     {canBulkExport && (
                     <td className="px-4 py-3 align-top">
                       <input
@@ -392,7 +392,7 @@ export default function EmployeesPage() {
           const ap = approvalStatus(emp.approvals);
           const db = docBadge(emp.documentCounts);
           return (
-            <div key={emp.id} className="rounded-xl border border-zinc-200 bg-white p-4 space-y-2">
+            <div key={emp.id} className="rounded-xl border border-zinc-200 bg-white p-4 space-y-2 animate-fade-in hover:shadow-md transition-all duration-200">
               <div className="flex items-start justify-between gap-2">
                 <div>
                   <div className="text-sm font-medium text-zinc-900">{sanitize(emp.fullName)}</div>

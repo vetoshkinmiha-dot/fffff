@@ -496,7 +496,8 @@ export default function DocumentsPage() {
           </div>
         </div>
 
-        <div className="rounded-xl border border-zinc-200 bg-white overflow-x-auto">
+        {/* Desktop table */}
+        <div className="hidden md:block rounded-xl border border-zinc-200 bg-white overflow-x-auto">
           <table className="w-full text-sm" style={{ minWidth: "max-content" }}>
             <thead>
               <tr className="border-b border-zinc-200">
@@ -585,6 +586,74 @@ export default function DocumentsPage() {
               )}
             </tbody>
           </table>
+        </div>
+
+        {/* Mobile cards */}
+        <div className="md:hidden space-y-3">
+          {filteredDocs.length === 0 ? (
+            <div className="py-8 text-center">
+              <p className="text-sm text-zinc-500">Документы не найдены</p>
+              {canAdd && (
+                <Button variant="outline" size="sm" className="gap-1.5 mt-3" onClick={() => setUploadOpen(true)}>
+                  <Upload className="h-4 w-4" />
+                  Загрузить документ
+                </Button>
+              )}
+            </div>
+          ) : (
+            filteredDocs.map((doc) => {
+              const cfg = typeConfig[doc.fileType] || typeConfig.pdf;
+              const Icon = cfg.icon;
+              return (
+                <div key={doc.id} className="rounded-xl border border-zinc-200 bg-white p-4 space-y-2">
+                  <div className="flex items-start justify-between gap-2">
+                    <span className="text-sm font-medium text-zinc-900 flex-1">{doc.title}</span>
+                    <Badge variant={cfg.variant} className="inline-flex items-center gap-1 shrink-0">
+                      <Icon className="size-3" />
+                      {cfg.label}
+                    </Badge>
+                  </div>
+                  <div className="text-xs text-zinc-500">
+                    {doc.section?.name ?? "—"} &bull; v{doc.version} &bull; {formatDate(doc.updatedAt)}
+                  </div>
+                  <div className="flex gap-2 pt-1">
+                    <button
+                      onClick={() => setPreviewDoc({ id: doc.id, title: doc.title, fileUrl: doc.fileUrl, fileType: doc.fileType })}
+                      className="flex-1 inline-flex items-center justify-center gap-1 text-sm text-zinc-500 hover:text-blue-600 border border-zinc-200 rounded-md px-3 py-1.5"
+                    >
+                      <Eye className="h-3.5 w-3.5" />
+                      Просмотр
+                    </button>
+                    <button
+                      onClick={() => handleDownloadDoc(doc.id, doc.title)}
+                      className="flex-1 inline-flex items-center justify-center gap-1 text-sm text-blue-600 border border-blue-200 rounded-md px-3 py-1.5 hover:bg-blue-50"
+                    >
+                      <Download className="h-3.5 w-3.5" />
+                      Скачать
+                    </button>
+                  </div>
+                  {canManage && (
+                    <div className="flex gap-2">
+                      <button
+                        onClick={() => { setEditDoc(doc); setEditTitle(doc.title); setEditSection(doc.sectionId); }}
+                        className="flex-1 inline-flex items-center justify-center gap-1 text-sm text-zinc-500 hover:text-blue-600 border border-zinc-200 rounded-md px-3 py-1.5"
+                      >
+                        <Pencil className="h-3.5 w-3.5" />
+                        Редактировать
+                      </button>
+                      <button
+                        onClick={() => setDeleteTarget({ type: "doc", id: doc.id, name: doc.title })}
+                        className="flex-1 inline-flex items-center justify-center gap-1 text-sm text-red-600 hover:text-red-700 border border-red-200 rounded-md px-3 py-1.5"
+                      >
+                        <Trash2 className="h-3.5 w-3.5" />
+                        Удалить
+                      </button>
+                    </div>
+                  )}
+                </div>
+              );
+            })
+          )}
         </div>
 
         {totalPages > 1 && (

@@ -373,7 +373,7 @@ export default function ViolationsPage() {
                   violations.map((v) => {
                     const sev = severityConfig[v.severity] ?? severityConfig.low;
                     return (
-                      <TableRow key={v.id}>
+                      <TableRow key={v.id} className="hover:bg-muted/50 transition-colors">
                         <TableCell className="font-mono text-xs text-zinc-700">
                           {v.violationNumber}
                         </TableCell>
@@ -415,7 +415,7 @@ export default function ViolationsPage() {
             {violations.map((v) => {
               const sev = severityConfig[v.severity] ?? severityConfig.low;
               return (
-                <div key={v.id} className="rounded-xl border border-zinc-200 bg-white p-4 space-y-2">
+                <div key={v.id} className="rounded-xl border border-zinc-200 bg-white p-4 space-y-2 animate-fade-in hover:shadow-md hover:-translate-y-0.5 transition-all duration-200">
                   <div className="flex items-center justify-between">
                     <span className="font-mono text-xs text-zinc-700">{v.violationNumber}</span>
                     <Badge variant="outline" className={sev.className}>{sev.label}</Badge>
@@ -503,7 +503,7 @@ export default function ViolationsPage() {
                         ? "bg-green-50 text-green-700 border-green-200"
                         : "bg-red-50 text-red-700 border-red-200";
                     return (
-                      <TableRow key={c.id}>
+                      <TableRow key={c.id} className="hover:bg-muted/50 transition-colors">
                         <TableCell className="text-zinc-900">
                           {c.contractor?.name ?? "—"}
                         </TableCell>
@@ -549,7 +549,7 @@ export default function ViolationsPage() {
                   ? "bg-green-50 text-green-700 border-green-200"
                   : "bg-red-50 text-red-700 border-red-200";
               return (
-                <div key={c.id} className="rounded-xl border border-zinc-200 bg-white p-4 space-y-2">
+                <div key={c.id} className="rounded-xl border border-zinc-200 bg-white p-4 space-y-2 animate-fade-in hover:shadow-md hover:-translate-y-0.5 transition-all duration-200">
                   <div className="flex items-center justify-between">
                     <span className="text-sm font-medium text-zinc-900">{c.contractor?.name ?? "—"}</span>
                     <Badge variant="outline" className={statusColor}>{complaintStatusLabels[c.status] ?? c.status}</Badge>
