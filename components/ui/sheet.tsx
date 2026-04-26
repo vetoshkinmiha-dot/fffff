@@ -44,6 +44,7 @@ function SheetContent({
   ...props
 }: DialogPrimitive.Popup.Props & {
   side?: "left" | "right" | "top" | "bottom";
+  children?: React.ReactNode;
 }) {
   const sideClasses: Record<string, string> = {
     left: "left-0 top-0 h-full w-[260px] data-open:animate-in data-open:slide-in-from-left data-closed:animate-out data-closed:slide-out-to-left",
@@ -63,7 +64,9 @@ function SheetContent({
           className
         )}
         {...props}
-      />
+      >
+        {children}
+      </DialogPrimitive.Popup>
     </SheetPortal>
   );
 }
