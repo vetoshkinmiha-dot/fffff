@@ -5,7 +5,6 @@ import { usePathname } from "next/navigation";
 import Sidebar from "./sidebar";
 import Header from "./header";
 import { Sheet, SheetContent, SheetTitle } from "@/components/ui/sheet";
-import { useMediaQuery } from "@/lib/hooks/use-media-query";
 
 export default function RootLayout({
   children,
@@ -15,7 +14,6 @@ export default function RootLayout({
   const pathname = usePathname();
   const isAuthPage = pathname === "/login" || pathname === "/auth/unauthorized";
   const isPrintPage = pathname?.includes("/print");
-  const isDesktop = useMediaQuery("(min-width: 768px)");
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
   if (isAuthPage || isPrintPage) {
@@ -29,12 +27,12 @@ export default function RootLayout({
         <Sidebar />
       </div>
 
-      {/* Mobile drawer — always rendered, only visible when open on mobile */}
+      {/* Mobile drawer */}
       <Sheet open={mobileMenuOpen} onOpenChange={setMobileMenuOpen}>
         <SheetContent side="left" className="p-0 w-[260px] max-w-[85vw]">
           <SheetTitle className="sr-only">Меню</SheetTitle>
           <div className="h-full overflow-y-auto">
-            <Sidebar />
+            <Sidebar mobile />
           </div>
         </SheetContent>
       </Sheet>

@@ -51,7 +51,7 @@ const ROLE_VISIBLE_NAV: Record<string, string[]> = {
   contractor_employee: ["/my-organization", "/employees", "/employees/*", "/permits", "/permits/*", "/permits/*/print", "/violations", "/violations/*", "/violations/*/print", "/documents", "/documents/*"],
 };
 
-export default function Sidebar() {
+export default function Sidebar({ mobile }: { mobile?: boolean }) {
   const pathname = usePathname();
   const [role, setRole] = useState<string | null>(null);
 
@@ -68,7 +68,7 @@ export default function Sidebar() {
   const navItems = allNavItems.filter((item) => allowedHrefs?.includes(item.href));
 
   return (
-    <aside className="fixed left-0 top-0 z-30 h-full w-[240px] border-r border-zinc-200 bg-zinc-50 flex flex-col">
+    <aside className={`${mobile ? "relative" : "fixed left-0 top-0 z-30"} h-full w-[240px] border-r border-zinc-200 bg-zinc-50 flex flex-col`}>
       <div className="flex h-14 items-center px-4 border-b border-zinc-200">
         <span className="text-base font-semibold tracking-tight text-zinc-900">
           ЗАО «ВШЗ»
