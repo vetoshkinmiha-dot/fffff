@@ -263,7 +263,7 @@ export default function EmployeesPage() {
 
       {/* Desktop table */}
       <div className="hidden md:block rounded-xl border border-zinc-200 bg-white overflow-x-auto">
-        <table className="w-full caption-bottom text-sm" style={{ minWidth: "max-content" }}>
+        <table className="w-full caption-bottom text-sm">
           <thead>
             <tr className="border-b">
               {canBulkExport && (
@@ -326,13 +326,13 @@ export default function EmployeesPage() {
                       />
                     </td>
                     )}
-                    <td className="px-4 py-3 font-medium align-top whitespace-nowrap">
+                    <td className="px-4 py-3 font-medium align-top max-w-[200px] truncate">
                       {sanitize(emp.fullName)}
                     </td>
                     <td className="px-4 py-3 text-sm text-zinc-600 align-top max-w-[200px]">
                       <span className="truncate block" title={sanitize(emp.organization.name)}>{sanitize(emp.organization.name)}</span>
                     </td>
-                    <td className="px-4 py-3 text-sm text-zinc-500 align-top whitespace-nowrap">
+                    <td className="px-4 py-3 text-sm text-zinc-500 align-top max-w-[200px] truncate">
                       {sanitize(emp.position)}
                     </td>
                     <td className="px-4 py-3 align-top">

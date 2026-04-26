@@ -364,7 +364,7 @@ export default function ContractorDetailPage() {
 
                   return (
                     <TableRow key={emp.id}>
-                      <TableCell className="font-medium text-zinc-900 whitespace-nowrap">
+                      <TableCell className="font-medium text-zinc-900 max-w-[200px] truncate">
                         {userRole === "employee"
                           ? sanitize(emp.fullName)
                           : (
@@ -376,7 +376,7 @@ export default function ContractorDetailPage() {
                             </Link>
                           )}
                       </TableCell>
-                      <TableCell className="text-zinc-600 whitespace-nowrap">
+                      <TableCell className="text-zinc-600 max-w-[200px] truncate">
                         {emp.position}
                       </TableCell>
                       <TableCell>

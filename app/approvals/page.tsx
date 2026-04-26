@@ -417,8 +417,8 @@ export default function ApprovalsPage() {
                   </TableCell>
                 </TableRow>
               ) : (
-                permitApprovals.map((permit) => (
-                  <TableRow key={permit.id}>
+                permitApprovals.map((permit, i) => (
+                  <TableRow key={permit.id} className="hover:bg-muted/50 transition-colors animate-fade-in" style={{ animationDelay: `${(i + 1) * 40}ms` }}>
                     <TableCell className="font-medium text-zinc-900">
                       <Link href={`/permits/${permit.id}`} className="hover:text-blue-600 transition-colors">
                         {sanitize(permit.permitNumber)}
@@ -477,8 +477,8 @@ export default function ApprovalsPage() {
 
         {/* Mobile cards — permits */}
         <div className="md:hidden space-y-3">
-          {permitApprovals.map((permit) => (
-            <div key={permit.id} className="rounded-xl border border-zinc-200 bg-white p-4 space-y-2">
+          {permitApprovals.map((permit, i) => (
+            <div key={permit.id} className="rounded-xl border border-zinc-200 bg-white p-4 space-y-2 animate-fade-in hover:shadow-md transition-all duration-200" style={{ animationDelay: `${(i + 1) * 40}ms` }}>
               <div className="flex items-center justify-between">
                 <Link href={`/permits/${permit.id}`} className="text-sm font-medium text-zinc-900 hover:text-blue-600">
                   {sanitize(permit.permitNumber)}
@@ -534,8 +534,8 @@ export default function ApprovalsPage() {
                   </TableCell>
                 </TableRow>
               ) : (
-                filteredEmployeeApprovals.map((approval) => (
-                  <TableRow key={approval.id}>
+                filteredEmployeeApprovals.map((approval, i) => (
+                  <TableRow key={approval.id} className="hover:bg-muted/50 transition-colors animate-fade-in" style={{ animationDelay: `${(i + 1) * 40}ms` }}>
                     <TableCell className="font-medium text-zinc-900">
                       <Link href={`/employees/${approval.employeeId}`} className="hover:text-blue-600 transition-colors">
                         {sanitize(approval.employeeName)}
@@ -604,7 +604,7 @@ export default function ApprovalsPage() {
         {/* Mobile cards — employee approvals */}
         <div className="md:hidden space-y-3">
           {filteredEmployeeApprovals.map((approval) => (
-            <div key={approval.id} className="rounded-xl border border-zinc-200 bg-white p-4 space-y-2">
+            <div key={approval.id} className="rounded-xl border border-zinc-200 bg-white p-4 space-y-2 animate-fade-in hover:shadow-md transition-all duration-200">
               <div className="flex items-center justify-between">
                 <Link href={`/employees/${approval.employeeId}`} className="text-sm font-medium text-zinc-900 hover:text-blue-600">
                   {sanitize(approval.employeeName)}

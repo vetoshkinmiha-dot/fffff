@@ -334,7 +334,7 @@ export default function ViolationTemplatesPage() {
               </TableRow>
             ) : (
               filtered.map((t) => (
-                <TableRow key={t.id}>
+                <TableRow key={t.id} className="hover:bg-muted/50 transition-colors">
                   <TableCell className="font-medium text-zinc-900 max-w-xs truncate">
                     {t.title}
                   </TableCell>

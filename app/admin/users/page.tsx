@@ -322,8 +322,8 @@ export default function AdminUsersPage() {
                 </TableCell>
               </TableRow>
             ) : (
-              filteredUsers.map((user) => (
-                <TableRow key={user.id}>
+              filteredUsers.map((user, i) => (
+                <TableRow key={user.id} className="hover:bg-muted/50 transition-colors animate-fade-in" style={{ animationDelay: `${(i + 1) * 40}ms` }}>
                   <TableCell className="text-zinc-600 font-mono text-xs">{user.email}</TableCell>
                   <TableCell className="font-medium text-zinc-900">{user.fullName}</TableCell>
                   <TableCell className="text-sm text-zinc-600">{roleLabels[user.role] ?? user.role}</TableCell>

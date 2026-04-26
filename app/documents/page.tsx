@@ -421,7 +421,7 @@ export default function DocumentsPage() {
   }
 
   return (
-    <div className="flex flex-col md:flex-row -m-6 h-[calc(100vh-56px)]">
+    <div className="flex flex-col md:flex-row h-[calc(100vh-56px)]">
       {/* Mobile section selector */}
       <div className="md:hidden w-full px-4 py-3 border-b border-zinc-200 bg-zinc-50">
         <Select value={selectedSection || ""} onValueChange={(v) => setSelectedSection(v || null)}>
@@ -438,7 +438,7 @@ export default function DocumentsPage() {
       </div>
 
       {/* Sidebar — sections tree (desktop only) */}
-      <aside className="hidden md:flex w-64 border-r border-zinc-200 bg-zinc-50 flex flex-col shrink-0">
+      <aside className="hidden md:flex w-64 border-r border-zinc-200 bg-zinc-50 flex-col shrink-0">
         <div className="flex items-center justify-between p-4 border-b border-zinc-200">
           <h3 className="text-sm font-medium text-zinc-900">Разделы</h3>
           {canManage && (
@@ -498,7 +498,7 @@ export default function DocumentsPage() {
 
         {/* Desktop table */}
         <div className="hidden md:block rounded-xl border border-zinc-200 bg-white overflow-x-auto">
-          <table className="w-full text-sm" style={{ minWidth: "max-content" }}>
+          <table className="w-full text-sm">
             <thead>
               <tr className="border-b border-zinc-200">
                 <th className="text-left font-medium px-4 py-3">Наименование</th>

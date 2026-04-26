@@ -186,7 +186,7 @@ export default function LoginPage() {
                 {group.items.map((item) => (
                   <div
                     key={item.email}
-                    className={`flex items-center justify-between rounded-lg px-3 py-2 cursor-pointer hover:opacity-80 transition-opacity mt-1 ${
+                    className={`flex items-center justify-between rounded-lg px-3 py-2 cursor-pointer hover:opacity-80 hover:scale-[1.01] transition-all duration-200 mt-1 ${
                       item.highlight ? "bg-amber-50" : "bg-zinc-50"
                     }`}
                     onClick={() => setCredentials(item.email, item.password)}
