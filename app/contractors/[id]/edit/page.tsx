@@ -176,7 +176,7 @@ export default function EditContractorPage() {
       {/* Form */}
       <form
         onSubmit={handleSubmit}
-        className="rounded-xl border border-zinc-200 bg-white p-6 space-y-5"
+        className="rounded-xl border border-zinc-200 bg-white p-6 space-y-5 transition-shadow duration-200 hover:shadow-md"
       >
         {error && (
           <div className="flex items-center gap-2 rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">

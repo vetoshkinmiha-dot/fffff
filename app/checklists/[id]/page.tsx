@@ -284,7 +284,7 @@ export default function ChecklistDetailPage() {
       </div>
 
       {/* Info card */}
-      <Card>
+      <Card className="transition-shadow duration-200 hover:shadow-md">
         <CardHeader>
           <CardTitle className="text-base">Информация</CardTitle>
         </CardHeader>
@@ -317,7 +317,7 @@ export default function ChecklistDetailPage() {
       </Card>
 
       {/* Score */}
-      <Card>
+      <Card className="transition-shadow duration-200 hover:shadow-md">
         <CardHeader>
           <CardTitle className="text-base">Результат проверки</CardTitle>
         </CardHeader>
@@ -342,7 +342,7 @@ export default function ChecklistDetailPage() {
       </Card>
 
       {/* Items table */}
-      <Card>
+      <Card className="transition-shadow duration-200 hover:shadow-md">
         <CardHeader>
           <CardTitle className="text-base">Пункты проверки</CardTitle>
           <CardDescription>

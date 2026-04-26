@@ -209,7 +209,7 @@ export default function ViolationDetailPage() {
       </div>
 
       {/* Violation info */}
-      <Card>
+      <Card className="transition-shadow duration-200 hover:shadow-md">
         <CardHeader>
           <CardTitle className="text-base">Информация</CardTitle>
         </CardHeader>
@@ -238,7 +238,7 @@ export default function ViolationDetailPage() {
             {violation.photoUrl && (
               <div className="sm:col-span-3 space-y-1">
                 <div className="text-xs font-medium text-zinc-400 uppercase">Фото</div>
-                <img src={violation.photoUrl} alt="Фото нарушения" className="h-48 rounded-lg object-cover" />
+                <img src={violation.photoUrl} alt="Фото нарушения" className="h-48 rounded-lg object-cover transition-transform duration-300 hover:scale-[1.02]" />
               </div>
             )}
           </div>
@@ -247,7 +247,7 @@ export default function ViolationDetailPage() {
 
       {/* Resolution section */}
       {violation.status === "pending" && (userRole === "admin" || (userRole === "department_approver" && violation.createdBy?.id === currentUserId)) && (
-        <Card>
+        <Card className="transition-shadow duration-200 hover:shadow-md">
           <CardHeader>
             <CardTitle className="text-base">Решение</CardTitle>
           </CardHeader>
@@ -310,7 +310,7 @@ export default function ViolationDetailPage() {
 
       {/* Contractor comment section */}
       {isContractorRole && (
-        <Card>
+        <Card className="transition-shadow duration-200 hover:shadow-md">
           <CardHeader>
             <CardTitle className="text-base">Комментарий подрядчика</CardTitle>
             <CardDescription>

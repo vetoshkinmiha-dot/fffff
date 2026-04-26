@@ -277,7 +277,7 @@ function NewChecklistForm() {
       )}
 
       {/* Form fields */}
-      <div className="rounded-xl border border-zinc-200 bg-white p-6 space-y-5">
+      <div className="rounded-xl border border-zinc-200 bg-white p-6 space-y-5 transition-shadow duration-200 hover:shadow-md">
         <div className="grid gap-4 sm:grid-cols-2">
           <div className="space-y-1.5">
             <Label>Подрядчик *</Label>

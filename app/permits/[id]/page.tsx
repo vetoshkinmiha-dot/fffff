@@ -303,7 +303,7 @@ export default function PermitDetailPage() {
       </div>
 
       {/* Permit info */}
-      <Card>
+      <Card className="transition-shadow duration-200 hover:shadow-md">
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <span className="font-mono text-lg">{permit.permitNumber}</span>
@@ -357,7 +357,7 @@ export default function PermitDetailPage() {
 
       {/* Approval pipeline */}
       {permit.approvals && permit.approvals.length > 0 && (
-        <Card>
+        <Card className="transition-shadow duration-200 hover:shadow-md">
           <CardHeader>
             <CardTitle className="text-base">Согласования</CardTitle>
           </CardHeader>

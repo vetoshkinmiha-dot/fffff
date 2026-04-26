@@ -163,7 +163,7 @@ export default function ComplaintDetailPage() {
         </Badge>
       </div>
 
-      <Card>
+      <Card className="transition-shadow duration-200 hover:shadow-md">
         <CardHeader>
           <CardTitle className="text-base">Информация</CardTitle>
         </CardHeader>
@@ -206,7 +206,7 @@ export default function ComplaintDetailPage() {
       </Card>
 
       {complaint.status !== "pending" && (
-        <Card>
+        <Card className="transition-shadow duration-200 hover:shadow-md">
           <CardHeader>
             <CardTitle className="text-base">Резолюция</CardTitle>
           </CardHeader>
@@ -233,7 +233,7 @@ export default function ComplaintDetailPage() {
       )}
 
       {complaint.status === "pending" && isAdmin && (
-        <Card>
+        <Card className="transition-shadow duration-200 hover:shadow-md">
           <CardHeader>
             <CardTitle className="text-base">Рассмотреть жалобу</CardTitle>
             <CardDescription>

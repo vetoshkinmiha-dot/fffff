@@ -543,7 +543,7 @@ export default function EmployeeDetailPage({
       </div>
 
       {/* Employee header */}
-      <Card>
+      <Card className="transition-shadow duration-200 hover:shadow-md">
         <CardHeader className={(isOwnRecord || isAdminEdit) ? "flex flex-row items-center justify-between" : undefined}>
           <CardTitle className="text-base">Личные данные</CardTitle>
           <div className="flex gap-2">
@@ -682,7 +682,7 @@ export default function EmployeeDetailPage({
       </Card>
 
       {/* Documents */}
-      <Card>
+      <Card className="transition-shadow duration-200 hover:shadow-md">
         <CardHeader className="flex flex-row items-center justify-between">
           <CardTitle className="text-base">Документы</CardTitle>
           {(userRole === "admin" || userRole === "contractor_admin" || userRole === "contractor_employee") && (
@@ -777,7 +777,7 @@ export default function EmployeeDetailPage({
       </Card>
 
       {/* Work classes */}
-      <Card>
+      <Card className="transition-shadow duration-200 hover:shadow-md">
         <CardHeader>
           <CardTitle className="text-base">Классы работ</CardTitle>
         </CardHeader>
@@ -804,7 +804,7 @@ export default function EmployeeDetailPage({
       </Card>
 
       {/* Approval pipeline */}
-      <Card>
+      <Card className="transition-shadow duration-200 hover:shadow-md">
         <CardHeader>
           <CardTitle className="text-base">Маршрут согласования</CardTitle>
           <p className="text-sm text-zinc-500">

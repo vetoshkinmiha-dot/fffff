@@ -159,7 +159,7 @@ export default function MyOrganizationPage() {
         </div>
       )}
 
-      <Card>
+      <Card className="transition-shadow duration-200 hover:shadow-md">
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <Building2 className="size-5 text-zinc-400" />
