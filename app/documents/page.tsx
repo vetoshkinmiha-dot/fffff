@@ -385,7 +385,7 @@ export default function DocumentsPage() {
           </button>
           <button
             onClick={() => setSelectedSection(section.id)}
-            className={`flex items-center min-h-[32px] gap-2 flex-1 text-left px-2 py-1.5 rounded-md transition-colors ${
+            className={`flex items-center min-h-[32px] gap-2 flex-1 text-left px-2 py-1.5 rounded-md transition-all duration-200 ${
               selectedSection === section.id ? "bg-blue-50 text-blue-700 font-medium" : "hover:bg-zinc-100"
             }`}
             style={{ paddingLeft: `${depth * 16 + 8}px` }}
@@ -529,7 +529,7 @@ export default function DocumentsPage() {
                   const cfg = typeConfig[doc.fileType] || typeConfig.pdf;
                   const Icon = cfg.icon;
                   return (
-                    <tr key={doc.id} className="border-b border-zinc-100 hover:bg-zinc-50">
+                    <tr key={doc.id} className="border-b border-zinc-100 hover:bg-zinc-50 transition-colors duration-200">
                       <td className="px-4 py-3 font-medium text-zinc-900">{doc.title}</td>
                       <td className="px-4 py-3">
                         <Badge variant={cfg.variant} className="inline-flex items-center gap-1">

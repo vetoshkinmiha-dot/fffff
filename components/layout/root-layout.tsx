@@ -29,17 +29,15 @@ export default function RootLayout({
         <Sidebar />
       </div>
 
-      {/* Mobile drawer */}
-      {!isDesktop && (
-        <Sheet open={mobileMenuOpen} onOpenChange={setMobileMenuOpen}>
-          <SheetContent side="left" className="p-0 w-[260px] max-w-[85vw]">
-            <SheetTitle className="sr-only">Меню</SheetTitle>
-            <div className="h-full overflow-y-auto">
-              <Sidebar />
-            </div>
-          </SheetContent>
-        </Sheet>
-      )}
+      {/* Mobile drawer — always rendered, only visible when open on mobile */}
+      <Sheet open={mobileMenuOpen} onOpenChange={setMobileMenuOpen}>
+        <SheetContent side="left" className="p-0 w-[260px] max-w-[85vw]">
+          <SheetTitle className="sr-only">Меню</SheetTitle>
+          <div className="h-full overflow-y-auto">
+            <Sidebar />
+          </div>
+        </SheetContent>
+      </Sheet>
 
       <div className="flex flex-1 flex-col overflow-hidden md:ml-[240px]">
         <Header onMenuClick={() => setMobileMenuOpen(true)} />
